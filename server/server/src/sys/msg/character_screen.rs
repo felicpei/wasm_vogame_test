@@ -110,9 +110,9 @@ impl Sys {
                 }
             },
             ClientGeneral::RequestCharacterList => {
-                tracing::info!("## recv requet character list");
+                //tracing::info!("## recv requet character list");
                 if let Some(player) = players.get(entity) {
-                    tracing::info!("## recv requet character list 2");
+                    //tracing::info!("## recv requet character list 2");
                     character_loader.load_character_list(entity, player.uuid().to_string())
                 }
             },

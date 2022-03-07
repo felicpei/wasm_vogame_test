@@ -225,17 +225,27 @@ lazy_static! {
         // 1. VELOREN_ASSETS environment variable
         if let Ok(var) = std::env::var("VELOREN_ASSETS") {
             paths.push(var.into());
+           
         }
 
         // 2. Executable path
         if let Ok(mut path) = std::env::current_exe() {
             path.pop();
             paths.push(path);
+            
         }
 
         // 3. Root of the repository
         if let Some(path) = find_root() {
             paths.push(path);
+        }
+
+        // 3. Root of the repository server
+        if let Some(path) = find_root() {
+            let s_path = path.join("server");
+            let c_path = path.join("client");
+            paths.push(s_path);
+            paths.push(c_path);
         }
 
         // 4. System paths

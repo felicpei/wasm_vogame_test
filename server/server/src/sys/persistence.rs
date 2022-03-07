@@ -73,7 +73,7 @@ impl<'a> System<'a> for Sys {
                             waypoint,
                             active_abilities,
                             map_marker,
-                        )| match presence.kind {
+                        )|  match presence.kind {
                             PresenceKind::Character(id) => {
                                 let pets = (&alignments, &bodies, &stats, &pets)
                                     .join()
@@ -101,6 +101,7 @@ impl<'a> System<'a> for Sys {
                                 ))
                             },
                             PresenceKind::Spectator => None,
+                            PresenceKind::Possessor => None,
                         },
                     ),
             );

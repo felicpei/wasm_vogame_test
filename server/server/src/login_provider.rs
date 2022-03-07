@@ -78,22 +78,27 @@ impl LoginProvider {
     pub fn verify(&self, username_or_token: &str) -> PendingLogin {
         let (pending_s, pending_r) = oneshot::channel();
 
-        match &self.auth_server {
-            // Token from auth server expected
-            Some(srv) => {
-                let srv = Arc::clone(srv);
-                let username_or_token = username_or_token.to_string();
-                self.runtime.spawn(async move {
-                    let _ = pending_s.send(Self::query(srv, &username_or_token).await);
-                });
-            },
-            // Username is expected
-            None => {
-                let username = username_or_token;
-                let uuid = derive_uuid(username);
-                let _ = pending_s.send(Ok((username.to_string(), uuid)));
-            },
-        }
+        // match &self.auth_server {
+        //     // Token from auth server expected
+        //     Some(srv) => {
+        //         let srv = Arc::clone(srv);
+        //         let username_or_token = username_or_token.to_string();
+        //         self.runtime.spawn(async move {
+        //             let _ = pending_s.send(Self::query(srv, &username_or_token).await);
+        //         });
+        //     },
+        //     // Username is expected
+        //     None => {
+        //         let username = username_or_token;
+        //         let uuid = derive_uuid(username);
+        //         let _ = pending_s.send(Ok((username.to_string(), uuid)));
+        //     },
+        // }
+
+        //绕过 auth_server 验证
+        let username = username_or_token;
+        let uuid = derive_uuid(username);
+        let _ = pending_s.send(Ok((username.to_string(), uuid)));
 
         PendingLogin { pending_r }
     }

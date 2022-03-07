@@ -4,16 +4,6 @@ version = "0.12.0"
 authors = ["Joshua Barretto <joshua.s.barretto@gmail.com>"]
 edition = "2021"
 
-[package.metadata.nix]
-build = true
-app = true
-longDescription = """
-Veloren is a multiplayer voxel RPG written in Rust.
-It is inspired by games such as Cube World, Legend of Zelda: Breath of the Wild, Dwarf Fortress and Minecraft.
-
-This package includes the official server CLI.
-"""
-
 [features]
 worldgen = ["server/worldgen"]
 persistent_world = ["server/persistent_world"]

@@ -270,6 +270,7 @@ fn persist_entity(state: &mut State, entity: EcsEntity) -> EcsEntity {
                     ),
                 );
             },
+            PresenceKind::Possessor => { /* Do nothing, spectators do not need persisting */ },
             PresenceKind::Spectator => { /* Do nothing, spectators do not need persisting */ },
         };
     }

@@ -7,4 +7,3 @@ npm run restart
 
 #run server
 cargo run --bin veloren-server-cli
-

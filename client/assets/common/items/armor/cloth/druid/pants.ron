@@ -1,0 +1,18 @@
+ItemDef(
+    name: "Druid Leggings",
+    description: "Incredibly light, with the essence of nature.",
+    kind: Armor((
+        kind: Pants("Druid"),
+        stats: (
+            protection: Some(Normal(12.0)),
+            energy_max: Some(13.2),
+            energy_reward: Some(0.134),
+            stealth: Some(0.134),
+        ),
+    )),
+    quality: High,
+    tags: [
+        Material(Lifecloth),
+        SalvageInto(Lifecloth),
+    ],
+)

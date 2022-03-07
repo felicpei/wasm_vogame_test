@@ -1,0 +1,11 @@
+ItemDef(
+    name: "Headband",
+    description: "yep.",
+    kind: Armor((
+        kind: Head("Headband"),
+        stats: (
+        ),
+    )),
+    quality: Common,
+    tags: [],
+)

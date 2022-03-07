@@ -1,0 +1,13 @@
+ItemDef(
+    name: "Testing Boots",
+    description: "Hopefully this test doesn't break!",
+    kind: Armor(
+        (
+            kind: Foot("Dark"),
+            stats: (
+            ),
+        )
+    ),
+    quality: Low,
+    tags: [],
+)

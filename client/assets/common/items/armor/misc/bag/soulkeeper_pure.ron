@@ -1,0 +1,14 @@
+ItemDef(
+    name: "Purified Soulkeeper",
+    description: "WIP",
+    kind: Armor(
+        (
+            kind: Bag("BlueFace"),
+            stats: (
+            ),
+        )
+    ),
+    quality: Legendary,
+    tags: [Bag],
+    slots: 36,
+)

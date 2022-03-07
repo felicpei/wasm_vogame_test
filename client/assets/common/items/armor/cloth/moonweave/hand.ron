@@ -1,0 +1,18 @@
+ItemDef(
+    name: "Moonweave Gloves",
+    description: "The fabric dances silently, like moonlight.",
+    kind: Armor((
+        kind: Hand("Moonweave"),
+        stats: (
+            protection: Some(Normal(8.0)),
+            energy_max: Some(8.3),
+            energy_reward: Some(0.084),
+            stealth: Some(0.084),
+        ),
+    )),
+    quality: Epic,
+    tags: [
+        Material(Moonweave),
+        SalvageInto(Moonweave),
+    ],
+)

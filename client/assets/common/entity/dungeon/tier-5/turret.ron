@@ -1,0 +1,8 @@
+(
+    name: Name("Possessed Turret"),
+    body: Exact(Object(Crossbow)),
+    alignment: Alignment(Enemy),
+    loadout: FromBody,
+    loot: Item("common.items.crafting_ing.twigs"),
+    meta: [],
+)

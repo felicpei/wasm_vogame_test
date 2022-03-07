@@ -1,0 +1,18 @@
+ItemDef(
+    name: "Druid Sash",
+    description: "Incredibly light, with the essence of nature.",
+    kind: Armor((
+        kind: Belt("Druid"),
+        stats: (
+            protection: Some(Normal(3.0)),
+            energy_max: Some(3.3),
+            energy_reward: Some(0.034),
+            stealth: Some(0.034),
+        ),
+    )),
+    quality: High,
+    tags: [
+        Material(Lifecloth),
+        SalvageInto(Lifecloth),
+    ],
+)

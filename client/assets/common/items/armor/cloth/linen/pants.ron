@@ -1,0 +1,18 @@
+ItemDef(
+    name: "Linen Pants",
+    description: "Roughly stitched, but it seems to hold.",
+    kind: Armor((
+        kind: Pants("Linen"),
+        stats: (
+            protection: Some(Normal(3.0)),
+            energy_max: Some(3.3),
+            energy_reward: Some(0.034),
+            stealth: Some(0.034),
+        ),
+    )),
+    quality: Low,
+    tags: [
+        Material(Linen),
+        SalvageInto(Linen),
+    ],
+)

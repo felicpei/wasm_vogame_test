@@ -1,0 +1,18 @@
+ItemDef(
+    name: "Moonweave Belt",
+    description: "The fabric dances silently, like moonlight.",
+    kind: Armor((
+        kind: Belt("Moonweave"),
+        stats: (
+            protection: Some(Normal(4.0)),
+            energy_max: Some(4.1),
+            energy_reward: Some(0.042),
+            stealth: Some(0.042),
+        ),
+    )),
+    quality: Epic,
+    tags: [
+        Material(Moonweave),
+        SalvageInto(Moonweave),
+    ],
+)

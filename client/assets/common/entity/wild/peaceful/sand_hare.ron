@@ -1,0 +1,11 @@
+(
+    name: Name("Desert Hare"),
+    body: Exact(QuadrupedSmall((
+        species: Hare,
+        body_type: Male,
+    ))),
+    alignment: Alignment(Wild),
+    loadout: FromBody,
+    loot: LootTable("common.loot_tables.creature.quad_small.fur"),
+    meta: [],
+)

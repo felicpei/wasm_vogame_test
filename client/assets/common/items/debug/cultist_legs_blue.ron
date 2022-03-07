@@ -1,0 +1,13 @@
+ItemDef(
+    name: "Velorite Skirt",
+    description: "",
+    kind: Armor(
+        (
+            kind: Pants("VeloriteMage"),
+            stats: (
+            ),
+        )
+    ),
+    quality: Debug,
+    tags: [],
+)

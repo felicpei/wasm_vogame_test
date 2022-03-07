@@ -1,0 +1,14 @@
+ItemDef(
+    name: "Cursed Soulkeeper",
+    description: "WIP",
+    kind: Armor(
+        (
+            kind: Bag("RedFace"),
+            stats: (
+            ),
+        )
+    ),
+    quality: Legendary,
+    tags: [Bag],
+    slots: 36,
+)

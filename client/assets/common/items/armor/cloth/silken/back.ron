@@ -1,0 +1,18 @@
+ItemDef(
+    name: "Silken Cape",
+    description: "Weaved with care by a skilled tailor.",
+    kind: Armor((
+        kind: Back("Silken"),
+        stats: (
+            protection: Some(Normal(2.0)),
+            energy_max: Some(2.5),
+            energy_reward: Some(0.025),
+            stealth: Some(0.025),
+        ),
+    )),
+    quality: Moderate,
+    tags: [
+        Material(Silk),
+        SalvageInto(Silk),
+    ],
+)

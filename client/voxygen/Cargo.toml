@@ -1,0 +1,204 @@
+[package]
+authors = ["Joshua Barretto <joshua.s.barretto@gmail.com>", "Imbris <imbrisf@gmail.com>"]
+default-run = "veloren-voxygen"
+edition = "2021"
+name = "veloren-voxygen"
+version = "0.12.0"
+# Cargo thinks it should build the voxygen binary even when a specific bench is specified for building
+# Uncomment below and comment out default-run if you want to avoid this
+# autobins = false
+
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[package.metadata.nix]
+build = true
+app = true
+desktopFile = "./assets/voxygen/net.veloren.veloren.desktop"
+longDescription = """
+Veloren is a multiplayer voxel RPG written in Rust.
+It is inspired by games such as Cube World, Legend of Zelda: Breath of the Wild, Dwarf Fortress and Minecraft.
+
+This package includes the official client, Voxygen.
+"""
+runtimeLibs = ["libGL", "xorg.libX11", "xorg.libXcursor", "xorg.libXrandr", "xorg.libXi", "vulkan-loader", "vulkan-extension-layer"]
+buildInputs = ["xorg.libxcb"]
+
+[features]
+hot-anim = ["anim/use-dyn-lib"]
+hot-egui = ["voxygen-egui/use-dyn-lib", "egui"]
+hot-reloading = ["common/hot-reloading"]
+#singleplayer = ["server"]
+simd = ["vek/platform_intrinsics"]
+tracy = ["profiling", "profiling/profile-with-tracy", "common-frontend/tracy", "client/tracy"]
+tracy-memory = ["tracy"] # enables heap profiling with tracy
+plugins = ["client/plugins"]
+egui-ui = ["voxygen-egui", "egui", "egui_wgpu_backend", "egui_winit_platform"]
+shaderc-from-source = ["shaderc/build-from-source"]
+
+# We don't ship egui with published release builds so a separate feature is required that excludes it.
+#default-publish = ["singleplayer", "native-dialog", "plugins", "simd"]
+default-publish = ["native-dialog", "plugins", "simd"]
+default = ["default-publish", "egui-ui", "hot-reloading", "shaderc-from-source","console_error_panic_hook"]
+
+[dependencies]
+
+#wasm start
+wasm-bindgen = "0.2.63"
+console_error_panic_hook = { version = "0.1.6", optional = true }
+wee_alloc = { version = "0.4.5", optional = true }
+
+#时间库 代替标准库的time
+instant = { version = "0.1", features = [ "wasm-bindgen", "inaccurate" ] }
+#wasn end
+
+client = {package = "veloren-client", path = "../client"}
+common = {package = "veloren-common", path = "../common"}
+common-base = {package = "veloren-common-base", path = "../common/base"}
+common-ecs = {package = "veloren-common-ecs", path = "../common/ecs"}
+common-frontend = {package = "veloren-common-frontend", path = "../common/frontend"}
+common-net = {package = "veloren-common-net", path = "../common/net"}
+common-systems = {package = "veloren-common-systems", path = "../common/systems"}
+common-state = {package = "veloren-common-state", path = "../common/state"}
+
+anim = {package = "veloren-voxygen-anim", path = "anim"}
+i18n = {package = "veloren-voxygen-i18n", path = "i18n"}
+voxygen-egui = {package = "veloren-voxygen-egui", path = "egui", optional = true }
+
+# Graphics
+winit = {version = "0.25.0", features = ["serde"]}
+wgpu = { version = "=0.8.0", features = ["trace", "cross"] }
+wgpu-profiler = { git = "https://github.com/Imberflur/wgpu-profiler", tag = "wgpu-0.8" }
+bytemuck = { version="1.4", features=["derive"] }
+shaderc = "0.7.4"
+# cmake crate used by shaderc, newer version 0.1.46 uses a new cmake command that is not available in our CI cmake version
+# see https://github.com/alexcrichton/cmake-rs/issues/131
+cmake = "=0.1.45"
+
+# Ui
+conrod_core = {git = "https://gitlab.com/veloren/conrod.git", branch="copypasta_0.7"}
+conrod_winit = {git = "https://gitlab.com/veloren/conrod.git", branch="copypasta_0.7"}
+euc = "0.5.0"
+iced = {package = "iced_native", git = "https://github.com/Imberflur/iced", tag = "winit-0.25"}
+iced_winit = {git = "https://github.com/Imberflur/iced", tag = "winit-0.25"}
+window_clipboard = "0.2"
+glyph_brush = "0.7.0"
+keyboard-keynames = { git = "https://gitlab.com/Frinksy/keyboard-keynames.git", branch = "develop" }
+
+# EGUI
+egui = {version = "0.12", optional = true }
+egui_wgpu_backend = {git = "https://github.com/hasenbanck/egui_wgpu_backend.git", rev = "63a002c6a9b6c016e45806dd065864431caab621", optional = true }
+egui_winit_platform = {version = "0.8", optional = true }
+
+# ECS
+specs = {git = "https://github.com/amethyst/specs.git", rev = "f985bec5d456f7b0dd8aae99848f9473c2cd9d46"}
+specs-idvs = { git = "https://gitlab.com/veloren/specs-idvs.git", rev = "8be2abcddf8f524cb5876e8dd20a7e47cfaf7573" }
+
+# Mathematics
+vek = {version = "=0.14.1", features = ["serde"]}
+
+# Controller
+gilrs = {version = "0.8.0", features = ["serde-serialize"]}
+
+# Singleplayer
+#server = { package = "veloren-server", path = "../server", optional = true, default-features = false, features = ["worldgen"] }
+
+# Utility
+assets_manager = {version = "0.7", features = ["ab_glyph"]}
+backtrace = "0.3.40"
+bincode = "1.3.1"
+chrono = { version = "0.4.19", features = ["serde"] }
+chumsky = "0.3.2"
+cpal = "0.13"
+copy_dir = "0.1.2"
+crossbeam-utils = "0.8.1"
+crossbeam-channel = "0.5"
+
+
+# TODO: remove
+directories-next = "2.0"
+dot_vox = "4.0"
+enum-iterator = "0.7"
+guillotiere = "0.6"
+hashbrown = {version = "0.11", features = ["rayon", "serde", "nightly"]}
+image = {version = "0.23.12", default-features = false, features = ["ico", "png"]}
+lazy_static = "1.4.0"
+native-dialog = { version = "0.5.2", optional = true }
+num = "0.4"
+ordered-float = { version = "2.0.1", default-features = false }
+rand = "0.8"
+rand_chacha = "0.3"
+rayon = "1.5"
+rodio = {version = "0.14", default-features = false, features = ["vorbis"]}
+ron = {version = "0.7", default-features = false}
+serde = {version = "1.0", features = [ "rc", "derive" ]}
+slab = "0.4.2"
+strum = { version = "0.23", features = ["derive"] }
+strum_macros = "0.23"
+treeculler = "0.2"
+tokio = { version = "=1.17.0", default-features = false, features = ["rt-multi-thread"] }
+num_cpus = "1.0"
+# vec_map = { version = "0.8.2" }
+inline_tweak = "1.0.2"
+itertools = "0.10.0"
+
+# Tracy
+tracing = "0.1"
+profiling = { version = "1.0.1", default-features = false, optional = true }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+dispatch = "0.1.4"
+
+[target.'cfg(windows)'.build-dependencies]
+winres = "0.1"
+
+# Mumble
+[target.'cfg(not(target_os="macos"))'.dependencies]
+mumble-link = "0.1.0"
+
+[dev-dependencies]
+#wasm start
+wasm-bindgen-test = "0.3.13"
+#wasm end
+
+criterion = "0.3"
+#world = {package = "veloren-world", path = "../world"}
+rayon = "1.5.0"
+
+[[bench]]
+harness = false
+name = "meshing_benchmark"
+
+
+
+[dependencies.web-sys]
+version = "=0.3.50"
+features = [
+  'CanvasRenderingContext2d',
+  'console',
+  'Document',
+  'Element',
+  'EventTarget',
+  'HtmlCanvasElement',
+  'HtmlElement',
+  'HtmlImageElement',
+  'ImageData',
+  'MouseEvent',
+  'Node',
+  'Request',
+  'RequestInit',
+  'RequestMode',
+  'Response',
+  'Performance',
+  'PerformanceTiming',
+  'Window',
+
+  "BinaryType",
+  "Blob",
+  "ErrorEvent",
+  "FileReader",
+  "MessageEvent",
+  "ProgressEvent",
+  "WebSocket",
+]

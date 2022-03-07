@@ -1,0 +1,14 @@
+ItemDef(
+    name: "Tiny Leather Pouch",
+    description: "Made from a few patches of leather.",
+    kind: Armor(
+        (
+            kind: Bag("LeatherSmall"),
+            stats: (
+            ),
+        )
+    ),
+    quality: Common,
+    tags: [Bag],
+    slots: 6,
+)

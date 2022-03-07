@@ -1,0 +1,18 @@
+ItemDef(
+    name: "Silken Wraps",
+    description: "Weaved with care by a skilled tailor.",
+    kind: Armor((
+        kind: Hand("Silken"),
+        stats: (
+            protection: Some(Normal(5.0)),
+            energy_max: Some(5.0),
+            energy_reward: Some(0.05),
+            stealth: Some(0.05),
+        ),
+    )),
+    quality: Moderate,
+    tags: [
+        Material(Silk),
+        SalvageInto(Silk),
+    ],
+)

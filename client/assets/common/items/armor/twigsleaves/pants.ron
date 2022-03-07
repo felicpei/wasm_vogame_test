@@ -1,0 +1,13 @@
+ItemDef(
+    name: "Leafy Pants",
+    description: "Leaves cover the magically imbued chainmail twigs, providing protection from the elements.",
+    kind: Armor((
+        kind: Pants("TwigsLeaves"),
+        stats: (
+            protection: Some(Normal(12.0)),
+        ),
+    )),
+    quality: Moderate,
+    tags: [
+    ],
+)

@@ -1,0 +1,16 @@
+ItemDef(
+    name: "Bloodsteel Legs",
+    description: "Forged to preserve life, at the cost of another.",
+    kind: Armor((
+        kind: Pants("Bloodsteel"),
+        stats: (
+            protection: Some(Normal(40.0)),
+            poise_resilience: Some(Normal(10.0)),
+        ),
+    )),
+    quality: Epic,
+    tags: [
+        Material(Bloodsteel),
+        SalvageInto(Bloodsteel),
+    ],
+)

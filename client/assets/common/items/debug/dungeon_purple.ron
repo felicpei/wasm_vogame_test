@@ -1,0 +1,13 @@
+ItemDef(
+    name: "Velorite Admin Cape",
+    description: "Where did I put my banhammer again?",
+    kind: Armor(
+        (
+            kind: Back("VeloriteMage"),
+            stats: (
+            ),
+        )
+    ),
+    quality: Debug,
+    tags: [],
+)

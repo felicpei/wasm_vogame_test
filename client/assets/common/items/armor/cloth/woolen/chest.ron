@@ -1,0 +1,18 @@
+ItemDef(
+    name: "Woolen Parka",
+    description: "Thick and ready for the snow.",
+    kind: Armor((
+        kind: Chest("Woolen"),
+        stats: (
+            protection: Some(Normal(9.0)),
+            energy_max: Some(9.9),
+            energy_reward: Some(0.099),
+            stealth: Some(0.099),
+        ),
+    )),
+    quality: Common,
+    tags: [
+        Material(Wool),
+        SalvageInto(Wool),
+    ],
+)

@@ -1,0 +1,18 @@
+ItemDef(
+    name: "Linen Feet",
+    description: "Roughly stitched, but it seems to hold.",
+    kind: Armor((
+        kind: Foot("Linen"),
+        stats: (
+            protection: Some(Normal(2.0)),
+            energy_max: Some(1.7),
+            energy_reward: Some(0.017),
+            stealth: Some(0.017),
+        ),
+    )),
+    quality: Low,
+    tags: [
+        Material(Linen),
+        SalvageInto(Linen),
+    ],
+)

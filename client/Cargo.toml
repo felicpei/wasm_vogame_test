@@ -17,7 +17,6 @@ members = [
     "voxygen",
     "voxygen/anim",
     "voxygen/i18n",
-    "voxygen/egui",
     "network",
     "network/protocol",
 ]

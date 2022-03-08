@@ -831,8 +831,6 @@ impl Client {
     pub fn load_character_list(&mut self) {
         self.character_list.loading = true;
         self.send_msg(ClientGeneral::RequestCharacterList);
-
-        warn!("### load_character_list")
     }
 
     /// New character creation

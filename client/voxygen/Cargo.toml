@@ -8,22 +8,8 @@ version = "0.12.0"
 # Uncomment below and comment out default-run if you want to avoid this
 # autobins = false
 
-
 [lib]
 crate-type = ["cdylib", "rlib"]
-
-[package.metadata.nix]
-build = true
-app = true
-desktopFile = "./assets/voxygen/net.veloren.veloren.desktop"
-longDescription = """
-Veloren is a multiplayer voxel RPG written in Rust.
-It is inspired by games such as Cube World, Legend of Zelda: Breath of the Wild, Dwarf Fortress and Minecraft.
-
-This package includes the official client, Voxygen.
-"""
-runtimeLibs = ["libGL", "xorg.libX11", "xorg.libXcursor", "xorg.libXrandr", "xorg.libXi", "vulkan-loader", "vulkan-extension-layer"]
-buildInputs = ["xorg.libxcb"]
 
 [features]
 hot-anim = ["anim/use-dyn-lib"]
@@ -40,18 +26,13 @@ shaderc-from-source = ["shaderc/build-from-source"]
 # We don't ship egui with published release builds so a separate feature is required that excludes it.
 #default-publish = ["singleplayer", "native-dialog", "plugins", "simd"]
 default-publish = ["native-dialog", "plugins", "simd"]
-default = ["default-publish", "egui-ui", "hot-reloading", "shaderc-from-source","console_error_panic_hook"]
+default = ["default-publish", "egui-ui", "hot-reloading", "shaderc-from-source"]
 
 [dependencies]
-
-#wasm start
 wasm-bindgen = "0.2.63"
-console_error_panic_hook = { version = "0.1.6", optional = true }
-wee_alloc = { version = "0.4.5", optional = true }
 
 #时间库 代替标准库的time
 instant = { version = "0.1", features = [ "wasm-bindgen", "inaccurate" ] }
-#wasn end
 
 client = {package = "veloren-client", path = "../client"}
 common = {package = "veloren-common", path = "../common"}
@@ -139,6 +120,7 @@ strum_macros = "0.23"
 treeculler = "0.2"
 tokio = { version = "=1.17.0", default-features = false, features = ["rt-multi-thread"] }
 num_cpus = "1.0"
+
 # vec_map = { version = "0.8.2" }
 inline_tweak = "1.0.2"
 itertools = "0.10.0"
@@ -158,47 +140,9 @@ winres = "0.1"
 mumble-link = "0.1.0"
 
 [dev-dependencies]
-#wasm start
-wasm-bindgen-test = "0.3.13"
-#wasm end
-
 criterion = "0.3"
-#world = {package = "veloren-world", path = "../world"}
 rayon = "1.5.0"
 
 [[bench]]
 harness = false
 name = "meshing_benchmark"
-
-
-
-[dependencies.web-sys]
-version = "=0.3.50"
-features = [
-  'CanvasRenderingContext2d',
-  'console',
-  'Document',
-  'Element',
-  'EventTarget',
-  'HtmlCanvasElement',
-  'HtmlElement',
-  'HtmlImageElement',
-  'ImageData',
-  'MouseEvent',
-  'Node',
-  'Request',
-  'RequestInit',
-  'RequestMode',
-  'Response',
-  'Performance',
-  'PerformanceTiming',
-  'Window',
-
-  "BinaryType",
-  "Blob",
-  "ErrorEvent",
-  "FileReader",
-  "MessageEvent",
-  "ProgressEvent",
-  "WebSocket",
-]

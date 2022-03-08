@@ -7,31 +7,29 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [features]
+client_tcp = ["socket2", "tokio"]   #切换 客户端 和 wasm
 metrics = ["prometheus", "network-protocol/metrics"]
-compression = ["lz-fear"]
-default = ["metrics","compression"]
+compression = ["lz-fear"]   #压缩
+default = ["metrics", "compression", "client_tcp"]
 
 [dependencies]
-network-protocol = { package = "veloren-network-protocol", path = "protocol" }
-rand = { version = "0.8" }
 
-#todo wasm socket
-#ws_stream_wasm = "0.7"
+#给client用的网络部分，引用到features-client_tcp
+socket2 = { version = "0.4.4", default-features = false, optional = true }
+tokio = { version = "=1.17.0", default-features = false, optional = true, features = ["io-util", "macros", "rt", "net", "time"] }
+#tokio = { version = "=1.17.0", default-features = false, features = ["macros", "rt", "time"] }
+#end
+
+network-protocol = { package = "veloren-network-protocol", path = "protocol" }
+tokio-stream = { version = "=0.1.8", default-features = false }
+rand = { version = "0.8" }
 
 #serialisation
 bincode = "1.3.2"
 serde = { version = "1.0" }
 
-
-#wasm delete
-#ipv4/ipv6 behavior
-#socket2 = "0.4.4"
-
-
 #sending
 crossbeam-channel = "0.5"
-tokio = { version = "=1.17.0", default-features = false, features = ["macros", "rt", "time"] }
-tokio-stream = { version = "=0.1.8", default-features = false }
 
 #tracing and metrics
 tracing = { version = "0.1", default-features = false, features = ["attributes"]}

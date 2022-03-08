@@ -14,8 +14,14 @@
 	Udp（未使用，删除）
 	quic（默认未使用，删除）
 	mpsc（一种c2c的网络，删除）
-	
-4. network的feature
+
+-------------------------------------
+
+1. 屏蔽使用socket2的地方，用client_tcp feature 区分。（用cargo跑的话，在network的default里加上client_tcp)
+2. 删除dyn相关，dyn是支持动态更新资源的，web应该不需要。（解除notify，net2的引用）
+3. 删除feature tracy相关，profile用的，wasm不可用了。
+4. 删除有问题的dev引用，一些单元测试test代码，test以后wasm也没法用了。
+5. 
 
 
 	

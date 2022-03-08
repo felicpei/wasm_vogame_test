@@ -16,12 +16,12 @@ crate-type = ["cdylib", "rlib"]
 
 simd = ["vek/platform_intrinsics"]
 plugins = ["client/plugins"]
-egui-ui = ["voxygen-egui", "egui", "egui_wgpu_backend", "egui_winit_platform"]
+#egui-ui = ["voxygen-egui", "egui_web"]
 shaderc-from-source = ["shaderc/build-from-source"]
 
 # We don't ship egui with published release builds so a separate feature is required that excludes it.
 default-publish = ["plugins", "simd"]
-default = ["default-publish", "egui-ui", "shaderc-from-source"]
+default = ["default-publish", "shaderc-from-source"]
 
 [dependencies]
 wasm-bindgen = "0.2.63"
@@ -40,7 +40,7 @@ common-state = {package = "veloren-common-state", path = "../common/state"}
 
 anim = {package = "veloren-voxygen-anim", path = "anim"}
 i18n = {package = "veloren-voxygen-i18n", path = "i18n"}
-voxygen-egui = {package = "veloren-voxygen-egui", path = "egui", optional = true }
+#voxygen-egui = {package = "veloren-voxygen-egui", path = "egui", optional = true }
 
 # Graphics
 winit = {version = "0.25.0", features = ["serde"]}
@@ -63,9 +63,7 @@ glyph_brush = "0.7.0"
 keyboard-keynames = { git = "https://gitlab.com/Frinksy/keyboard-keynames.git", branch = "develop" }
 
 # EGUI
-egui = {version = "0.12", optional = true }
-egui_wgpu_backend = {git = "https://github.com/hasenbanck/egui_wgpu_backend.git", rev = "63a002c6a9b6c016e45806dd065864431caab621", optional = true }
-egui_winit_platform = {version = "0.8", optional = true }
+#egui_web = "0.17.0"
 
 # ECS
 specs = {git = "https://github.com/amethyst/specs.git", rev = "f985bec5d456f7b0dd8aae99848f9473c2cd9d46"}

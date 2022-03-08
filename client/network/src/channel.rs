@@ -1,8 +1,32 @@
 use crate::api::NetworkConnectError;
 use async_trait::async_trait;
 use bytes::BytesMut;
-// use futures_util::future::ok;
-// use futures_util::FutureExt;
+
+use tokio::sync::{mpsc, oneshot};
+
+
+
+#[cfg(feature = "client_tcp")]
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
+
+#[cfg(feature = "client_tcp")]
+use tokio::net;
+
+#[cfg(feature = "client_tcp")]
+use tokio::net:: tcp::{OwnedReadHalf, OwnedWriteHalf};
+
+#[cfg(feature = "client_tcp")]
+use tokio::select;
+
+#[cfg(feature = "client_tcp")]
+use tracing::{error, info, trace, warn};
+
+#[cfg(feature = "client_tcp")]
+use futures_util::future::ok;
+
+#[cfg(feature = "client_tcp")]
+use futures_util::FutureExt;
+
 use network_protocol::{
     Bandwidth, Cid, InitProtocolError, Pid,
     ProtocolError, ProtocolEvent, ProtocolMetricCache, ProtocolMetrics, Sid, TcpRecvProtocol,
@@ -16,13 +40,7 @@ use std::{
     },
     time::Duration,
 };
-use tokio::{
-    // io::{AsyncReadExt, AsyncWriteExt},
-    //net,
-    //net::tcp::{OwnedReadHalf, OwnedWriteHalf},
-    // select,
-    sync::{mpsc, oneshot},
-};
+
 
 #[allow(clippy::large_enum_variant)]
 #[derive(Debug)]
@@ -47,22 +65,29 @@ impl Protocols {
         metrics: ProtocolMetricCache,
     ) -> Result<Self, NetworkConnectError> {
 
-
-        // let stream = net::TcpStream::connect(addr)
-        //     .await
-        //     .and_then(|s| {
-        //         s.set_nodelay(true)?;
-        //         Ok(s)
-        //     })
-        //     .map_err(NetworkConnectError::Io)?;
-        // info!(
-        //     "Connecting Tcp to: {}",
-        //     stream.peer_addr().map_err(NetworkConnectError::Io)?
-        // );
-        //Ok(Self::new_tcp(stream, metrics))
-
-        dbg!("########## todo with_tcp_connect");
-        Err(NetworkConnectError::InvalidSecret)
+        //tcp连接
+        #[cfg(feature = "client_tcp")]
+        {
+            let stream = net::TcpStream::connect(addr)
+                .await
+                .and_then(|s| {
+                    s.set_nodelay(true)?;
+                    Ok(s)
+                })
+                .map_err(NetworkConnectError::Io)?;
+            info!(
+                "Connecting Tcp to: {}",
+                stream.peer_addr().map_err(NetworkConnectError::Io)?
+            );
+            Ok(Self::new_tcp(stream, metrics))
+        }
+    
+        //websocket连接 todo
+        #[cfg(not(feature = "client_tcp"))]
+        {
+            dbg!("########## todo with_tcp_connect");
+            Err(NetworkConnectError::InvalidSecret)
+        }
     }
 
     pub(crate) async fn with_tcp_listen(
@@ -73,65 +98,77 @@ impl Protocols {
         c2s_protocol_s: mpsc::UnboundedSender<(Self, Cid)>,
     ) -> std::io::Result<()> {
 
-        dbg!("########## todo with tcp listen");
-        
-        // use socket2::{Domain, Socket, Type};
-        // let domain = Domain::for_address(addr);
-        // let socket2_socket = Socket::new(domain, Type::STREAM, None)?;
-        // if domain == Domain::IPV6 {
-        //     socket2_socket.set_only_v6(true)?
-        // }
-        // socket2_socket.set_nonblocking(true)?; // Needed by Tokio
-        // // See https://docs.rs/tokio/latest/tokio/net/struct.TcpSocket.html
-        // #[cfg(not(windows))]
-        // socket2_socket.set_reuse_address(true)?;
-        // let socket2_addr = addr.into();
-        // socket2_socket.bind(&socket2_addr)?;
-        // socket2_socket.listen(1024)?;
-        // let std_listener: std::net::TcpListener = socket2_socket.into();
-        // let listener = tokio::net::TcpListener::from_std(std_listener)?;
-        // trace!(?addr, "Tcp Listener bound");
-        // let mut end_receiver = s2s_stop_listening_r.fuse();
-        // tokio::spawn(async move {
-        //     while let Some(data) = select! {
-        //             next = listener.accept().fuse() => Some(next),
-        //             _ = &mut end_receiver => None,
-        //     } {
-        //         let (stream, remote_addr) = match data {
-        //             Ok((s, p)) => (s, p),
-        //             Err(e) => {
-        //                 trace!(?e, "TcpStream Error, ignoring connection attempt");
-        //                 continue;
-        //             },
-        //         };
-        //         if let Err(e) = stream.set_nodelay(true) {
-        //             warn!(
-        //                 ?e,
-        //                 "Failed to set TCP_NODELAY, client may have degraded latency"
-        //             );
-        //         }
-        //         let cid = cids.fetch_add(1, Ordering::Relaxed);
-        //         info!(?remote_addr, ?cid, "Accepting Tcp from");
-        //         let metrics = ProtocolMetricCache::new(&cid.to_string(), Arc::clone(&metrics));
-        //         let _ = c2s_protocol_s.send((Self::new_tcp(stream, metrics.clone()), cid));
-        //     }
-        // });
+        //tcp连接
+        #[cfg(feature = "client_tcp")]
+        {
+            use socket2::{Domain, Socket, Type};
+            let domain = Domain::for_address(addr);
+            let socket2_socket = Socket::new(domain, Type::STREAM, None)?;
+            if domain == Domain::IPV6 {
+                socket2_socket.set_only_v6(true)?
+            }
+            socket2_socket.set_nonblocking(true)?; // Needed by Tokio
+            // See https://docs.rs/tokio/latest/tokio/net/struct.TcpSocket.html
+            #[cfg(not(windows))]
+            socket2_socket.set_reuse_address(true)?;
+            let socket2_addr = addr.into();
+            socket2_socket.bind(&socket2_addr)?;
+            socket2_socket.listen(1024)?;
+            let std_listener: std::net::TcpListener = socket2_socket.into();
+            let listener = tokio::net::TcpListener::from_std(std_listener)?;
+            trace!(?addr, "Tcp Listener bound");
+            let mut end_receiver = s2s_stop_listening_r.fuse();
+            tokio::spawn(async move {
+                while let Some(data) = select! {
+                        next = listener.accept().fuse() => Some(next),
+                        _ = &mut end_receiver => None,
+                } {
+                    let (stream, remote_addr) = match data {
+                        Ok((s, p)) => (s, p),
+                        Err(e) => {
+                            trace!(?e, "TcpStream Error, ignoring connection attempt");
+                            continue;
+                        },
+                    };
+                    if let Err(e) = stream.set_nodelay(true) {
+                        warn!(
+                            ?e,
+                            "Failed to set TCP_NODELAY, client may have degraded latency"
+                        );
+                    }
+                    let cid = cids.fetch_add(1, Ordering::Relaxed);
+                    info!(?remote_addr, ?cid, "Accepting Tcp from");
+                    let metrics = ProtocolMetricCache::new(&cid.to_string(), Arc::clone(&metrics));
+                    let _ = c2s_protocol_s.send((Self::new_tcp(stream, metrics.clone()), cid));
+                }
+            });
+        }
+    
+        //websocket连接 todo
+        #[cfg(not(feature = "client_tcp"))]
+        {
+            dbg!("########## todo with tcp listen");
+        }
+
         Ok(())
     }
 
-    // pub(crate) fn new_tcp(stream: tokio::net::TcpStream, metrics: ProtocolMetricCache) -> Self {
+    //tcp连接
+    #[cfg(feature = "client_tcp")]
+    pub(crate) fn new_tcp(stream: tokio::net::TcpStream, metrics: ProtocolMetricCache) -> Self {
 
-    //     let (r, w) = stream.into_split();
-    //     let sp = TcpSendProtocol::new(TcpDrain { half: w }, metrics.clone());
-    //     let rp = TcpRecvProtocol::new(
-    //         TcpSink {
-    //             half: r,
-    //             buffer: BytesMut::new(),
-    //         },
-    //         metrics,
-    //     );
-    //     Protocols::Tcp((sp, rp))
-    // }
+        let (r, w) = stream.into_split();
+        let sp = TcpSendProtocol::new(TcpDrain { half: w }, metrics.clone());
+        let rp = TcpRecvProtocol::new(
+            TcpSink {
+                half: r,
+                buffer: BytesMut::new(),
+            },
+            metrics,
+        );
+        Protocols::Tcp((sp, rp))
+    }
+   
 
     pub(crate) fn split(self) -> (SendProtocols, RecvProtocols) {
         match self {
@@ -192,12 +229,15 @@ impl network_protocol::RecvProtocol for RecvProtocols {
 //// TCP
 #[derive(Debug)]
 pub struct TcpDrain {
-    //half: OwnedWriteHalf,
+    #[cfg(feature = "client_tcp")]
+    half: OwnedWriteHalf,
 }
 
 #[derive(Debug)]
 pub struct TcpSink {
-    //half: OwnedReadHalf,
+    #[cfg(feature = "client_tcp")]
+    half: OwnedReadHalf,
+    
     buffer: BytesMut,
 }
 
@@ -206,12 +246,22 @@ impl UnreliableDrain for TcpDrain {
     type DataFormat = BytesMut;
 
     async fn send(&mut self, data: Self::DataFormat) -> Result<(), ProtocolError> {
-        // match self.half.write_all(&data).await {
-        //     Ok(()) => Ok(()),
-        //     Err(_) => Err(ProtocolError::Closed),
-        // }
-
-        dbg!("########## todo UnreliableDrain for TcpDrain send");
+       
+        //tcp连接
+        #[cfg(feature = "client_tcp")]
+        {
+            match self.half.write_all(&data).await {
+                Ok(()) => Ok(()),
+                Err(_) => Err(ProtocolError::Closed),
+            };
+        }
+    
+        //websocket连接 todo
+        #[cfg(not(feature = "client_tcp"))]
+        {
+            dbg!("########## todo UnreliableDrain for TcpDrain send");
+        }
+      
         Ok(())
     }
 }
@@ -221,14 +271,23 @@ impl UnreliableSink for TcpSink {
     type DataFormat = BytesMut;
 
     async fn recv(&mut self) -> Result<Self::DataFormat, ProtocolError> {
-        // self.buffer.resize(1500, 0u8);
-        // match self.half.read(&mut self.buffer).await {
-        //     Ok(0) => Err(ProtocolError::Closed),
-        //     Ok(n) => Ok(self.buffer.split_to(n)),
-        //     Err(_) => Err(ProtocolError::Closed),
-        // }
 
-        dbg!("########## todo impl UnreliableSink for TcpSink recv");
-        Err(ProtocolError::Closed)
+        //tcp连接
+        #[cfg(feature = "client_tcp")]
+        {
+            self.buffer.resize(1500, 0u8);
+            match self.half.read(&mut self.buffer).await {
+                Ok(0) => Err(ProtocolError::Closed),
+                Ok(n) => Ok(self.buffer.split_to(n)),
+                Err(_) => Err(ProtocolError::Closed),
+            }
+        }
+    
+        //websocket连接 todo
+        #[cfg(not(feature = "client_tcp"))]
+        {
+            dbg!("########## todo impl UnreliableSink for TcpSink recv");
+            Err(ProtocolError::Closed)
+        }
     }
 }

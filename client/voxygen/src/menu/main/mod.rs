@@ -266,6 +266,8 @@ impl PlayState for MainMenuState {
             .maintain(global_state, global_state.clock.dt())
         {
             match event {
+
+
                 MainMenuEvent::LoginAttempt {
                     username,
                     password,
@@ -281,6 +283,7 @@ impl PlayState for MainMenuState {
                         .settings
                         .save_to_file_warn(&global_state.config_dir);
 
+                    //初始化网络
                     let connection_args = ConnectionArgs::Tcp {
                         hostname: server_address,
                         prefer_ipv6: false,
@@ -296,6 +299,7 @@ impl PlayState for MainMenuState {
                         &global_state.i18n,
                     );
                 },
+
                 MainMenuEvent::CancelLoginAttempt => {
                     // init contains InitState::Client(ClientInit), which spawns a thread which
                     // contains a TcpStream::connect() call This call is
@@ -467,6 +471,7 @@ fn get_client_msg_error(
     }
 }
 
+//登录
 fn attempt_login(
     info_message: &mut Option<String>,
     username: String,

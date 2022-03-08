@@ -199,17 +199,6 @@ impl Scheduler {
                             )
                             .await
                         },
-                        ListenAddr::Mpsc(addr) => {
-                            Protocols::with_mpsc_listen(
-                                addr,
-                                cids,
-                                metrics,
-                                s2s_stop_listening_r,
-                                c2s_protocol_s,
-                            )
-                            .await
-                        },
-                        _ => unimplemented!(),
                     };
                     let _ = s2a_listen_result_s.send(res);
 
@@ -231,8 +220,6 @@ impl Scheduler {
             self.metrics.connect_request(&addr);
             let protocol = match addr {
                 ConnectAddr::Tcp(addr) => Protocols::with_tcp_connect(addr, metrics).await,
-                ConnectAddr::Mpsc(addr) => Protocols::with_mpsc_connect(addr, metrics).await,
-                _ => unimplemented!(),
             };
             let protocol = match protocol {
                 Ok(p) => p,

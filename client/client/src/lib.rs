@@ -53,7 +53,7 @@ use common_net::{
         world_msg::{EconomyInfo, PoiInfo, SiteId, SiteInfo},
         ChatMsgValidationError, ClientGeneral, ClientMsg, ClientRegister, ClientType,
         DisconnectReason, InviteAnswer, Notification, PingMsg, PlayerInfo, PlayerListUpdate,
-        PresenceKind, RegisterError, ServerGeneral, ServerInit, ServerRegisterAnswer,
+        PresenceKind,  ServerGeneral, ServerInit,
         MAX_BYTES_CHAT_MSG,
     },
     sync::WorldSyncExt,
@@ -225,13 +225,18 @@ impl Client {
     ) -> Result<Self, Error> {
         let network = Network::new(Pid::new(), &runtime);
 
+        dbg!("conent addr:{}", &addr);
+
         let participant = match addr {
+
+            //网络监听模块
             ConnectionArgs::Tcp {
                 hostname,
                 prefer_ipv6,
             } => addr::try_connect(&network, &hostname, prefer_ipv6, ConnectAddr::Tcp).await?,
   
-            ConnectionArgs::Mpsc(id) => network.connect(ConnectAddr::Mpsc(id)).await?,
+            //删除mpsc
+            //ConnectionArgs::Mpsc(id) => network.connect(ConnectAddr::Mpsc(id)).await?,
         };
 
         let stream = participant.opened().await?;
@@ -242,6 +247,8 @@ impl Client {
         let terrain_stream = participant.opened().await?;
 
         register_stream.send(ClientType::Game)?;
+
+        //版本号验证
         let server_info: ServerInfo = register_stream.recv().await?;
         if server_info.git_hash != *common::util::GIT_HASH {
             warn!(
@@ -260,6 +267,7 @@ impl Client {
         dbg!("server_info:{}", &server_info);
         //debug!("Auth Server: {:?}", server_info.auth_provider);
 
+        //心跳
         ping_stream.send(PingMsg::Ping)?;
 
         // Wait for initial sync
@@ -649,8 +657,7 @@ impl Client {
     pub async fn register(
         &mut self,
         token_or_username: String,
-        password: String,
-        mut auth_trusted: impl FnMut(&str) -> bool,
+        password: String
     ) -> Result<(), Error> {
         // Authentication
 
@@ -2662,9 +2669,7 @@ mod tests {
             let password: String = "Bar".to_string();
             let auth_server: String = "auth.veloren.net".to_string();
             let _result: Result<(), Error> =
-                runtime.block_on(client.register(username, password, |suggestion: &str| {
-                    suggestion == auth_server
-                }));
+                runtime.block_on(client.register(username, password));
 
             //clock
             let mut clock = Clock::new(Duration::from_secs_f64(SPT));

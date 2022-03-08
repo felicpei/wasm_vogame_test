@@ -9,7 +9,6 @@ pub enum ConnectionArgs {
         hostname: String,
         prefer_ipv6: bool,
     },
-    Mpsc(u64),
 }
 
 impl ConnectionArgs {
@@ -43,6 +42,7 @@ pub(crate) async fn resolve(
     }
 }
 
+//建立网络连接
 pub(crate) async fn try_connect<F>(
     network: &network::Network,
     address: &str,

@@ -55,14 +55,7 @@ impl ClientInit {
 
         let runtime2 = Arc::clone(&runtime);
         runtime.spawn(async move {
-            let trust_fn = |auth_server: &str| {
-                let _ = tx.send(Msg::IsAuthTrusted(auth_server.to_string()));
-                trust_rx
-                    .recv()
-                    .map(|AuthTrust(server, trust)| trust && server == *auth_server)
-                    .unwrap_or(false)
-            };
-
+         
             let mut last_err = None;
 
             const FOUR_MINUTES_RETRIES: u64 = 48;
@@ -80,7 +73,8 @@ impl ClientInit {
                 {
                     Ok(mut client) => {
 
-                        if let Err(e) = client.register(username, password, trust_fn).await {
+                        //验证登录模块
+                        if let Err(e) = client.register(username, password).await {
                             last_err = Some(Error::ClientError {
                                 error: e,
                                 mismatched_server_info: None,

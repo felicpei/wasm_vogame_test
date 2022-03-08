@@ -56,7 +56,6 @@ mod frame;
 mod handshake;
 mod message;
 mod metrics;
-mod mpsc;
 mod prio;
 mod tcp;
 mod types;
@@ -67,10 +66,8 @@ pub use event::ProtocolEvent;
 pub use metrics::ProtocolMetricCache;
 #[cfg(feature = "metrics")]
 pub use metrics::ProtocolMetrics;
-pub use mpsc::{MpscMsg, MpscRecvProtocol, MpscSendProtocol};
 pub use tcp::{TcpRecvProtocol, TcpSendProtocol};
 pub use types::{Bandwidth, Cid, Pid, Prio, Promises, Sid, HIGHEST_PRIO, VELOREN_NETWORK_VERSION};
-
 ///use at own risk, might change any time, for internal benchmarks
 pub mod _internal {
     pub use crate::{

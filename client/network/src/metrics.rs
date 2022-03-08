@@ -7,16 +7,16 @@ use std::{error::Error, net::SocketAddr};
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub(crate) enum ProtocolInfo {
     Tcp(SocketAddr),
-    Udp(SocketAddr),
-    Mpsc(u64),
+    //Udp(SocketAddr),
+    //Mpsc(u64),
 }
 
 impl From<ListenAddr> for ProtocolInfo {
     fn from(other: ListenAddr) -> ProtocolInfo {
         match other {
             ListenAddr::Tcp(s) => ProtocolInfo::Tcp(s),
-            ListenAddr::Udp(s) => ProtocolInfo::Udp(s),
-            ListenAddr::Mpsc(s) => ProtocolInfo::Mpsc(s),
+            //ListenAddr::Udp(s) => ProtocolInfo::Udp(s),
+            //ListenAddr::Mpsc(s) => ProtocolInfo::Mpsc(s),
         }
     }
 }
@@ -243,8 +243,8 @@ impl NetworkMetrics {
 fn protocolconnect_name(protocol: &ConnectAddr) -> &str {
     match protocol {
         ConnectAddr::Tcp(_) => "tcp",
-        ConnectAddr::Udp(_) => "udp",
-        ConnectAddr::Mpsc(_) => "mpsc",
+        //ConnectAddr::Udp(_) => "udp",
+        //ConnectAddr::Mpsc(_) => "mpsc",
     }
 }
 
@@ -252,8 +252,8 @@ fn protocolconnect_name(protocol: &ConnectAddr) -> &str {
 fn protocollisten_name(protocol: &ListenAddr) -> &str {
     match protocol {
         ListenAddr::Tcp(_) => "tcp",
-        ListenAddr::Udp(_) => "udp",
-        ListenAddr::Mpsc(_) => "mpsc",
+        //ListenAddr::Udp(_) => "udp",
+        //ListenAddr::Mpsc(_) => "mpsc",
     }
 }
 

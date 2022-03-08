@@ -20,8 +20,6 @@ use veloren_voxygen::{
 };
 
 use chrono::Utc;
-#[cfg(feature = "hot-reloading")]
-use common::assets;
 use common::clock::Clock;
 use std::{panic, path::PathBuf};
 use tracing::{error, info, warn};
@@ -193,21 +191,6 @@ fn main() {
             .build()
             .unwrap(),
     );
-
-    #[cfg(feature = "hot-reloading")]
-    assets::start_hot_reloading();
-
-    // Initialise watcher for animation hot-reloading
-    #[cfg(feature = "hot-anim")]
-    {
-        anim::init();
-    }
-
-    // Initialise watcher for egui hot-reloading
-    #[cfg(feature = "hot-egui")]
-    {
-        voxygen_egui::init();
-    }
 
     // Setup audio
     let mut audio = match settings.audio.output {

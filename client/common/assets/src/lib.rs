@@ -23,9 +23,6 @@ lazy_static! {
         AssetCache::with_source(fs::FileSystem::new().unwrap());
 }
 
-#[cfg(feature = "hot-reloading")]
-pub fn start_hot_reloading() { ASSETS.enhance_hot_reloading(); }
-
 pub type AssetHandle<T> = assets_manager::Handle<'static, T>;
 pub type AssetGuard<T> = assets_manager::AssetGuard<'static, T>;
 pub type AssetDirHandle<T> = assets_manager::DirHandle<'static, T, fs::FileSystem>;

@@ -12,21 +12,16 @@ version = "0.12.0"
 crate-type = ["cdylib", "rlib"]
 
 [features]
-hot-anim = ["anim/use-dyn-lib"]
-hot-egui = ["voxygen-egui/use-dyn-lib", "egui"]
-hot-reloading = ["common/hot-reloading"]
 #singleplayer = ["server"]
+
 simd = ["vek/platform_intrinsics"]
-tracy = ["profiling", "profiling/profile-with-tracy", "common-frontend/tracy", "client/tracy"]
-tracy-memory = ["tracy"] # enables heap profiling with tracy
 plugins = ["client/plugins"]
 egui-ui = ["voxygen-egui", "egui", "egui_wgpu_backend", "egui_winit_platform"]
 shaderc-from-source = ["shaderc/build-from-source"]
 
 # We don't ship egui with published release builds so a separate feature is required that excludes it.
-#default-publish = ["singleplayer", "native-dialog", "plugins", "simd"]
-default-publish = ["native-dialog", "plugins", "simd"]
-default = ["default-publish", "egui-ui", "hot-reloading", "shaderc-from-source"]
+default-publish = ["plugins", "simd"]
+default = ["default-publish", "egui-ui", "shaderc-from-source"]
 
 [dependencies]
 wasm-bindgen = "0.2.63"
@@ -105,7 +100,6 @@ guillotiere = "0.6"
 hashbrown = {version = "0.11", features = ["rayon", "serde", "nightly"]}
 image = {version = "0.23.12", default-features = false, features = ["ico", "png"]}
 lazy_static = "1.4.0"
-native-dialog = { version = "0.5.2", optional = true }
 num = "0.4"
 ordered-float = { version = "2.0.1", default-features = false }
 rand = "0.8"
@@ -127,7 +121,6 @@ itertools = "0.10.0"
 
 # Tracy
 tracing = "0.1"
-profiling = { version = "1.0.1", default-features = false, optional = true }
 
 [target.'cfg(target_os = "macos")'.dependencies]
 dispatch = "0.1.4"
@@ -142,7 +135,3 @@ mumble-link = "0.1.0"
 [dev-dependencies]
 criterion = "0.3"
 rayon = "1.5.0"
-
-[[bench]]
-harness = false
-name = "meshing_benchmark"

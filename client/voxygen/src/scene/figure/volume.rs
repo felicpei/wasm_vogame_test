@@ -26,9 +26,6 @@ impl anim::Skeleton for VolumeKey {
     type Body = Self;
 
     const BONE_COUNT: usize = 4;
-    #[cfg(feature = "hot-anim")]
-    const COMPUTE_FN: &'static [u8] = b"I AM NOT USED\0";
-
     fn compute_matrices_inner(
         &self,
         base_mat: anim::vek::Mat4<f32>,

@@ -16,11 +16,8 @@ members = [
     "plugin/rt",
     "voxygen",
     "voxygen/anim",
-    "voxygen/anim/dyn",
     "voxygen/i18n",
-    "voxygen/dynlib",
     "voxygen/egui",
-    "voxygen/egui/dyn",
     "network",
     "network/protocol",
 ]

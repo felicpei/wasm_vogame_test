@@ -5,11 +5,6 @@ use tracing::trace;
 #[derive(Clone, Debug)]
 pub enum ConnectionArgs {
     ///hostname: (hostname|ip):[<port>]
-    Quic {
-        hostname: String,
-        prefer_ipv6: bool,
-    },
-    ///hostname: (hostname|ip):[<port>]
     Tcp {
         hostname: String,
         prefer_ipv6: bool,

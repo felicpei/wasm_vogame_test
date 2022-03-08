@@ -272,7 +272,6 @@ impl PlayState for MainMenuState {
                     server_address,
                 } => {
                     let mut net_settings = &mut global_state.settings.networking;
-                    let use_quic = net_settings.use_quic;
                     net_settings.username = username.clone();
                     net_settings.default_server = server_address.clone();
                     if !net_settings.servers.contains(&server_address) {
@@ -282,17 +281,11 @@ impl PlayState for MainMenuState {
                         .settings
                         .save_to_file_warn(&global_state.config_dir);
 
-                    let connection_args = if use_quic {
-                        ConnectionArgs::Quic {
-                            hostname: server_address,
-                            prefer_ipv6: false,
-                        }
-                    } else {
-                        ConnectionArgs::Tcp {
-                            hostname: server_address,
-                            prefer_ipv6: false,
-                        }
+                    let connection_args = ConnectionArgs::Tcp {
+                        hostname: server_address,
+                        prefer_ipv6: false,
                     };
+
                     attempt_login(
                         &mut global_state.info_message,
                         username,

@@ -8,8 +8,6 @@ use std::{error::Error, net::SocketAddr};
 pub(crate) enum ProtocolInfo {
     Tcp(SocketAddr),
     Udp(SocketAddr),
-    #[cfg(feature = "quic")]
-    Quic(SocketAddr),
     Mpsc(u64),
 }
 
@@ -18,8 +16,6 @@ impl From<ListenAddr> for ProtocolInfo {
         match other {
             ListenAddr::Tcp(s) => ProtocolInfo::Tcp(s),
             ListenAddr::Udp(s) => ProtocolInfo::Udp(s),
-            #[cfg(feature = "quic")]
-            ListenAddr::Quic(s, _) => ProtocolInfo::Quic(s),
             ListenAddr::Mpsc(s) => ProtocolInfo::Mpsc(s),
         }
     }
@@ -249,8 +245,6 @@ fn protocolconnect_name(protocol: &ConnectAddr) -> &str {
         ConnectAddr::Tcp(_) => "tcp",
         ConnectAddr::Udp(_) => "udp",
         ConnectAddr::Mpsc(_) => "mpsc",
-        #[cfg(feature = "quic")]
-        ConnectAddr::Quic(_, _, _) => "quic",
     }
 }
 
@@ -260,8 +254,6 @@ fn protocollisten_name(protocol: &ListenAddr) -> &str {
         ListenAddr::Tcp(_) => "tcp",
         ListenAddr::Udp(_) => "udp",
         ListenAddr::Mpsc(_) => "mpsc",
-        #[cfg(feature = "quic")]
-        ListenAddr::Quic(_, _) => "quic",
     }
 }
 

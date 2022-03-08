@@ -54,7 +54,6 @@ impl ClientInit {
         let cancel2 = Arc::clone(&cancel);
 
         let runtime2 = Arc::clone(&runtime);
-
         runtime.spawn(async move {
             let trust_fn = |auth_server: &str| {
                 let _ = tx.send(Msg::IsAuthTrusted(auth_server.to_string()));
@@ -92,11 +91,13 @@ impl ClientInit {
                         tokio::task::block_in_place(move || drop(runtime2));
                         return;
                     },
+
                     Err(ClientError::NetworkErr(NetworkError::ConnectFailed(
                         NetworkConnectError::Io(e),
                     ))) => {
                         warn!(?e, "Failed to connect to the server. Retrying...");
                     },
+
                     Err(e) => {
                         trace!(?e, "Aborting server connection attempt");
                         last_err = Some(Error::ClientError {

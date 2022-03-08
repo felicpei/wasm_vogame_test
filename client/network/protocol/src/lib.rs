@@ -58,7 +58,6 @@ mod message;
 mod metrics;
 mod mpsc;
 mod prio;
-mod quic;
 mod tcp;
 mod types;
 mod util;
@@ -69,7 +68,6 @@ pub use metrics::ProtocolMetricCache;
 #[cfg(feature = "metrics")]
 pub use metrics::ProtocolMetrics;
 pub use mpsc::{MpscMsg, MpscRecvProtocol, MpscSendProtocol};
-pub use quic::{QuicDataFormat, QuicDataFormatStream, QuicRecvProtocol, QuicSendProtocol};
 pub use tcp::{TcpRecvProtocol, TcpSendProtocol};
 pub use types::{Bandwidth, Cid, Pid, Prio, Promises, Sid, HIGHEST_PRIO, VELOREN_NETWORK_VERSION};
 

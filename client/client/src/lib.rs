@@ -230,20 +230,7 @@ impl Client {
                 hostname,
                 prefer_ipv6,
             } => addr::try_connect(&network, &hostname, prefer_ipv6, ConnectAddr::Tcp).await?,
-            ConnectionArgs::Quic {
-                hostname,
-                prefer_ipv6,
-            } => {
-                warn!(
-                    "QUIC is enabled. This is experimental and you won't be able to connect to \
-                     TCP servers unless deactivated"
-                );
-                let config = quinn::ClientConfig::with_native_roots();
-                addr::try_connect(&network, &hostname, prefer_ipv6, |a| {
-                    ConnectAddr::Quic(a, config.clone(), hostname.clone())
-                })
-                .await?
-            },
+  
             ConnectionArgs::Mpsc(id) => network.connect(ConnectAddr::Mpsc(id)).await?,
         };
 

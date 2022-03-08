@@ -3799,11 +3799,15 @@ dependencies = [
 [[package]]
 name = "quinn"
 version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "61a84d97630b137463c8e6802adc1dfe9de81457b41bb1ac59189e6761ab9255"
 dependencies = [
  "bytes",
+ "futures-channel",
+ "futures-util",
+ "fxhash",
  "quinn-proto",
  "quinn-udp",
- "rustc-hash",
  "rustls",
  "thiserror",
  "tokio",
@@ -3813,14 +3817,17 @@ dependencies = [
 
 [[package]]
 name = "quinn-proto"
-version = "0.8.0"
+version = "0.8.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d2b1562bf4998b0c6d1841a4742b7103bb82cdde61374833de826bab9e8ad498"
 dependencies = [
  "bytes",
+ "fxhash",
  "rand",
  "ring",
- "rustc-hash",
  "rustls",
  "rustls-native-certs",
+ "rustls-pemfile",
  "slab",
  "thiserror",
  "tinyvec",
@@ -3830,11 +3837,15 @@ dependencies = [
 
 [[package]]
 name = "quinn-udp"
-version = "0.1.0"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "df185e5e5f7611fa6e628ed8f9633df10114b03bbaecab186ec55822c44ac727"
 dependencies = [
+ "futures-util",
  "libc",
  "mio 0.7.14",
  "quinn-proto",
+ "socket2",
  "tokio",
  "tracing",
 ]
@@ -4990,6 +5001,8 @@ checksum = "cda74da7e1a664f795bb1f8a87ec406fb89a02522cf6e50620d016add6dbbf5c"
 [[package]]
 name = "tokio"
 version = "1.17.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2af73ac49756f3f7c01172e34a23e5d0216f6c32333757c2c61feb2bbff5a5ee"
 dependencies = [
  "bytes",
  "libc",
@@ -5005,6 +5018,8 @@ dependencies = [
 [[package]]
 name = "tokio-macros"
 version = "1.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b557f72f448c511a979e2564e55d74e6c4432fc96ff4f6241bc6bded342643b7"
 dependencies = [
  "proc-macro2 1.0.36",
  "quote 1.0.15",
@@ -5014,6 +5029,8 @@ dependencies = [
 [[package]]
 name = "tokio-stream"
 version = "0.1.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "50145484efff8818b5ccd256697f36863f587da82cf8b409c53adf1e840798e3"
 dependencies = [
  "futures-core",
  "pin-project-lite",
@@ -6541,23 +6558,3 @@ checksum = "e262a29d0e61ccf2b6190d7050d4b237535fc76ce4c1210d9caa316f71dffa75"
 dependencies = [
  "chrono",
 ]
-
-[[patch.unused]]
-name = "hyper"
-version = "0.14.17"
-
-[[patch.unused]]
-name = "hyper-rustls"
-version = "0.23.0"
-
-[[patch.unused]]
-name = "tokio-rustls"
-version = "0.23.2"
-
-[[patch.unused]]
-name = "tokio-test"
-version = "0.4.2"
-
-[[patch.unused]]
-name = "tokio-util"
-version = "0.7.0"

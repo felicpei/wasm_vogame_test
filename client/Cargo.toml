@@ -106,19 +106,3 @@ vek = { git = "https://gitlab.com/veloren/vek.git", branch = "fix_intrinsics2" }
 
 # patch wgpu so we can use wgpu-profiler crate
 wgpu = { git = "https://github.com/gfx-rs/wgpu.git", rev = "a92b8549a8e2cb9dac781bafc5ed32828f3caf46" }
-
-
-# custom
-tokio = { path = './dep/tokio/tokio' }                  #1.17.0
-tokio-macros = { path = './dep/tokio/tokio-macros' }    #1.7.0
-tokio-stream = { path = './dep/tokio/tokio-stream' }    #0.1.8
-tokio-test = { path = './dep/tokio/tokio-test' }        #0.4.2
-tokio-util = { path = './dep/tokio/tokio-util' }        #0.7.0
-tokio-rustls = { path = './dep/tokio-rustls/tokio-rustls' }  #0.23.2
-
-quinn = { path = './dep/quinn/quinn' }                  #0.8.0
-quinn-proto = { path = './dep/quinn/quinn-proto' }      #0.8.0
-quinn-udp = { path = './dep/quinn/quinn-udp' }          #0.1.0
-
-hyper = { path = './dep/hyper' }                        #0.14.17
-hyper-rustls = { path = './dep/hyper-rustls' }          #0.23.0

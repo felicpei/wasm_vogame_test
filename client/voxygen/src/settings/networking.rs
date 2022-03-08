@@ -9,20 +9,18 @@ pub struct NetworkingSettings {
     pub servers: Vec<String>,
     pub default_server: String,
     pub trusted_auth_servers: HashSet<String>,
-    pub use_quic: bool,
 }
 
 impl Default for NetworkingSettings {
     fn default() -> Self {
         Self {
             username: "".to_string(),
-            servers: vec!["server.veloren.net".to_string()],
-            default_server: "server.veloren.net".to_string(),
+            servers: vec!["127.0.0.1".to_string()],
+            default_server: "127.0.0.1".to_string(),
             trusted_auth_servers: ["https://auth.veloren.net"]
                 .iter()
                 .map(|s| s.to_string())
                 .collect(),
-            use_quic: false,
         }
     }
 }

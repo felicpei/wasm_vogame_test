@@ -199,18 +199,6 @@ impl Scheduler {
                             )
                             .await
                         },
-                        #[cfg(feature = "quic")]
-                        ListenAddr::Quic(addr, ref server_config) => {
-                            Protocols::with_quic_listen(
-                                addr,
-                                server_config.clone(),
-                                cids,
-                                metrics,
-                                s2s_stop_listening_r,
-                                c2s_protocol_s,
-                            )
-                            .await
-                        },
                         ListenAddr::Mpsc(addr) => {
                             Protocols::with_mpsc_listen(
                                 addr,
@@ -243,10 +231,6 @@ impl Scheduler {
             self.metrics.connect_request(&addr);
             let protocol = match addr {
                 ConnectAddr::Tcp(addr) => Protocols::with_tcp_connect(addr, metrics).await,
-                #[cfg(feature = "quic")]
-                ConnectAddr::Quic(addr, ref config, name) => {
-                    Protocols::with_quic_connect(addr, config.clone(), name, metrics).await
-                },
                 ConnectAddr::Mpsc(addr) => Protocols::with_mpsc_connect(addr, metrics).await,
                 _ => unimplemented!(),
             };

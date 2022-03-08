@@ -99,39 +99,6 @@ lazy_static! {
 }
 
 #[allow(dead_code)]
-pub fn quic() -> (ListenAddr, ConnectAddr) {
-    const LOCALHOST: &str = "localhost";
-    let port = UDP_PORTS.fetch_add(1, Ordering::Relaxed);
-
-    trace!("generating self-signed certificate");
-    let cert = rcgen::generate_simple_self_signed(vec![LOCALHOST.into()]).unwrap();
-    let key = cert.serialize_private_key_der();
-    let cert = cert.serialize_der().unwrap();
-
-    let key = rustls::PrivateKey(key);
-    let cert = rustls::Certificate(cert);
-
-    let mut root_store = rustls::RootCertStore::empty();
-    root_store.add(&cert).expect("cannot add cert to rootstore");
-
-    let server_config = quinn::ServerConfig::with_single_cert(vec![cert], key)
-        .expect("Server Config Cert/Key failed");
-    let client_config = quinn::ClientConfig::with_root_certificates(root_store);
-    use std::net::IpAddr;
-    (
-        ListenAddr::Quic(
-            SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), port),
-            server_config,
-        ),
-        ConnectAddr::Quic(
-            SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), port),
-            client_config,
-            LOCALHOST.to_owned(),
-        ),
-    )
-}
-
-#[allow(dead_code)]
 pub fn udp() -> (ListenAddr, ConnectAddr) {
     let port = UDP_PORTS.fetch_add(1, Ordering::Relaxed);
     (

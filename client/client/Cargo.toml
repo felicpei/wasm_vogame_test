@@ -19,7 +19,7 @@ common-base = { package = "veloren-common-base", path = "../common/base" }
 common-state = { package = "veloren-common-state", path = "../common/state", default-features = false }
 common-systems = { package = "veloren-common-systems", path = "../common/systems", default-features = false }
 common-net = { package = "veloren-common-net", path = "../common/net" }
-network = { package = "veloren-network", path = "../network", features = ["compression","quic"], default-features = false }
+network = { package = "veloren-network", path = "../network", features = ["compression"], default-features = false }
 
 
 tokio = { version = "=1.17.0", default-features = false, features = ["rt-multi-thread"] }

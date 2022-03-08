@@ -205,15 +205,6 @@ impl BParticipant {
                 None
             }
         ).or_else(
-            // check for quic, TODO: evaluate to order quic BEFORE tcp once its stable
-            || if network_protocol::QuicSendProtocol::<crate::channel::QuicDrain>::supported_promises()
-                .contains(promises)
-            {
-                all.data.iter().find(|(_, p)| matches!(p, SendProtocols::Quic(_))).map(|(c, _)| *c)
-            } else {
-                None
-            }
-        ).or_else(
             || {
                 warn!("couldn't satisfy promises");
                 all.data.first().map(|(c, _)| *c)

@@ -9,9 +9,7 @@ edition = "2021"
 [features]
 metrics = ["prometheus", "network-protocol/metrics"]
 compression = ["lz-fear"]
-quic = ["quinn"]
-
-default = ["metrics","compression","quic"]
+default = ["metrics","compression"]
 
 [dependencies]
 network-protocol = { package = "veloren-network-protocol", path = "protocol" }

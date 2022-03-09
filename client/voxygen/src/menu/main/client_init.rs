@@ -82,7 +82,11 @@ impl ClientInit {
                             break 'tries;
                         }
                         let _ = tx.send(Msg::Done(Ok(client)));
-                        tokio::task::block_in_place(move || drop(runtime2));
+
+                        
+                        //########## 去掉多线程 rt_multi_thread
+                        tokio::task::spawn_blocking(move || drop(runtime2));
+                        //tokio::task::block_in_place(move || drop(runtime2));
                         return;
                     },
 
@@ -110,7 +114,9 @@ impl ClientInit {
             let _ = tx.send(Msg::Done(Err(last_err.unwrap_or(Error::ServerNotFound))));
 
             // Safe drop runtime
-            tokio::task::block_in_place(move || drop(runtime2));
+            //########## 去掉多线程 rt_multi_thread
+            //tokio::task::block_in_place(move || drop(runtime2));
+            tokio::task::spawn_blocking(move || drop(runtime2));
         });
 
         ClientInit {

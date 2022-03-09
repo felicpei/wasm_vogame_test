@@ -23,6 +23,7 @@ use i18n::LocalizationHandle;
 use scene::Scene;
 use std::sync::Arc;
 use tokio::runtime;
+
 use tracing::error;
 use ui::{Event as MainMenuEvent, MainMenuUi};
 
@@ -289,6 +290,7 @@ impl PlayState for MainMenuState {
                         prefer_ipv6: false,
                     };
 
+                    dbg!("### try MainMenuEvent => LoginAttempt");
                     attempt_login(
                         &mut global_state.info_message,
                         username,
@@ -481,6 +483,7 @@ fn attempt_login(
     runtime: &Arc<runtime::Runtime>,
     localized_strings: &LocalizationHandle,
 ) {
+    dbg!("attempt_login start");
     let localization = localized_strings.read();
     if let Err(err) = comp::Player::alias_validate(&username) {
         match err {

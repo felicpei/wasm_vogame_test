@@ -37,8 +37,6 @@ pub mod window;
 
 #[cfg(feature = "singleplayer")]
 use crate::singleplayer::Singleplayer;
-#[cfg(feature = "egui-ui")]
-use crate::ui::egui::EguiState;
 use crate::{
     audio::AudioFrontend,
     profile::Profile,
@@ -52,6 +50,7 @@ use i18n::LocalizationHandle;
 use std::path::PathBuf;
 
 use std::sync::Arc;
+
 use tokio::runtime::Runtime;
 
 /// A type used to store state that is shared between all play states.
@@ -62,8 +61,6 @@ pub struct GlobalState {
     pub profile: Profile,
     pub window: Window,
     pub tokio_runtime: Arc<Runtime>,
-    #[cfg(feature = "egui-ui")]
-    pub egui_state: EguiState,
     pub lazy_init: scene::terrain::SpriteRenderContextLazy,
     pub audio: AudioFrontend,
     pub info_message: Option<String>,

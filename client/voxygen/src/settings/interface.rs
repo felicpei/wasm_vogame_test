@@ -87,8 +87,3 @@ impl Default for InterfaceSettings {
         }
     }
 }
-
-#[cfg(feature = "egui-ui")]
-impl InterfaceSettings {
-    pub fn egui_enabled(&self) -> bool { self.toggle_egui_debug }
-}

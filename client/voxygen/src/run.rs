@@ -31,20 +31,6 @@ pub fn run(mut global_state: GlobalState, event_loop: EventLoop) {
         // Continuously run loop since we handle sleeping
         *control_flow = winit::event_loop::ControlFlow::Poll;
 
-        #[cfg(feature = "egui-ui")]
-        {
-            let enabled_for_current_state =
-                states.last().map_or(false, |state| state.egui_enabled());
-
-            // Only send events to the egui UI when it is being displayed.
-            if enabled_for_current_state && global_state.settings.interface.egui_enabled() {
-                global_state.egui_state.platform.handle_event(&event);
-                if global_state.egui_state.platform.captures_event(&event) {
-                    return;
-                }
-            }
-        }
-
         // Don't pass resize events to the ui, `Window` is responsible for:
         // - deduplicating them
         // - generating resize events for the ui
@@ -195,9 +181,6 @@ fn handle_main_events_cleared(
 
     drop(guard);
 
-    #[cfg(feature = "egui-ui")]
-    let scale_factor = global_state.window.window().scale_factor() as f32;
-
     if let Some(last) = states.last_mut() {
         capped_fps = last.capped_fps();
 
@@ -215,11 +198,6 @@ fn handle_main_events_cleared(
             }
 
             last.render(&mut drawer, &global_state.settings);
-
-            #[cfg(feature = "egui-ui")]
-            if last.egui_enabled() && global_state.settings.interface.egui_enabled() {
-                drawer.draw_egui(&mut global_state.egui_state.platform, scale_factor);
-            }
         };
         if global_state.clear_shadows_next_frame {
             global_state.clear_shadows_next_frame = false;
@@ -251,8 +229,6 @@ fn handle_main_events_cleared(
             .set_target_dt(Duration::from_secs_f64(1.0 / target_fps as f64));
         global_state.clock.tick();
         drop(guard);
-        #[cfg(feature = "tracy")]
-        common_base::tracy_client::finish_continuous_frame!();
 
         // Maintain global state.
         global_state.maintain(global_state.clock.dt());

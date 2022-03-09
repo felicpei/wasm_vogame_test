@@ -17,11 +17,15 @@
 
 -------------------------------------
 
-1. 屏蔽使用socket2的地方，用client_tcp feature 区分。（用cargo跑的话，在network的default里加上client_tcp)
+1. 屏蔽使用socket2的地方，用client_tcp feature 区分。（用cargo跑的话，打开client_tcp feature)
 2. 删除dyn相关，dyn是支持动态更新资源的，web应该不需要。（解除notify，net2的引用）
 3. 删除feature tracy相关，profile用的，wasm不可用了。
 4. 删除有问题的dev引用，一些单元测试test代码，test以后wasm也没法用了。
-5. 删掉了egui相关，不知道干嘛用的。删掉后进游戏跑还是正常的。
+5. 删掉了egui相关，看了只有debug按钮用到，先删掉。删掉后进游戏跑还是正常的。
 6. 删掉了plugin相关的feature，这个看上去是可以加载外部插件用的。（删掉后，游戏无影响）
+7. 删除了 num_cpus（这个通过获取cpu核心数量，来定义场景同时渲染数量，修改为1）
+8. 修改 tokio 的 rt-multi-thread 为 rt，wasm不支持 rt-multi-thread。(修改对应的报错代码）
+
+
 
 	

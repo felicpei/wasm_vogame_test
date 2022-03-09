@@ -53,8 +53,6 @@ use hashbrown::HashMap;
 use interactable::{select_interactable, Interactable};
 use settings_change::Language::ChangeLanguage;
 use target::targets_under_cursor;
-#[cfg(feature = "egui-ui")]
-use voxygen_egui::EguiDebugInfo;
 
 /// The action to perform after a tick
 enum TickAction {
@@ -1103,24 +1101,6 @@ impl PlayState for SessionState {
                 },
                 self.interactable,
             );
-
-            // Maintain egui (debug interface)
-            #[cfg(feature = "egui-ui")]
-            if global_state.settings.interface.egui_enabled() {
-                let settings_change = global_state.egui_state.maintain(
-                    &mut self.client.borrow_mut(),
-                    &mut self.scene,
-                    debug_info.map(|debug_info| EguiDebugInfo {
-                        frame_time: debug_info.frame_time,
-                        ping_ms: debug_info.ping_ms,
-                    }),
-                    &global_state.settings,
-                );
-
-                if let Some(settings_change) = settings_change {
-                    settings_change.process(global_state, self);
-                }
-            }
 
             // Look for changes in the localization files
             if global_state.i18n.reloaded() {

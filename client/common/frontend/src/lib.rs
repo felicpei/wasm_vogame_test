@@ -1,4 +1,4 @@
-#[cfg(not(feature = "tracy"))] use std::fs;
+use std::fs;
 use std::path::Path;
 
 use termcolor::{ColorChoice, StandardStream};
@@ -39,10 +39,7 @@ where
 {
     // To hold the guards that we create, they will cause the logs to be
     // flushed when they're dropped.
-    #[cfg(not(feature = "tracy"))]
     let mut guards: Vec<WorkerGuard> = Vec::new();
-    #[cfg(feature = "tracy")]
-    let guards: Vec<WorkerGuard> = Vec::new();
 
     // We will do lower logging than the default (INFO) by INCLUSION. This
     // means that if you need lower level logging for a specific module, then
@@ -96,17 +93,9 @@ where
     };
 
     let registry = registry();
-    #[cfg(not(feature = "tracy"))]
     let mut file_setup = false;
-    #[cfg(feature = "tracy")]
-    let file_setup = false;
-    #[cfg(feature = "tracy")]
-    let _terminal = terminal;
 
     // Create the terminal writer layer.
-    #[cfg(feature = "tracy")]
-    let registry = registry.with(tracing_tracy::TracyLayer::new().with_stackdepth(0));
-    #[cfg(not(feature = "tracy"))]
     let registry = {
         let (non_blocking, stdio_guard) = tracing_appender::non_blocking(terminal.make_writer());
         guards.push(stdio_guard);
@@ -114,7 +103,6 @@ where
     };
 
     // Try to create the log file's parent folders.
-    #[cfg(not(feature = "tracy"))]
     if let Some((path, file)) = log_path_file {
         match fs::create_dir_all(path) {
             Ok(_) => {
@@ -138,8 +126,6 @@ where
     } else {
         registry.with(filter).init();
     }
-    #[cfg(feature = "tracy")]
-    registry.with(filter).init();
 
     if file_setup {
         let (path, file) = log_path_file.unwrap();

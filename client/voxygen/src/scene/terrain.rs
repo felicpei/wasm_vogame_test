@@ -937,11 +937,15 @@ impl<V: RectRasterableVol> Terrain<V> {
 
         // Limit ourselves to u16::MAX even if larger textures are supported.
         let max_texture_size = renderer.max_texture_size();
-        let meshing_cores = match num_cpus::get() as u64 {
-            n if n < 4 => 1,
-            n if n < 8 => n - 3,
-            n => n - 4,
-        };
+
+        //########## 这个是根据cpu数量来控制效率
+        let meshing_cores = 1;
+        
+        // let meshing_cores = match num_cpus::get() as u64 {
+        //     n if n < 4 => 1,
+        //     n if n < 8 => n - 3,
+        //     n => n - 4,
+        // };
 
         span!(guard, "Queue meshing from todo list");
         let mesh_focus_pos = focus_pos.map(|e| e.trunc()).xy().as_::<i64>();

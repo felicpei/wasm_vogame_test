@@ -31,8 +31,6 @@ use super::{
 use common::assets::{self, AssetExt, AssetHandle, ReloadWatcher};
 use common_base::span;
 use core::convert::TryFrom;
-#[cfg(feature = "egui-ui")]
-use egui_wgpu_backend::wgpu::TextureFormat;
 use std::sync::Arc;
 use tracing::{error, info, warn};
 use vek::*;
@@ -168,9 +166,6 @@ pub struct Renderer {
     profiler: wgpu_profiler::GpuProfiler,
     profile_times: Vec<wgpu_profiler::GpuTimerScopeResult>,
     profiler_features_enabled: bool,
-
-    #[cfg(feature = "egui-ui")]
-    egui_renderpass: egui_wgpu_backend::RenderPass,
 
     // This checks is added because windows resizes the window to 0,0 when
     // minimizing and this causes a bunch of validation errors
@@ -485,10 +480,6 @@ impl Renderer {
         profiler.enable_timer = other_modes.profiler_enabled;
         profiler.enable_debug_marker = other_modes.profiler_enabled;
 
-        #[cfg(feature = "egui-ui")]
-        let egui_renderpass =
-            egui_wgpu_backend::RenderPass::new(&*device, TextureFormat::Bgra8UnormSrgb, 1);
-
         Ok(Self {
             device,
             queue,
@@ -522,9 +513,6 @@ impl Renderer {
             profiler,
             profile_times: Vec::new(),
             profiler_features_enabled,
-
-            #[cfg(feature = "egui-ui")]
-            egui_renderpass,
 
             is_minimized: false,
 

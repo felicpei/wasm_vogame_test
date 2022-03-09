@@ -77,16 +77,6 @@ use tokio::runtime::Runtime;
 use tracing::{debug, error, trace, warn};
 use vek::*;
 
-#[cfg(feature = "tracy")]
-mod tracy_plots {
-    use common_base::tracy_client::{create_plot, Plot};
-    pub static TERRAIN_SENDS: Plot = create_plot!("terrain_sends");
-    pub static TERRAIN_RECVS: Plot = create_plot!("terrain_recvs");
-    pub static INGAME_SENDS: Plot = create_plot!("ingame_sends");
-    pub static INGAME_RECVS: Plot = create_plot!("ingame_recvs");
-}
-#[cfg(feature = "tracy")] use tracy_plots::*;
-
 const PING_ROLLING_AVERAGE_SECS: usize = 10;
 
 #[derive(Debug)]
@@ -739,8 +729,6 @@ impl Client {
             ClientMsg::Type(msg) => self.register_stream.send(msg),
             ClientMsg::Register(msg) => self.register_stream.send(msg),
             ClientMsg::General(msg) => {
-                #[cfg(feature = "tracy")]
-                let (mut ingame, mut terrain) = (0.0, 0.0);
                 let stream = match msg {
                     ClientGeneral::RequestCharacterList
                     | ClientGeneral::CreateCharacter { .. }
@@ -764,18 +752,10 @@ impl Client {
                     | ClientGeneral::RequestLossyTerrainCompression { .. }
                     | ClientGeneral::AcknowledgePersistenceLoadError
                     | ClientGeneral::UpdateMapMarker(_) => {
-                        #[cfg(feature = "tracy")]
-                        {
-                            ingame = 1.0;
-                        }
                         &mut self.in_game_stream
                     },
                     //Only in game, terrain
                     ClientGeneral::TerrainChunkRequest { .. } => {
-                        #[cfg(feature = "tracy")]
-                        {
-                            terrain = 1.0;
-                        }
                         &mut self.terrain_stream
                     },
                     //Always possible
@@ -783,11 +763,6 @@ impl Client {
                     | ClientGeneral::Command(_, _)
                     | ClientGeneral::Terminate => &mut self.general_stream,
                 };
-                #[cfg(feature = "tracy")]
-                {
-                    INGAME_SENDS.point(ingame);
-                    TERRAIN_SENDS.point(terrain);
-                }
                 stream.send(msg)
             },
             ClientMsg::Ping(msg) => self.ping_stream.send(msg),
@@ -2158,8 +2133,6 @@ impl Client {
 
     fn handle_messages(&mut self, frontend_events: &mut Vec<Event>) -> Result<u64, Error> {
         let mut cnt = 0;
-        #[cfg(feature = "tracy")]
-        let (mut terrain_cnt, mut ingame_cnt) = (0, 0);
         loop {
             let cnt_start = cnt;
 
@@ -2177,29 +2150,14 @@ impl Client {
             }
             while let Some(msg) = self.in_game_stream.try_recv()? {
                 cnt += 1;
-                #[cfg(feature = "tracy")]
-                {
-                    ingame_cnt += 1;
-                }
                 self.handle_server_in_game_msg(frontend_events, msg)?;
             }
             while let Some(msg) = self.terrain_stream.try_recv()? {
                 cnt += 1;
-                #[cfg(feature = "tracy")]
-                {
-                    if let ServerGeneral::TerrainChunkUpdate { chunk, .. } = &msg {
-                        terrain_cnt += chunk.as_ref().map(|x| x.approx_len()).unwrap_or(0);
-                    }
-                }
                 self.handle_server_terrain_msg(msg)?;
             }
 
             if cnt_start == cnt {
-                #[cfg(feature = "tracy")]
-                {
-                    TERRAIN_RECVS.point(terrain_cnt as f64);
-                    INGAME_RECVS.point(ingame_cnt as f64);
-                }
                 return Ok(cnt);
             }
         }
@@ -2622,86 +2580,17 @@ impl Drop for Client {
             trace!("no disconnect msg necessary as client wasn't registered")
         }
 
-        tokio::task::block_in_place(|| {
-            if let Err(e) = self
-                .runtime
-                .block_on(self.participant.take().unwrap().disconnect())
-            {
-                warn!(?e, "error when disconnecting, couldn't send all data");
-            }
-        });
+        //########## 去掉多线程 rt_multi_thread
+        // tokio::task::block_in_place(|| {
+        //     if let Err(e) = self
+        //         .runtime
+        //         .block_on(self.participant.take().unwrap().disconnect())
+        //     {
+        //         warn!(?e, "error when disconnecting, couldn't send all data");
+        //     }
+        // });
+
         //explicitly drop the network here while the runtime is still existing
         drop(self.network.take());
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    /// THIS TEST VERIFIES THE CONSTANT API.
-    /// CHANGING IT WILL BREAK 3rd PARTY APPLICATIONS (please extend) which
-    /// needs to be informed (or fixed)
-    ///  - torvus: https://gitlab.com/veloren/torvus
-    /// CONTACT @Core Developer BEFORE MERGING CHANGES TO THIS TEST
-    fn constant_api_test() {
-        use common::clock::Clock;
-
-        const SPT: f64 = 1.0 / 60.0;
-
-        let runtime = Arc::new(Runtime::new().unwrap());
-        let runtime2 = Arc::clone(&runtime);
-        let veloren_client: Result<Client, Error> = runtime.block_on(Client::new(
-            ConnectionArgs::Tcp {
-                hostname: "127.0.0.1:9000".to_owned(),
-                prefer_ipv6: false,
-            },
-            runtime2,
-            &mut None,
-        ));
-
-        let _ = veloren_client.map(|mut client| {
-            //register
-            let username: String = "Foo".to_string();
-            let password: String = "Bar".to_string();
-            let auth_server: String = "auth.veloren.net".to_string();
-            let _result: Result<(), Error> =
-                runtime.block_on(client.register(username, password));
-
-            //clock
-            let mut clock = Clock::new(Duration::from_secs_f64(SPT));
-
-            //tick
-            let events_result: Result<Vec<Event>, Error> =
-                client.tick(comp::ControllerInputs::default(), clock.dt(), |_| {});
-
-            //chat functionality
-            client.send_chat("foobar".to_string());
-
-            let _ = events_result.map(|mut events| {
-                // event handling
-                if let Some(event) = events.pop() {
-                    match event {
-                        Event::Chat(msg) => {
-                            let msg: comp::ChatMsg = msg;
-                            let _s: String = client.format_message(&msg, true);
-                        },
-                        Event::Disconnect => {},
-                        Event::DisconnectionNotification(_) => {
-                            tracing::debug!("Will be disconnected soon! :/")
-                        },
-                        Event::Notification(notification) => {
-                            let notification: Notification = notification;
-                            tracing::debug!("Notification: {:?}", notification);
-                        },
-                        _ => {},
-                    }
-                };
-            });
-
-            client.cleanup();
-            clock.tick();
-        });
     }
 }

@@ -23,8 +23,6 @@ use chrono::Utc;
 use common::clock::Clock;
 use std::{panic, path::PathBuf};
 use tracing::{error, info, warn};
-#[cfg(feature = "egui-ui")]
-use veloren_voxygen::ui::egui::EguiState;
 
 fn main() {
     let userdata_dir = common_base::userdata_dir_workspace!();
@@ -178,7 +176,7 @@ fn main() {
     use tokio::runtime::Builder;
 
     // TODO: evaluate std::thread::available_concurrency as a num_cpus replacement
-    let cores = num_cpus::get();
+    let cores = 8;
     let tokio_runtime = Arc::new(
         Builder::new_multi_thread()
             .enable_all()
@@ -250,9 +248,6 @@ fn main() {
 
     let lazy_init = SpriteRenderContext::new(window.renderer_mut());
 
-    #[cfg(feature = "egui-ui")]
-    let egui_state = EguiState::new(&window);
-
     let global_state = GlobalState {
         userdata_dir,
         config_dir,
@@ -260,8 +255,6 @@ fn main() {
         profile,
         window,
         tokio_runtime,
-        #[cfg(feature = "egui-ui")]
-        egui_state,
         lazy_init,
         clock: Clock::new(std::time::Duration::from_secs_f64(
             1.0 / get_fps(settings.graphics.max_fps) as f64,

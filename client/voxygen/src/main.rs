@@ -176,16 +176,18 @@ fn main() {
     use tokio::runtime::Builder;
 
     // TODO: evaluate std::thread::available_concurrency as a num_cpus replacement
-    let cores = 8;
     let tokio_runtime = Arc::new(
-        Builder::new_multi_thread()
-            .enable_all()
-            .worker_threads((cores / 4).max(MIN_RECOMMENDED_TOKIO_THREADS))
-            .thread_name_fn(|| {
-                static ATOMIC_ID: AtomicUsize = AtomicUsize::new(0);
-                let id = ATOMIC_ID.fetch_add(1, Ordering::SeqCst);
-                format!("tokio-voxygen-{}", id)
-            })
+        // Builder::new_multi_thread()
+        //     .enable_all()
+        //     .worker_threads((cores / 4).max(MIN_RECOMMENDED_TOKIO_THREADS))
+        //     .thread_name_fn(|| {
+        //         static ATOMIC_ID: AtomicUsize = AtomicUsize::new(0);
+        //         let id = ATOMIC_ID.fetch_add(1, Ordering::SeqCst);
+        //         format!("tokio-voxygen-{}", id)
+        //     })
+        //     .build()
+        //     .unwrap(),
+        Builder::new_current_thread()
             .build()
             .unwrap(),
     );

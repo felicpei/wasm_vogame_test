@@ -85,9 +85,6 @@ pub enum Event {
     #[cfg(feature = "singleplayer")]
     StartSingleplayer,
     Quit,
-    // Note: Keeping in case we re-add the disclaimer
-    //DisclaimerAccepted,
-    AuthServerTrust(String, bool),
     DeleteServer {
         server_index: usize,
     },
@@ -101,7 +98,6 @@ pub struct LoginInfo {
 
 enum ConnectionState {
     InProgress,
-    AuthTrustPrompt { auth_server: String, msg: String },
 }
 
 enum Screen {
@@ -165,8 +161,6 @@ enum Message {
     ServerChanged(usize),
     FocusPassword,
     CancelConnect,
-    TrustPromptAdd,
-    TrustPromptCancel,
     CloseError,
     DeleteServer,
     /* Note: Keeping in case we re-add the disclaimer
@@ -409,20 +403,6 @@ impl Controls {
                 self.exit_connect_screen();
                 events.push(Event::CancelLoginAttempt);
             },
-            msg @ Message::TrustPromptAdd | msg @ Message::TrustPromptCancel => {
-                if let Screen::Connecting {
-                    connection_state, ..
-                } = &mut self.screen
-                {
-                    if let ConnectionState::AuthTrustPrompt { auth_server, .. } = connection_state {
-                        let auth_server = std::mem::take(auth_server);
-                        let added = matches!(msg, Message::TrustPromptAdd);
-
-                        *connection_state = ConnectionState::InProgress;
-                        events.push(Event::AuthServerTrust(auth_server, added));
-                    }
-                }
-            },
             Message::CloseError => {
                 if let Screen::Login { error, .. } = &mut self.screen {
                     *error = None;
@@ -433,16 +413,6 @@ impl Controls {
                     events.push(Event::DeleteServer { server_index });
                 }
             },
-            /* Note: Keeping in case we re-add the disclaimer */
-            /*Message::AcceptDisclaimer => {
-                if let Screen::Disclaimer { .. } = &self.screen {
-                    events.push(Event::DisclaimerAccepted);
-                    self.screen = Screen::Login {
-                        screen: login::Screen::new(),
-                        error: None,
-                    };
-                }
-            },*/
         }
     }
 
@@ -453,23 +423,6 @@ impl Controls {
                 screen: Box::new(login::Screen::new()),
                 error: None,
             }
-        }
-    }
-
-    fn auth_trust_prompt(&mut self, auth_server: String) {
-        if let Screen::Connecting {
-            connection_state, ..
-        } = &mut self.screen
-        {
-            let msg = format!(
-                "Warning: The server you are trying to connect to has provided this \
-                 authentication server address:\n\n{}\n\nbut it is not in your list of trusted \
-                 authentication servers.\n\nMake sure that you trust this site and owner to not \
-                 try and bruteforce your password!",
-                &auth_server
-            );
-
-            *connection_state = ConnectionState::AuthTrustPrompt { auth_server, msg };
         }
     }
 
@@ -554,10 +507,6 @@ impl MainMenuUi {
         self.controls.selected_language_index = language_metadatas
             .iter()
             .position(|f| f.language_identifier == settings.language.selected_language);
-    }
-
-    pub fn auth_trust_prompt(&mut self, auth_server: String) {
-        self.controls.auth_trust_prompt(auth_server);
     }
 
     pub fn show_info(&mut self, msg: String) { self.controls.connection_error(msg); }

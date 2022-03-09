@@ -63,7 +63,7 @@ use common_systems::add_local_systems;
 use comp::BuffKind;
 use hashbrown::{HashMap, HashSet};
 use image::DynamicImage;
-use network::{ConnectAddr, Network, Participant, Pid, Stream};
+use network::{ConnectAddr, Network, Pid, Stream};
 use num::traits::FloatConst;
 use rayon::prelude::*;
 use specs::Component;
@@ -73,7 +73,6 @@ use std::{
     sync::Arc,
     time::{Duration, Instant},
 };
-use tokio::runtime::Runtime;
 use tracing::{debug, error, trace, warn};
 use vek::*;
 
@@ -150,7 +149,6 @@ pub struct SiteInfoRich {
 pub struct Client {
     registered: bool,
     presence: Option<PresenceKind>,
-    runtime: Arc<Runtime>,
     server_info: ServerInfo,
     world_data: WorldData,
     player_list: HashMap<Uid, PlayerInfo>,
@@ -173,7 +171,6 @@ pub struct Client {
     pending_trade: Option<(TradeId, PendingTrade, Option<SitePrices>)>,
 
     network: Option<Network>,
-    participant: Option<Participant>,
     general_stream: Stream,
     ping_stream: Stream,
     register_stream: Stream,
@@ -209,11 +206,9 @@ pub struct CharacterList {
 impl Client {
     pub async fn new(
         addr: ConnectionArgs,
-        runtime: Arc<Runtime>,
-        // TODO: refactor to avoid needing to use this out parameter
         mismatched_server_info: &mut Option<ServerInfo>,
     ) -> Result<Self, Error> {
-        let network = Network::new(Pid::new(), &runtime);
+        let network = Network::new(Pid::new());
 
         dbg!("conent addr:{}", &addr);
 
@@ -586,7 +581,6 @@ impl Client {
         Ok(Self {
             registered: false,
             presence: None,
-            runtime,
             server_info,
             world_data: WorldData {
                 lod_base,
@@ -618,7 +612,6 @@ impl Client {
             pending_trade: None,
 
             network: Some(network),
-            participant: Some(participant),
             general_stream: stream,
             ping_stream,
             register_stream,
@@ -651,54 +644,12 @@ impl Client {
     ) -> Result<(), Error> {
         // Authentication
 
+        dbg!("# 直接跳过验证, username:{}, password:{}", &token_or_username, &password);
+
         //直接跳过验证
         self.send_msg_err(ClientRegister { token_or_username })?;
         self.registered = true;
         Ok(())
-
-        // let token_or_username = match &self.server_info.auth_provider {
-        //     Some(addr) => {
-        //         // Query whether this is a trusted auth server
-        //         if auth_trusted(addr) {
-        //             let (scheme, authority) = match addr.split_once("://") {
-        //                 Some((s, a)) => (s, a),
-        //                 None => return Err(Error::AuthServerUrlInvalid(addr.to_string())),
-        //             };
-
-        //             let scheme = match scheme.parse::<authc::Scheme>() {
-        //                 Ok(s) => s,
-        //                 Err(_) => return Err(Error::AuthServerUrlInvalid(addr.to_string())),
-        //             };
-
-        //             let authority = match authority.parse::<authc::Authority>() {
-        //                 Ok(a) => a,
-        //                 Err(_) => return Err(Error::AuthServerUrlInvalid(addr.to_string())),
-        //             };
-
-        //             Ok(authc::AuthClient::new(scheme, authority)?
-        //                 .sign_in(&username, &password)
-        //                 .await?
-        //                 .serialize())
-        //         } else {
-        //             Err(Error::AuthServerNotTrusted)
-        //         }
-        //     },
-        //     None => Ok(username),
-        // }?;
-
-        // self.send_msg_err(ClientRegister { token_or_username })?;
-
-        // match self.register_stream.recv::<ServerRegisterAnswer>().await? {
-        //     Err(RegisterError::AuthError(err)) => Err(Error::AuthErr(err)),
-        //     Err(RegisterError::InvalidCharacter) => Err(Error::InvalidCharacter),
-        //     Err(RegisterError::NotOnWhitelist) => Err(Error::NotOnWhitelist),
-        //     Err(RegisterError::Kicked(err)) => Err(Error::Kicked(err)),
-        //     Err(RegisterError::Banned(reason)) => Err(Error::Banned(reason)),
-        //     Ok(()) => {
-        //         self.registered = true;
-        //         Ok(())
-        //     },
-        // }
     }
 
     fn send_msg_err<S>(&mut self, msg: S) -> Result<(), network::StreamError>
@@ -2231,12 +2182,6 @@ impl Client {
             / total_weight)
             * 1000.0
     }
-
-    /// Get a reference to the client's runtime thread pool. This pool should be
-    /// used for any computationally expensive operations that run outside
-    /// of the main thread (i.e., threads that block on I/O operations are
-    /// exempt).
-    pub fn runtime(&self) -> &Arc<Runtime> { &self.runtime }
 
     /// Get a reference to the client's game state.
     pub fn state(&self) -> &State { &self.state }

@@ -19,10 +19,7 @@ use tokio::net:: tcp::{OwnedReadHalf, OwnedWriteHalf};
 use tokio::select;
 
 #[cfg(feature = "client_tcp")]
-use tracing::{error, info, trace, warn};
-
-#[cfg(feature = "client_tcp")]
-use futures_util::future::ok;
+use tracing::{info, trace, warn};
 
 #[cfg(feature = "client_tcp")]
 use futures_util::FutureExt;
@@ -253,16 +250,15 @@ impl UnreliableDrain for TcpDrain {
             match self.half.write_all(&data).await {
                 Ok(()) => Ok(()),
                 Err(_) => Err(ProtocolError::Closed),
-            };
+            }
         }
     
         //websocket连接 todo
         #[cfg(not(feature = "client_tcp"))]
         {
             dbg!("########## todo UnreliableDrain for TcpDrain send");
+            Ok(())
         }
-      
-        Ok(())
     }
 }
 

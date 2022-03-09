@@ -185,20 +185,7 @@ impl PlayState for MainMenuState {
                         .replace("{init_fail_reason}", e.as_str()),
                 );
             },
-            Some(InitMsg::IsAuthTrusted(auth_server)) => {
-                if global_state
-                    .settings
-                    .networking
-                    .trusted_auth_servers
-                    .contains(&auth_server)
-                {
-                    // Can't fail since we just polled it, it must be Some
-                    self.init.client().unwrap().auth_trust(auth_server, true);
-                } else {
-                    // Show warning that auth server is not trusted and prompt for approval
-                    self.main_menu_ui.auth_trust_prompt(auth_server);
-                }
-            },
+           
             None => {},
         }
 
@@ -337,21 +324,7 @@ impl PlayState for MainMenuState {
                 /*MainMenuEvent::DisclaimerAccepted => {
                     global_state.settings.show_disclaimer = false
                 },*/
-                MainMenuEvent::AuthServerTrust(auth_server, trust) => {
-                    if trust {
-                        global_state
-                            .settings
-                            .networking
-                            .trusted_auth_servers
-                            .insert(auth_server.clone());
-                        global_state
-                            .settings
-                            .save_to_file_warn(&global_state.config_dir);
-                    }
-                    self.init
-                        .client()
-                        .map(|init| init.auth_trust(auth_server, trust));
-                },
+               
                 MainMenuEvent::DeleteServer { server_index } => {
                     let net_settings = &mut global_state.settings.networking;
                     net_settings.servers.remove(server_index);

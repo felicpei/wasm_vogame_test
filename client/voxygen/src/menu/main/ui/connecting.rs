@@ -199,61 +199,7 @@ impl Screen {
                     bottom_bar.into(),
                 ]
             },
-            ConnectionState::AuthTrustPrompt { msg, .. } => {
-                let text = Text::new(msg).size(fonts.cyri.scale(25));
-
-                let cancel = neat_button(
-                    &mut self.cancel_button,
-                    i18n.get("common.cancel"),
-                    0.7,
-                    button_style,
-                    Some(Message::TrustPromptCancel),
-                );
-                let add = neat_button(
-                    &mut self.add_button,
-                    i18n.get("common.add"),
-                    0.7,
-                    button_style,
-                    Some(Message::TrustPromptAdd),
-                );
-
-                let content = Column::with_children(vec![
-                    text.into(),
-                    Container::new(
-                        Row::with_children(vec![cancel, add])
-                            .spacing(20)
-                            .height(Length::Units(25)),
-                    )
-                    .align_x(Align::End)
-                    .width(Length::Fill)
-                    .into(),
-                ])
-                .spacing(4)
-                .max_width(520)
-                .width(Length::Fill)
-                .height(Length::Fill);
-
-                let prompt_window = Container::new(content)
-                    .style(
-                        style::container::Style::color_with_double_cornerless_border(
-                            (22, 18, 16, 255).into(),
-                            (11, 11, 11, 255).into(),
-                            (54, 46, 38, 255).into(),
-                        ),
-                    )
-                    .padding(20);
-
-                let container = Container::new(prompt_window)
-                    .width(Length::Fill)
-                    .height(Length::Fill)
-                    .center_x()
-                    .center_y();
-
-                vec![
-                    container.into(),
-                    Space::new(Length::Fill, Length::Units(fonts.cyri.scale(15))).into(),
-                ]
-            },
+            
         };
 
         Column::with_children(children)

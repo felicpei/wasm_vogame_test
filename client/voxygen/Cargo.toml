@@ -105,7 +105,7 @@ treeculler = "0.2"
 #tokio = { version = "=1.17.0", default-features = false, features = ["rt-multi-thread"] }
 #num_cpus = "1.0"
 
-tokio = { version = "=1.17.0", default-features = false, features = ["rt","rt-multi-thread"] }
+tokio = { version = "=1.17.0", default-features = false, features = ["rt"] }
 
 
 # vec_map = { version = "0.8.2" }

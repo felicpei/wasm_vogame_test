@@ -63,7 +63,7 @@ use common_systems::add_local_systems;
 use comp::BuffKind;
 use hashbrown::{HashMap, HashSet};
 use image::DynamicImage;
-use network::{ConnectAddr, Network, Participant, Pid, Stream};
+use network::{ConnectAddr, Network, Pid, Stream};
 use num::traits::FloatConst;
 use rayon::prelude::*;
 use specs::Component;
@@ -173,7 +173,6 @@ pub struct Client {
     pending_trade: Option<(TradeId, PendingTrade, Option<SitePrices>)>,
 
     network: Option<Network>,
-    participant: Option<Participant>,
     general_stream: Stream,
     ping_stream: Stream,
     register_stream: Stream,
@@ -618,7 +617,6 @@ impl Client {
             pending_trade: None,
 
             network: Some(network),
-            participant: Some(participant),
             general_stream: stream,
             ping_stream,
             register_stream,

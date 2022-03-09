@@ -5,11 +5,18 @@ authors = ["Joshua Barretto <joshua.s.barretto@gmail.com>"]
 edition = "2021"
 
 [features]
-client_tcp =["network/client_tcp"]
+#del plugin 这个看上去是可以加载外部插件用的
+#plugins = ["common-state/plugins"]
+
 simd = ["vek/platform_intrinsics"]
-plugins = ["common-state/plugins"]
 tick_network = []
+
+#需要用cargo的tcp情况
+client_tcp =["network/client_tcp"]
 default = ["simd","client_tcp"]
+
+#使用websocket的情况
+#default = ["simd"]
 
 [dependencies]
 common = { package = "veloren-common", path = "../common", features = ["no-assets"] }

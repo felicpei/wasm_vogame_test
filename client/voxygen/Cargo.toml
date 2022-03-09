@@ -15,16 +15,16 @@ crate-type = ["cdylib", "rlib"]
 #singleplayer = ["server"]
 
 simd = ["vek/platform_intrinsics"]
-plugins = ["client/plugins"]
+#plugins = ["client/plugins"]
 shaderc-from-source = ["shaderc/build-from-source"]
-default-publish = ["plugins", "simd"]
+default-publish = ["simd"]
 default = ["default-publish", "shaderc-from-source"]
 
 [dependencies]
-wasm-bindgen = "0.2.63"
+#wasm-bindgen = "0.2.63"
 
 #时间库 代替标准库的time
-instant = { version = "0.1", features = [ "wasm-bindgen", "inaccurate" ] }
+#instant = { version = "0.1", features = [ "wasm-bindgen", "inaccurate" ] }
 
 client = {package = "veloren-client", path = "../client"}
 common = {package = "veloren-common", path = "../common"}
@@ -39,13 +39,11 @@ anim = {package = "veloren-voxygen-anim", path = "anim"}
 i18n = {package = "veloren-voxygen-i18n", path = "i18n"}
 
 # Graphics
-winit = {version = "0.25.0", features = ["serde"]}
+winit = {version = "0.25.0", features = ["serde", "web-sys"]}
 wgpu = { version = "=0.8.0", features = ["trace", "cross", "webgl"] }
 wgpu-profiler = { git = "https://github.com/Imberflur/wgpu-profiler", tag = "wgpu-0.8" }
 bytemuck = { version="1.4", features=["derive"] }
 shaderc = "0.7.4"
-# cmake crate used by shaderc, newer version 0.1.46 uses a new cmake command that is not available in our CI cmake version
-# see https://github.com/alexcrichton/cmake-rs/issues/131
 cmake = "=0.1.45"
 
 # Ui

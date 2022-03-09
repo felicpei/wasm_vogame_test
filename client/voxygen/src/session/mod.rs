@@ -3,9 +3,6 @@ pub mod settings_change;
 mod target;
 
 use std::{cell::RefCell, collections::HashSet, rc::Rc, result::Result, sync::Arc, time::Duration};
-
-#[cfg(not(target_os = "macos"))]
-use mumble_link::SharedLink;
 use ordered_float::OrderedFloat;
 use specs::{Join, WorldExt};
 use tracing::{error, info, warn};
@@ -80,8 +77,6 @@ pub struct SessionState {
     target_entity: Option<specs::Entity>,
     selected_entity: Option<(specs::Entity, std::time::Instant)>,
     interactable: Option<Interactable>,
-    #[cfg(not(target_os = "macos"))]
-    mumble_link: SharedLink,
     hitboxes: HashMap<specs::Entity, DebugShapeId>,
 }
 
@@ -100,25 +95,7 @@ impl SessionState {
         scene
             .camera_mut()
             .set_fov_deg(global_state.settings.graphics.fov);
-        #[cfg(not(target_os = "macos"))]
-        let mut mumble_link = SharedLink::new("veloren", "veloren-voxygen");
-        {
-            let mut client = client.borrow_mut();
-            client.request_player_physics(global_state.settings.gameplay.player_physics_behavior);
-            client.request_lossy_terrain_compression(
-                global_state.settings.graphics.lossy_terrain_compression,
-            );
-            #[cfg(not(target_os = "macos"))]
-            if let Some(uid) = client.uid() {
-                let identiy = if let Some(info) = client.player_list().get(&uid) {
-                    format!("{}-{}", info.player_alias, uid)
-                } else {
-                    format!("unknown-{}", uid)
-                };
-                mumble_link.set_identity(&identiy);
-                // TODO: evaluate context
-            }
-        }
+       
         let hud = Hud::new(global_state, &client.borrow());
         let walk_forward_dir = scene.camera().forward_xy();
         let walk_right_dir = scene.camera().right_xy();
@@ -142,7 +119,6 @@ impl SessionState {
             selected_entity: None,
             interactable: None,
             #[cfg(not(target_os = "macos"))]
-            mumble_link,
             hitboxes: HashMap::new(),
         }
     }
@@ -166,25 +142,6 @@ impl SessionState {
         self.scene
             .maintain_debug_hitboxes(&client, &global_state.settings, &mut self.hitboxes);
 
-        #[cfg(not(target_os = "macos"))]
-        {
-            // Update mumble positional audio
-            let pos = client.position().unwrap_or_default();
-            let ori = client
-                .state()
-                .read_storage::<comp::Ori>()
-                .get(client.entity())
-                .map_or_else(comp::Ori::default, |o| *o);
-            let front = ori.look_dir().to_vec();
-            let top = ori.up().to_vec();
-            // converting from veloren z = height axis, to mumble y = height axis
-            let player_pos = mumble_link::Position {
-                position: [pos.x, pos.z, pos.y],
-                front: [front.x, front.z, front.y],
-                top: [top.x, top.z, top.y],
-            };
-            self.mumble_link.update(player_pos, player_pos);
-        }
 
         for event in client.tick(self.inputs.clone(), dt, crate::ecs::sys::add_local_systems)? {
             match event {

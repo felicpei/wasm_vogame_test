@@ -25,7 +25,9 @@
 6. 删掉了plugin相关的feature，这个看上去是可以加载外部插件用的。（删掉后，游戏无影响）
 7. 删除了 num_cpus（这个通过获取cpu核心数量，来定义场景同时渲染数量，修改为1）
 8. walkdir 剥离：
-	copy_dir ： 
+	copy_dir (没用删了), 
+	mumble-link(不太确定干嘛的，似乎是影响位置音频的，删了没啥影响，代码在：client/voxygen/src/session/mod.rs）
+	rodio 音频使用，不支持wasm，wasm音频需要另外的实现方案。
 	
  winapi、libc、
 

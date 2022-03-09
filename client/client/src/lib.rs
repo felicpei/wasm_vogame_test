@@ -63,7 +63,7 @@ use common_systems::add_local_systems;
 use comp::BuffKind;
 use hashbrown::{HashMap, HashSet};
 use image::DynamicImage;
-use network::{ConnectAddr, Network, Pid, Stream};
+use network::{ConnectAddr, Network, Participant, Pid, Stream};
 use num::traits::FloatConst;
 use rayon::prelude::*;
 use specs::Component;
@@ -73,6 +73,7 @@ use std::{
     sync::Arc,
     time::{Duration, Instant},
 };
+use tokio::runtime::Runtime;
 use tracing::{debug, error, trace, warn};
 use vek::*;
 
@@ -149,6 +150,7 @@ pub struct SiteInfoRich {
 pub struct Client {
     registered: bool,
     presence: Option<PresenceKind>,
+    runtime: Arc<Runtime>,
     server_info: ServerInfo,
     world_data: WorldData,
     player_list: HashMap<Uid, PlayerInfo>,
@@ -171,6 +173,7 @@ pub struct Client {
     pending_trade: Option<(TradeId, PendingTrade, Option<SitePrices>)>,
 
     network: Option<Network>,
+    participant: Option<Participant>,
     general_stream: Stream,
     ping_stream: Stream,
     register_stream: Stream,
@@ -206,9 +209,11 @@ pub struct CharacterList {
 impl Client {
     pub async fn new(
         addr: ConnectionArgs,
+        runtime: Arc<Runtime>,
+        // TODO: refactor to avoid needing to use this out parameter
         mismatched_server_info: &mut Option<ServerInfo>,
     ) -> Result<Self, Error> {
-        let network = Network::new(Pid::new());
+        let network = Network::new(Pid::new(), &runtime);
 
         dbg!("conent addr:{}", &addr);
 
@@ -581,6 +586,7 @@ impl Client {
         Ok(Self {
             registered: false,
             presence: None,
+            runtime,
             server_info,
             world_data: WorldData {
                 lod_base,
@@ -612,6 +618,7 @@ impl Client {
             pending_trade: None,
 
             network: Some(network),
+            participant: Some(participant),
             general_stream: stream,
             ping_stream,
             register_stream,
@@ -2182,6 +2189,12 @@ impl Client {
             / total_weight)
             * 1000.0
     }
+
+    /// Get a reference to the client's runtime thread pool. This pool should be
+    /// used for any computationally expensive operations that run outside
+    /// of the main thread (i.e., threads that block on I/O operations are
+    /// exempt).
+    pub fn runtime(&self) -> &Arc<Runtime> { &self.runtime }
 
     /// Get a reference to the client's game state.
     pub fn state(&self) -> &State { &self.state }

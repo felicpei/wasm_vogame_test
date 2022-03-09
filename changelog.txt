@@ -24,12 +24,14 @@
 5. 删掉了egui相关，看了只有debug按钮用到，先删掉。删掉后进游戏跑还是正常的。
 6. 删掉了plugin相关的feature，这个看上去是可以加载外部插件用的。（删掉后，游戏无影响）
 7. 删除了 num_cpus（这个通过获取cpu核心数量，来定义场景同时渲染数量，修改为1）
-8. 修改 tokio 的 rt-multi-thread 为 rt，wasm不支持 rt-multi-thread。(修改对应的报错代码, 参见网络部分 1）
-
+8. walkdir 剥离：
+	copy_dir ： 
+	
+ winapi、libc、
 
 ----
-网络部分（问题）：
-1. 目前网络部分使用了多线程，这个wasm会有问题，目前去掉了传入的runtime，屏蔽了runtime.spawn（以后修改时要想办法）
+网络部分todo（会导致无法运行问题）：
+1. 目前网络部分使用了多线程，这个wasm会有问题，修改 tokio 的 rt-multi-thread 为 rt，wasm不支持 rt-multi-thread。
 2. 网络部分暂时屏蔽了tcpsocket，以后换。
 
 

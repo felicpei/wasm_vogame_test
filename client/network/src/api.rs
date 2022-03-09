@@ -21,6 +21,7 @@ use std::{
 };
 use tokio::{
     io,
+    runtime::Runtime,
     sync::{mpsc, oneshot, watch, Mutex},
 };
 use tracing::*;
@@ -173,7 +174,7 @@ pub struct StreamParams {
 /// [`connected`]: Network::connected
 /// [`ConnectAddr`]: crate::api::ConnectAddr
 /// [`ListenAddr`]: crate::api::ListenAddr
-pub struct  Network {
+pub struct Network {
     local_pid: Pid,
     participant_disconnect_sender: Arc<Mutex<HashMap<Pid, A2sDisconnect>>>,
     listen_sender: Mutex<mpsc::UnboundedSender<(ListenAddr, oneshot::Sender<io::Result<()>>)>>,
@@ -183,23 +184,74 @@ pub struct  Network {
 }
 
 impl Network {
-    pub fn new(participant_id: Pid) -> Self {
+    /// Generates a new `Network` to handle all connections in an Application
+    ///
+    /// # Arguments
+    /// * `participant_id` - provide it by calling [`Pid::new()`], usually you
+    ///   don't want to reuse a Pid for 2 `Networks`
+    /// * `runtime` - provide a [`Runtime`], it's used to internally spawn
+    ///   tasks. It is necessary to clean up in the non-async `Drop`. **All**
+    ///   network related components **must** be dropped before the runtime is
+    ///   stopped. dropping the runtime while a shutdown is still in progress
+    ///   leaves the network in a bad state which might cause a panic!
+    ///
+    /// # Result
+    /// * `Self` - returns a `Network` which can be `Send` to multiple areas of
+    ///   your code, including multiple threads. This is the base strct of this
+    ///   crate.
+    ///
+    /// # Examples
+    /// ```rust
+    /// use tokio::runtime::Runtime;
+    /// use veloren_network::{Network, Pid};
+    ///
+    /// let runtime = Runtime::new().unwrap();
+    /// let network = Network::new(Pid::new(), &runtime);
+    /// ```
+    ///
+    /// Usually you only create a single `Network` for an application,
+    /// except when client and server are in the same application, then you
+    /// will want 2. However there are no technical limitations from
+    /// creating more.
+    ///
+    /// [`Pid::new()`]: network_protocol::Pid::new
+    /// [`Runtime`]: tokio::runtime::Runtime
+    pub fn new(participant_id: Pid, runtime: &Runtime) -> Self {
         Self::internal_new(
             participant_id,
+            runtime,
             #[cfg(feature = "metrics")]
             None,
         )
     }
-    
+
+    /// See [`new`]
+    ///
+    /// # additional Arguments
+    /// * `registry` - Provide a Registry in order to collect Prometheus metrics
+    ///   by this `Network`, `None` will deactivate Tracing. Tracing is done via
+    ///   [`prometheus`]
+    ///
+    /// # Examples
+    /// ```rust
+    /// use prometheus::Registry;
+    /// use tokio::runtime::Runtime;
+    /// use veloren_network::{Network, Pid};
+    ///
+    /// let runtime = Runtime::new().unwrap();
+    /// let registry = Registry::new();
+    /// let network = Network::new_with_registry(Pid::new(), &runtime, &registry);
+    /// ```
+    /// [`new`]: crate::api::Network::new
     #[cfg(feature = "metrics")]
-    pub fn new_with_registry(participant_id: Pid,  registry: &Registry) -> Self {
-        Self::internal_new(participant_id, Some(registry))
+    pub fn new_with_registry(participant_id: Pid, runtime: &Runtime, registry: &Registry) -> Self {
+        Self::internal_new(participant_id, runtime, Some(registry))
     }
 
     fn internal_new(
         participant_id: Pid,
+        runtime: &Runtime,
         #[cfg(feature = "metrics")] registry: Option<&Registry>,
-
     ) -> Self {
         let p = participant_id;
         let span = tracing::info_span!("network", ?p);
@@ -212,27 +264,21 @@ impl Network {
             );
         let participant_disconnect_sender = Arc::new(Mutex::new(HashMap::new()));
         let (shutdown_network_s, shutdown_network_r) = oneshot::channel();
-      
-
-        // ########## todo : 不能使用多线程
-        // if let Ok(handle) = tokio::runtime::Handle::try_current() {
-        //     let f = Self::shutdown_mgr(
-        //         p,
-        //         shutdown_network_r,
-        //         Arc::clone(&participant_disconnect_sender),
-        //         shutdown_sender,
-        //     );
-        //     handle.spawn(f);
-        //     handle.spawn(
-        //         async move {
-        //             trace!("Starting scheduler in own thread");
-        //             scheduler.run().await;
-        //             trace!("Stopping scheduler and his own thread");
-        //         }
-        //         .instrument(tracing::info_span!("network", ?p)),
-        //     );
-        // }
-
+        let f = Self::shutdown_mgr(
+            p,
+            shutdown_network_r,
+            Arc::clone(&participant_disconnect_sender),
+            shutdown_sender,
+        );
+        runtime.spawn(f);
+        runtime.spawn(
+            async move {
+                trace!("Starting scheduler in own thread");
+                scheduler.run().await;
+                trace!("Stopping scheduler and his own thread");
+            }
+            .instrument(tracing::info_span!("network", ?p)),
+        );
         Self {
             local_pid: participant_id,
             participant_disconnect_sender,

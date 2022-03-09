@@ -48,11 +48,10 @@ impl ClientInit {
         let cancel = Arc::new(AtomicBool::new(false));
         let cancel2 = Arc::clone(&cancel);
 
-        dbg!("# start ClientInit");
-        runtime.block_on(async {
+   	dbg!("# start ClientInit");
+        let runtime2 = Arc::clone(&runtime);
+        runtime.spawn(async move {
          
-            dbg!("# start ClientInit block_on start");
-
             let mut last_err = None;
 
             const FOUR_MINUTES_RETRIES: u64 = 48;
@@ -63,6 +62,7 @@ impl ClientInit {
                 let mut mismatched_server_info = None;
                 match Client::new(
                     connection_args.clone(),
+                    Arc::clone(&runtime2),
                     &mut mismatched_server_info,
                 )
                 .await
@@ -78,6 +78,11 @@ impl ClientInit {
                             break 'tries;
                         }
                         let _ = tx.send(Msg::Done(Ok(client)));
+
+                        
+                        //########## 去掉多线程 rt_multi_thread
+                        tokio::task::spawn_blocking(move || drop(runtime2));
+                        //tokio::task::block_in_place(move || drop(runtime2));
                         return;
                     },
 
@@ -103,6 +108,11 @@ impl ClientInit {
             // If last_err is None this typically means there was no server up at the input
             // address and all the attempts timed out.
             let _ = tx.send(Msg::Done(Err(last_err.unwrap_or(Error::ServerNotFound))));
+
+            // Safe drop runtime
+            //########## 去掉多线程 rt_multi_thread
+            //tokio::task::block_in_place(move || drop(runtime2));
+            tokio::task::spawn_blocking(move || drop(runtime2));
         });
 
         ClientInit {
@@ -121,7 +131,6 @@ impl ClientInit {
             Err(TryRecvError::Disconnected) => Some(Msg::Done(Err(Error::ClientCrashed))),
         }
     }
-
 
     pub fn cancel(&mut self) { self.cancel.store(true, Ordering::Relaxed); }
 }

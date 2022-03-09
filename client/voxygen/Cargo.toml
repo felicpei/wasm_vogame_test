@@ -77,10 +77,11 @@ bincode = "1.3.1"
 chrono = { version = "0.4.19", features = ["serde"] }
 chumsky = "0.3.2"
 cpal = "0.13"
-copy_dir = "0.1.2"
 crossbeam-utils = "0.8.1"
 crossbeam-channel = "0.5"
 
+#待删除
+copy_dir = "0.1.2"
 
 # TODO: remove
 directories-next = "2.0"
@@ -105,7 +106,7 @@ treeculler = "0.2"
 #tokio = { version = "=1.17.0", default-features = false, features = ["rt-multi-thread"] }
 #num_cpus = "1.0"
 
-tokio = { version = "=1.17.0", default-features = false, features = ["rt"] }
+tokio = { version = "=1.17.0", default-features = false, features = ["rt","rt-multi-thread"] }
 
 
 # vec_map = { version = "0.8.2" }

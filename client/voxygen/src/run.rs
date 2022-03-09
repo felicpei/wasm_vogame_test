@@ -9,8 +9,6 @@ use common_base::{no_guard_span, span, GuardlessSpan};
 use std::{mem, time::Duration};
 use tracing::debug;
 
-
-//游戏正式启动
 pub fn run(mut global_state: GlobalState, event_loop: EventLoop) {
     // Set up the initial play state.
     let mut states: Vec<Box<dyn PlayState>> = vec![Box::new(MainMenuState::new(&mut global_state))];

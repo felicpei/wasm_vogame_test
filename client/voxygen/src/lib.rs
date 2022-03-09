@@ -65,7 +65,6 @@ pub struct GlobalState {
     pub audio: AudioFrontend,
     pub info_message: Option<String>,
     pub clock: Clock,
-    
     #[cfg(feature = "singleplayer")]
     pub singleplayer: Option<Singleplayer>,
     // TODO: redo this so that the watcher doesn't have to exist for reloading to occur

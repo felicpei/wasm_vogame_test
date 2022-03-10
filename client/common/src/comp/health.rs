@@ -1,14 +1,14 @@
 use crate::DamageSource;
-#[cfg(not(target_arch = "wasm32"))]
+
 use crate::{comp, consts::HP_PER_LEVEL};
 use hashbrown::HashMap;
 use serde::{Deserialize, Serialize};
 use std::convert::TryFrom;
 
 use crate::{combat::DamageContributor, resources::Time};
-#[cfg(not(target_arch = "wasm32"))]
+
 use specs::{Component, DerefFlaggedStorage};
-#[cfg(not(target_arch = "wasm32"))]
+
 use specs_idvs::IdvStorage;
 use std::ops::Mul;
 
@@ -118,7 +118,7 @@ impl Health {
         self.current = self.current.min(self.maximum);
     }
 
-    #[cfg(not(target_arch = "wasm32"))]
+    
     pub fn new(body: comp::Body, level: u16) -> Self {
         let health = u32::from(
             body.base_health()
@@ -140,7 +140,7 @@ impl Health {
     }
 
     // TODO: Delete this once stat points will be a thing
-    #[cfg(not(target_arch = "wasm32"))]
+    
     pub fn update_max_hp(&mut self, body: comp::Body, level: u16) {
         let old_max = self.base_max;
         self.base_max = u32::from(
@@ -150,7 +150,7 @@ impl Health {
         self.current = (self.current + self.base_max - old_max).min(self.maximum);
     }
 
-    #[cfg(not(target_arch = "wasm32"))]
+    
     pub fn change_by(&mut self, change: HealthChange) {
         let prev_health = i64::from(self.current);
         self.current = (((self.current() + change.amount).clamp(0.0, f32::from(Self::MAX_HEALTH))
@@ -194,7 +194,7 @@ impl Health {
         self.is_dead = true;
     }
 
-    #[cfg(not(target_arch = "wasm32"))]
+    
     pub fn revive(&mut self) {
         self.current = self.maximum;
         self.is_dead = false;
@@ -218,7 +218,7 @@ impl Health {
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
+
 impl Component for Health {
     type Storage = DerefFlaggedStorage<Self, IdvStorage<Self>>;
 }

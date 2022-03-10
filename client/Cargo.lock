@@ -4570,6 +4570,7 @@ dependencies = [
  "dot_vox",
  "enum-iterator",
  "fxhash",
+ "getrandom",
  "hashbrown 0.11.2",
  "indexmap",
  "lazy_static",

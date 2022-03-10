@@ -1,5 +1,5 @@
 use crate::comp::buff::{Buff, BuffChange, BuffData, BuffKind, BuffSource};
-#[cfg(not(target_arch = "wasm32"))]
+
 use crate::{
     comp::{
         inventory::{
@@ -21,19 +21,19 @@ use crate::{
     util::Dir,
 };
 
-#[cfg(not(target_arch = "wasm32"))]
+
 use rand::{thread_rng, Rng};
 
 use serde::{Deserialize, Serialize};
 
 use crate::{comp::Group, resources::Time};
-#[cfg(not(target_arch = "wasm32"))]
-use specs::{saveload::MarkerAllocator, Entity as EcsEntity, ReadStorage};
-#[cfg(not(target_arch = "wasm32"))]
-use std::{ops::MulAssign, time::Duration};
-#[cfg(not(target_arch = "wasm32"))] use vek::*;
 
-#[cfg(not(target_arch = "wasm32"))]
+use specs::{saveload::MarkerAllocator, Entity as EcsEntity, ReadStorage};
+
+use std::{ops::MulAssign, time::Duration};
+use vek::*;
+
+
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub enum GroupTarget {
     InGroup,
@@ -49,7 +49,7 @@ pub enum AttackSource {
     Explosion,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
+
 #[derive(Copy, Clone)]
 pub struct AttackerInfo<'a> {
     pub entity: EcsEntity,
@@ -60,7 +60,7 @@ pub struct AttackerInfo<'a> {
     pub inventory: Option<&'a Inventory>,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
+
 pub struct TargetInfo<'a> {
     pub entity: EcsEntity,
     pub uid: Uid,
@@ -80,7 +80,7 @@ pub struct AttackOptions {
     pub target_group: GroupTarget,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
+
 #[derive(Clone, Debug, Serialize, Deserialize)] // TODO: Yeet clone derive
 pub struct Attack {
     damages: Vec<AttackDamage>,
@@ -89,7 +89,7 @@ pub struct Attack {
     crit_multiplier: f32,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
+
 impl Default for Attack {
     fn default() -> Self {
         Self {
@@ -101,7 +101,7 @@ impl Default for Attack {
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
+
 impl Attack {
     #[must_use]
     pub fn with_damage(mut self, damage: AttackDamage) -> Self {
@@ -594,7 +594,7 @@ pub fn may_harm(
         .map_or(true, |(a, t)| a.may_harm(t))
 }
 
-#[cfg(not(target_arch = "wasm32"))]
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct AttackDamage {
     damage: Damage,
@@ -602,7 +602,7 @@ pub struct AttackDamage {
     effects: Vec<CombatEffect>,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
+
 impl AttackDamage {
     pub fn new(damage: Damage, target: Option<GroupTarget>) -> Self {
         Self {
@@ -619,7 +619,7 @@ impl AttackDamage {
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct AttackEffect {
     target: Option<GroupTarget>,
@@ -627,7 +627,7 @@ pub struct AttackEffect {
     requirements: Vec<CombatRequirement>,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
+
 impl AttackEffect {
     pub fn new(target: Option<GroupTarget>, effect: CombatEffect) -> Self {
         Self {
@@ -646,7 +646,7 @@ impl AttackEffect {
     pub fn effect(&self) -> &CombatEffect { &self.effect }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
+
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq)]
 pub enum CombatEffect {
     Heal(f32),
@@ -658,7 +658,7 @@ pub enum CombatEffect {
     Combo(i32),
 }
 
-#[cfg(not(target_arch = "wasm32"))]
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum CombatRequirement {
     AnyDamage,
@@ -744,7 +744,7 @@ const PIERCING_PENETRATION_FRACTION: f32 = 1.0;
 const SLASHING_ENERGY_FRACTION: f32 = 0.5;
 const CRUSHING_POISE_FRACTION: f32 = 1.0;
 
-#[cfg(not(target_arch = "wasm32"))]
+
 #[derive(Copy, Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Damage {
     pub source: DamageSource,
@@ -752,7 +752,7 @@ pub struct Damage {
     pub value: f32,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
+
 impl Damage {
     /// Returns the total damage reduction provided by all equipped items
     pub fn compute_damage_reduction(
@@ -851,14 +851,14 @@ impl Damage {
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
+
 #[derive(Copy, Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Knockback {
     pub direction: KnockbackDir,
     pub strength: f32,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
+
 #[derive(Copy, Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum KnockbackDir {
     Away,
@@ -867,7 +867,7 @@ pub enum KnockbackDir {
     TowardsUp,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
+
 impl Knockback {
     pub fn calculate_impulse(self, dir: Dir) -> Vec3<f32> {
         // TEMP until source knockback values have been updated
@@ -890,7 +890,7 @@ impl Knockback {
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
+
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq)]
 pub struct CombatBuff {
     pub kind: BuffKind,
@@ -899,14 +899,14 @@ pub struct CombatBuff {
     pub chance: f32,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
+
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq)]
 pub enum CombatBuffStrength {
     DamageFraction(f32),
     Value(f32),
 }
 
-#[cfg(not(target_arch = "wasm32"))]
+
 impl CombatBuffStrength {
     fn to_strength(self, damage: f32, strength_modifier: f32) -> f32 {
         match self {
@@ -927,7 +927,7 @@ impl MulAssign<f32> for CombatBuffStrength {
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
+
 impl CombatBuff {
     fn to_buff(self, uid: Option<Uid>, damage: f32, strength_modifier: f32) -> Buff {
         // TODO: Generate BufCategoryId vec (probably requires damage overhaul?)
@@ -948,7 +948,7 @@ impl CombatBuff {
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
+
 fn equipped_item_and_tool(inv: &Inventory, slot: EquipSlot) -> Option<(&Item, &Tool)> {
     inv.equipped(slot).and_then(|i| {
         if let ItemKind::Tool(tool) = &i.kind() {
@@ -959,7 +959,7 @@ fn equipped_item_and_tool(inv: &Inventory, slot: EquipSlot) -> Option<(&Item, &T
     })
 }
 
-#[cfg(not(target_arch = "wasm32"))]
+
 pub fn get_weapons(inv: &Inventory) -> (Option<ToolKind>, Option<ToolKind>) {
     (
         equipped_item_and_tool(inv, EquipSlot::ActiveMainhand).map(|(_, tool)| tool.kind),
@@ -967,7 +967,7 @@ pub fn get_weapons(inv: &Inventory) -> (Option<ToolKind>, Option<ToolKind>) {
     )
 }
 
-#[cfg(not(target_arch = "wasm32"))]
+
 pub fn weapon_rating<T: ItemDesc>(item: &T, msm: &MaterialStatManifest) -> f32 {
     const DAMAGE_WEIGHT: f32 = 2.0;
     const SPEED_WEIGHT: f32 = 3.0;
@@ -1016,7 +1016,7 @@ pub fn weapon_rating<T: ItemDesc>(item: &T, msm: &MaterialStatManifest) -> f32 {
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
+
 fn weapon_skills(inventory: &Inventory, skill_set: &SkillSet) -> f32 {
     let (mainhand, offhand) = get_weapons(inventory);
     let mainhand_skills = if let Some(tool) = mainhand {
@@ -1032,7 +1032,7 @@ fn weapon_skills(inventory: &Inventory, skill_set: &SkillSet) -> f32 {
     mainhand_skills.max(offhand_skills)
 }
 
-#[cfg(not(target_arch = "wasm32"))]
+
 fn get_weapon_rating(inventory: &Inventory, msm: &MaterialStatManifest) -> f32 {
     let mainhand_rating =
         if let Some((item, _)) = equipped_item_and_tool(inventory, EquipSlot::ActiveMainhand) {
@@ -1051,7 +1051,7 @@ fn get_weapon_rating(inventory: &Inventory, msm: &MaterialStatManifest) -> f32 {
     mainhand_rating.max(offhand_rating)
 }
 
-#[cfg(not(target_arch = "wasm32"))]
+
 pub fn combat_rating(
     inventory: &Inventory,
     health: &Health,
@@ -1111,7 +1111,7 @@ pub fn combat_rating(
     combined_rating * body.combat_multiplier()
 }
 
-#[cfg(not(target_arch = "wasm32"))]
+
 pub fn compute_crit_mult(inventory: Option<&Inventory>) -> f32 {
     // Starts with a value of 1.25 when summing the stats from each armor piece, and
     // defaults to a value of 1.25 if no inventory is equipped
@@ -1129,7 +1129,7 @@ pub fn compute_crit_mult(inventory: Option<&Inventory>) -> f32 {
 }
 
 /// Computes the energy reward modifer from worn armor
-#[cfg(not(target_arch = "wasm32"))]
+
 pub fn compute_energy_reward_mod(inventory: Option<&Inventory>) -> f32 {
     // Starts with a value of 1.0 when summing the stats from each armor piece, and
     // defaults to a value of 1.0 if no inventory is present
@@ -1148,7 +1148,7 @@ pub fn compute_energy_reward_mod(inventory: Option<&Inventory>) -> f32 {
 
 /// Computes the additive modifier that should be applied to max energy from the
 /// currently equipped items
-#[cfg(not(target_arch = "wasm32"))]
+
 pub fn compute_max_energy_mod(inventory: Option<&Inventory>) -> f32 {
     // Defaults to a value of 0 if no inventory is present
     inventory.map_or(0.0, |inv| {
@@ -1166,7 +1166,7 @@ pub fn compute_max_energy_mod(inventory: Option<&Inventory>) -> f32 {
 
 /// Computes the sneak coefficient from armor. Agent perception distances are
 /// divided by the resulting f32.
-#[cfg(not(target_arch = "wasm32"))]
+
 pub fn compute_stealth_coefficient(inventory: Option<&Inventory>) -> f32 {
     // Starts with a value of 2.0 when summing the stats from each armor piece, and
     // defaults to a value of 2.0 if no inventory is equipped
@@ -1186,7 +1186,7 @@ pub fn compute_stealth_coefficient(inventory: Option<&Inventory>) -> f32 {
 /// Computes the total protection provided from armor. Is used to determine the
 /// damage reduction applied to damage received by an entity None indicates that
 /// the armor equipped makes the entity invulnerable
-#[cfg(not(target_arch = "wasm32"))]
+
 pub fn compute_protection(inventory: Option<&Inventory>) -> Option<f32> {
     inventory.map_or(Some(0.0), |inv| {
         inv.equipped_items()

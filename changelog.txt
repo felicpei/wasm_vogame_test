@@ -24,13 +24,11 @@
 5. 删掉了egui相关，看了只有debug按钮用到，先删掉。删掉后进游戏跑还是正常的。
 6. 删掉了plugin相关的feature，这个看上去是可以加载外部插件用的。（删掉后，游戏无影响）
 7. 删除了 num_cpus（这个通过获取cpu核心数量，来定义场景同时渲染数量，修改为1）
-8. walkdir 剥离：
-	copy_dir (没用删了), 
-	mumble-link(不太确定干嘛的，似乎是影响位置音频的，删了没啥影响，代码在：client/voxygen/src/session/mod.rs）
-	rodio 音频使用，不支持wasm，wasm音频需要另外的实现方案。
+8. copy_dir (没用删了), 
+9. mumble-link(不太确定干嘛的，似乎是影响位置音频的，删了没啥影响，代码在：client/voxygen/src/session/mod.rs）
 	
- winapi、libc、
-
+--
+替换所有trace，println ，dbg，debug等
 ----
 网络部分todo（会导致无法运行问题）：
 1. 目前网络部分使用了多线程，这个wasm会有问题，修改 tokio 的 rt-multi-thread 为 rt，wasm不支持 rt-multi-thread。

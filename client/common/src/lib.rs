@@ -19,79 +19,79 @@
 #![feature(hash_drain_filter)]
 
 /// Re-exported crates
-#[cfg(not(target_arch = "wasm32"))]
+
 pub use uuid;
 
 // modules
-#[cfg(not(target_arch = "wasm32"))]
+
 pub use common_assets as assets;
-#[cfg(not(target_arch = "wasm32"))] pub mod astar;
-#[cfg(not(target_arch = "wasm32"))]
+pub mod astar;
+
 mod cached_spatial_grid;
-#[cfg(not(target_arch = "wasm32"))]
+
 pub mod calendar;
-#[cfg(not(target_arch = "wasm32"))]
+
 pub mod character;
-#[cfg(not(target_arch = "wasm32"))] pub mod clock;
-#[cfg(not(target_arch = "wasm32"))] pub mod cmd;
+pub mod clock;
+pub mod cmd;
 pub mod combat;
 pub mod comp;
 pub mod consts;
-#[cfg(not(target_arch = "wasm32"))] pub mod depot;
-#[cfg(not(target_arch = "wasm32"))]
+pub mod depot;
+
 pub mod effect;
-#[cfg(not(target_arch = "wasm32"))] pub mod event;
-#[cfg(not(target_arch = "wasm32"))]
+pub mod event;
+
 pub mod explosion;
-#[cfg(not(target_arch = "wasm32"))]
+
 pub mod figure;
-#[cfg(not(target_arch = "wasm32"))]
+
 pub mod generation;
-#[cfg(not(target_arch = "wasm32"))] pub mod grid;
-#[cfg(not(target_arch = "wasm32"))] pub mod link;
-#[cfg(not(target_arch = "wasm32"))]
+pub mod grid;
+pub mod link;
+
 pub mod lottery;
-#[cfg(not(target_arch = "wasm32"))]
+
 pub mod mounting;
-#[cfg(not(target_arch = "wasm32"))] pub mod npc;
-#[cfg(not(target_arch = "wasm32"))]
+pub mod npc;
+
 pub mod outcome;
-#[cfg(not(target_arch = "wasm32"))] pub mod path;
-#[cfg(not(target_arch = "wasm32"))] pub mod ray;
-#[cfg(not(target_arch = "wasm32"))]
+pub mod path;
+pub mod ray;
+
 pub mod recipe;
-#[cfg(not(target_arch = "wasm32"))]
+
 pub mod region;
 pub mod resources;
-#[cfg(not(target_arch = "wasm32"))] pub mod rtsim;
-#[cfg(not(target_arch = "wasm32"))]
+pub mod rtsim;
+
 pub mod skillset_builder;
-#[cfg(not(target_arch = "wasm32"))]
+
 pub mod slowjob;
-#[cfg(not(target_arch = "wasm32"))]
+
 pub mod spiral;
-#[cfg(not(target_arch = "wasm32"))]
+
 pub mod states;
-#[cfg(not(target_arch = "wasm32"))] pub mod store;
-#[cfg(not(target_arch = "wasm32"))]
+pub mod store;
+
 pub mod terrain;
-#[cfg(not(target_arch = "wasm32"))] pub mod time;
-#[cfg(not(target_arch = "wasm32"))] pub mod trade;
-#[cfg(not(target_arch = "wasm32"))] pub mod typed;
+pub mod time;
+pub mod trade;
+pub mod typed;
 pub mod uid;
-#[cfg(not(target_arch = "wasm32"))] pub mod util;
-#[cfg(not(target_arch = "wasm32"))] pub mod vol;
-#[cfg(not(target_arch = "wasm32"))]
+pub mod util;
+pub mod vol;
+
 pub mod volumes;
 
-#[cfg(not(target_arch = "wasm32"))]
+
 pub use cached_spatial_grid::CachedSpatialGrid;
-#[cfg(not(target_arch = "wasm32"))]
+
 pub use combat::{Damage, GroupTarget, Knockback, KnockbackDir};
 pub use combat::{DamageKind, DamageSource};
-#[cfg(not(target_arch = "wasm32"))]
+
 pub use comp::inventory::loadout_builder::LoadoutBuilder;
-#[cfg(not(target_arch = "wasm32"))]
+
 pub use explosion::{Explosion, RadiusEffect};
-#[cfg(not(target_arch = "wasm32"))]
+
 pub use skillset_builder::SkillSetBuilder;

@@ -8,6 +8,8 @@ use crate::{
     sys::sentinel::DeletedEntities,
     wiring, BattleModeBuffer, SpawnPoint,
 };
+
+use tracing::{error, info};
 use common::{
     calendar::Calendar,
     character::CharacterId,
@@ -513,6 +515,8 @@ impl StateExt for State {
 
             // Tell the client its request was successful.
             if let Some(client) = self.ecs().read_storage::<Client>().get(entity) {
+                
+                info!("### client.send_fallible(ServerGeneral::CharacterSuccess)");
                 client.send_fallible(ServerGeneral::CharacterSuccess);
             }
         }

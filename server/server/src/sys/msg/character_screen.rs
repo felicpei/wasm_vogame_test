@@ -15,7 +15,7 @@ use common_ecs::{Job, Origin, Phase, System};
 use common_net::msg::{ClientGeneral, ServerGeneral};
 use specs::{Entities, Join, Read, ReadExpect, ReadStorage, WriteExpect};
 use std::sync::atomic::Ordering;
-use tracing::{debug, warn};
+use tracing::{debug, warn, info};
 
 impl Sys {
     fn handle_client_character_screen_msg(
@@ -41,6 +41,10 @@ impl Sys {
                 }
             },
             ClientGeneral::Character(character_id) => {
+
+                info!(" ## recv ClientGeneral::Character start");
+
+                
                 if let Some(player) = players.get(entity) {
                     if presences.contains(entity) {
                         debug!("player already ingame, aborting");

@@ -133,6 +133,7 @@ impl PlayState for CharSelectionState {
                     },
                     ui::Event::Play(character_id) => {
                         {
+                            dbg!("# ui::Event::Play");
                             let mut c = self.client.borrow_mut();
                             c.request_character(character_id);
                             //Send our ViewDistance

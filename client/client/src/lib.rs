@@ -754,6 +754,8 @@ impl Client {
 
     /// Request a state transition to `ClientState::Character`.
     pub fn request_character(&mut self, character_id: CharacterId) {
+
+        dbg!(" # start request character");
         self.send_msg(ClientGeneral::Character(character_id));
 
         //Assume we are in_game unless server tells us otherwise
@@ -2057,7 +2059,7 @@ impl Client {
                 events.push(Event::CharacterEdited(character_id));
             },
             ServerGeneral::CharacterSuccess => {
-                debug!("client is now in ingame state on server");
+                dbg!("### client is now in ingame state on server");
                 if let Some(vd) = self.view_distance {
                     self.set_view_distance(vd);
                 }

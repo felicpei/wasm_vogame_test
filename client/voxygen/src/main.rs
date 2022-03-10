@@ -173,9 +173,14 @@ fn init_log () {
         wasm_logger::init(wasm_logger::Config::default());
     }
     
-    env_logger::init();
-    log::set_max_level(log::LevelFilter::Debug);
-    if log::log_enabled!(log::Level::Debug) {
-        println!("LOG LEVEL DEBUG");
+    #[cfg(not(feature = "wasm"))]
+    {
+        let mut builder = env_logger::Builder::new();
+        builder.filter_module("wgpu", log::LevelFilter::Warn);
+        builder.filter_module("wgpu_core", log::LevelFilter::Warn);
+        builder.filter_level(log::LevelFilter::Info);
+        builder.init();
     }
+
+    log::info!("inited log");
 }

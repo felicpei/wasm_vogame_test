@@ -6,7 +6,10 @@ npm run restart
 
 wasm-pack build --target web
 #run server
+
+
 cargo run --bin veloren-server-cli
 
 
-SET RUST_LOG=debug cargo run
+cargo build -Z unstable-options --profile debuginfo
+cargo run -Z unstable-options --profile debuginfo

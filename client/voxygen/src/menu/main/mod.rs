@@ -274,7 +274,7 @@ impl PlayState for MainMenuState {
                         prefer_ipv6: false,
                     };
 
-                    dbg!("### try MainMenuEvent => LoginAttempt");
+                    log::info!("### try MainMenuEvent => LoginAttempt");
                     attempt_login(
                         &mut global_state.info_message,
                         username,
@@ -453,7 +453,7 @@ fn attempt_login(
     runtime: &Arc<runtime::Runtime>,
     localized_strings: &LocalizationHandle,
 ) {
-    dbg!("attempt_login start");
+    log::info!("attempt_login start");
     let localization = localized_strings.read();
     if let Err(err) = comp::Player::alias_validate(&username) {
         match err {

@@ -213,7 +213,7 @@ impl Client {
     ) -> Result<Self, Error> {
         let network = Network::new(Pid::new(), &runtime);
 
-        dbg!("conent addr:{}", &addr);
+        log::info!("conent addr:{:?}", &addr);
 
         let participant = match addr {
 
@@ -649,7 +649,7 @@ impl Client {
     ) -> Result<(), Error> {
         // Authentication
 
-        dbg!("# 直接跳过验证, username:{}, password:{}", &token_or_username, &password);
+        log::info!("# 直接跳过验证, username:{}, password:{}", &token_or_username, &password);
 
         //直接跳过验证
         self.send_msg_err(ClientRegister { token_or_username })?;
@@ -752,7 +752,7 @@ impl Client {
     /// Request a state transition to `ClientState::Character`.
     pub fn request_character(&mut self, character_id: CharacterId) {
 
-        dbg!(" # start request character");
+        log::info!(" # start request character");
         self.send_msg(ClientGeneral::Character(character_id));
 
         //Assume we are in_game unless server tells us otherwise

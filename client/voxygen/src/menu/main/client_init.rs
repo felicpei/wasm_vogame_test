@@ -47,7 +47,7 @@ impl ClientInit {
         let cancel = Arc::new(AtomicBool::new(false));
         let cancel2 = Arc::clone(&cancel);
 
-   	dbg!("# start ClientInit");
+        log::info!("# start ClientInit");
         let runtime2 = Arc::clone(&runtime);
         runtime.spawn(async move {
          

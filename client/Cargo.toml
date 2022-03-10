@@ -9,7 +9,7 @@ members = [
     "common/net",
     "common/state",
     "common/systems",
-    "common/frontend",
+    #"common/frontend",
     "client",
     "voxygen",
     "voxygen/anim",

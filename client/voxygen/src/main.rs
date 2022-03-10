@@ -35,11 +35,6 @@ fn main() {
         .map(PathBuf::from)
         .unwrap_or_else(|| userdata_dir.join("voxygen").join("logs"));
 
-    // Init logging and hold the guards.
-    let now = Utc::now();
-    let log_filename = format!("{}_voxygen.log", now.format("%Y-%m-%d"));
-    let _guards = common_frontend::init_stdout(Some((&logs_dir, &log_filename)));
-
     // Re-run userdata selection so any warnings will be logged
     common_base::userdata_dir_workspace!();
 
@@ -86,83 +81,12 @@ fn main() {
                 }
             },
         };
-        let msg = format!(
-            "A critical error has occurred and Voxygen has been forced to \
-            terminate in an unusual manner. Details about the error can be \
-            found below.\n\
-            \n\
-            > What should I do?\n\
-            \n\
-            We need your help to fix this! You can help by contacting us and \
-            reporting this problem. To do this, open an issue on the Veloren \
-            issue tracker:\n\
-            \n\
-            https://www.gitlab.com/veloren/veloren/issues/new\n\
-            \n\
-            If you're on the Veloren community Discord server, we'd be \
-            grateful if you could also post a message in the #support channel.
-            \n\
-            > What should I include?\n\
-            \n\
-            The error information below will be useful in finding and fixing \
-            the problem. Please include as much information about your setup \
-            and the events that led up to the panic as possible.
-            \n\
-            Voxygen has logged information about the problem (including this \
-            message) to the file {}. Please include the contents of this \
-            file in your bug report.
-            \n\
-            > Error information\n\
-            \n\
-            The information below is intended for developers and testers.\n\
-            \n\
-            Panic Payload: {:?}\n\
-            PanicInfo: {}\n\
-            Game version: {} [{}]",
-            logs_dir.join(&log_filename).display(),
-            reason,
-            panic_info,
-            *common::util::GIT_HASH,
-            *common::util::GIT_DATE
-        );
 
         error!(
             "VOXYGEN HAS PANICKED\n\n{}\n\nBacktrace:\n{:?}",
-            msg,
+            reason,
             backtrace::Backtrace::new(),
         );
-
-        #[cfg(feature = "native-dialog")]
-        {
-            use native_dialog::{MessageDialog, MessageType};
-
-            let mbox = move || {
-                MessageDialog::new()
-                    .set_title("Voxygen has panicked")
-                    //somehow `<` and `>` are invalid characters and cause the msg to get replaced
-                    // by some generic text thus i replace them
-                    .set_text(&msg.replace('<', "[").replace('>', "]"))
-                    .set_type(MessageType::Error)
-                    .show_alert()
-                    .unwrap()
-            };
-
-            // On windows we need to spawn a thread as the msg doesn't work otherwise
-            #[cfg(target_os = "windows")]
-            {
-                let builder = std::thread::Builder::new().name("shutdown".into());
-                builder
-                    .spawn(move || {
-                        mbox();
-                    })
-                    .unwrap()
-                    .join()
-                    .unwrap();
-            }
-
-            #[cfg(not(target_os = "windows"))]
-            mbox();
-        }
 
         default_hook(panic_info);
     }));

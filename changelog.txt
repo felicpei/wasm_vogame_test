@@ -26,7 +26,9 @@
 7. 删除了 num_cpus（这个通过获取cpu核心数量，来定义场景同时渲染数量，修改为1）
 8. copy_dir (没用删了), 
 9. mumble-link(不太确定干嘛的，似乎是影响位置音频的，删了没啥影响，代码在：client/voxygen/src/session/mod.rs）
-	
+10.删除plugin，仅给服务器使用（目前客户端没有使用)
+11.删除common-front_end，这个是用来写日志文件的。以后wasm不可用。
+12.删除native_dialog,这个是报错弹框，没用了。（统一用log看）
 --
 替换所有trace，println ，dbg，debug等
 ----

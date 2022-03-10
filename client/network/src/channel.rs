@@ -19,9 +19,6 @@ use tokio::net:: tcp::{OwnedReadHalf, OwnedWriteHalf};
 use tokio::select;
 
 #[cfg(feature = "client_tcp")]
-use tracing::{info, trace, warn};
-
-#[cfg(feature = "client_tcp")]
 use futures_util::FutureExt;
 
 use network_protocol::{
@@ -72,7 +69,7 @@ impl Protocols {
                     Ok(s)
                 })
                 .map_err(NetworkConnectError::Io)?;
-            info!(
+                log::info!(
                 "Connecting Tcp to: {}",
                 stream.peer_addr().map_err(NetworkConnectError::Io)?
             );
@@ -113,7 +110,7 @@ impl Protocols {
             socket2_socket.listen(1024)?;
             let std_listener: std::net::TcpListener = socket2_socket.into();
             let listener = tokio::net::TcpListener::from_std(std_listener)?;
-            trace!(?addr, "Tcp Listener bound");
+            log::trace!("Tcp Listener bound {}", addr);
             let mut end_receiver = s2s_stop_listening_r.fuse();
             tokio::spawn(async move {
                 while let Some(data) = select! {
@@ -123,18 +120,17 @@ impl Protocols {
                     let (stream, remote_addr) = match data {
                         Ok((s, p)) => (s, p),
                         Err(e) => {
-                            trace!(?e, "TcpStream Error, ignoring connection attempt");
+                            log::trace!("TcpStream Error, ignoring connection attempt {:?}", &e);
                             continue;
                         },
                     };
                     if let Err(e) = stream.set_nodelay(true) {
-                        warn!(
-                            ?e,
-                            "Failed to set TCP_NODELAY, client may have degraded latency"
+                        log::warn!(
+                            "Failed to set TCP_NODELAY, client may have degraded latency  {:?}", &e
                         );
                     }
                     let cid = cids.fetch_add(1, Ordering::Relaxed);
-                    info!(?remote_addr, ?cid, "Accepting Tcp from");
+                    log::info!("Accepting Tcp from, {}, {}", remote_addr, cid);
                     let metrics = ProtocolMetricCache::new(&cid.to_string(), Arc::clone(&metrics));
                     let _ = c2s_protocol_s.send((Self::new_tcp(stream, metrics.clone()), cid));
                 }

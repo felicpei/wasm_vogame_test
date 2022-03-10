@@ -204,7 +204,6 @@ impl<'a> Widget for Map<'a> {
     fn style(&self) -> Self::Style {}
 
     fn update(self, args: widget::UpdateArgs<Self>) -> Self::Event {
-        common_base::prof_span!("Map::update");
         let widget::UpdateArgs { state, ui, .. } = args;
         let zoom = self.global_state.settings.interface.map_zoom;
         let show_difficulty = self.global_state.settings.interface.map_show_difficulty;

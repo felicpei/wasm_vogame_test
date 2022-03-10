@@ -7,7 +7,6 @@ use std::{
     fmt::Debug,
     marker::PhantomData,
 };
-use tracing::error;
 
 // TODO: apply_{insert,modify,remove} all take the entity and call
 // `write_storage` once per entity per component, instead of once per update
@@ -27,7 +26,7 @@ pub trait CompPacket: Clone + Debug + Send + 'static {
 /// Useful for implementing CompPacket trait
 pub fn handle_insert<C: Component>(comp: C, entity: Entity, world: &World) {
     if let Err(e) = world.write_storage::<C>().insert(entity, comp) {
-        error!(?e, "Error inserting");
+        log::error!("Error inserting {}", &e);
     }
 }
 /// Useful for implementing CompPacket trait
@@ -35,8 +34,7 @@ pub fn handle_modify<C: Component + Debug>(comp: C, entity: Entity, world: &Worl
     if let Some(mut c) = world.write_storage::<C>().get_mut(entity) {
         *c = comp
     } else {
-        error!(
-            ?comp,
+        log::error!(
             "Error modifying synced component, it doesn't seem to exist"
         );
     }
@@ -80,8 +78,7 @@ pub fn handle_interp_modify<C: InterpolatableComponent + Debug>(
         comp.update_component(&mut interp_data, time, force_update);
         handle_modify(comp, entity, world);
     } else {
-        error!(
-            ?comp,
+        log::error!(
             "Error modifying interpolation data for synced component, it doesn't seem to exist"
         );
     }

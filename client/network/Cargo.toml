@@ -40,7 +40,6 @@ serde = { version = "1.0" }
 crossbeam-channel = "0.5"
 
 #tracing and metrics
-tracing = { version = "0.1", default-features = false, features = ["attributes"]}
 prometheus = { version = "=0.13.0", default-features = false, optional = true }
 
 #async
@@ -59,3 +58,7 @@ bytes = "^1"
 
 # faster HashMaps
 hashbrown = { version = ">=0.9, <0.12" }
+
+
+#log
+log = "0.4"

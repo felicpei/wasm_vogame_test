@@ -8,7 +8,6 @@ use crate::{
     InitProtocol,
 };
 use async_trait::async_trait;
-use tracing::{debug, error, info, trace};
 
 /// Implement this for auto Handshake with [`ReliableSink`].
 /// You must make sure that EVERY message send this way actually is received on
@@ -53,8 +52,6 @@ where
         const WRONG_VERSION: &str = "Handshake does contain a correct magic number, but invalid \
                                      version.\nWe don't know how to communicate with \
                                      you.\nClosing the connection";
-        const ERR_S: &str = "Got A Raw Message, these are usually Debug Messages indicating that \
-                             something went wrong on network layer and connection will be closed";
 
         let drain = &mut self.0;
         let sink = &mut self.1;
@@ -73,9 +70,8 @@ where
                 magic_number,
                 version,
             } => {
-                trace!(?magic_number, ?version, "Recv handshake");
                 if magic_number != VELOREN_MAGIC_NUMBER {
-                    error!(?magic_number, "Connection with invalid magic_number");
+                    log::error!("Connection with invalid magic_number");
                     #[cfg(debug_assertions)]
                     drain
                         .send(InitFrame::Raw(WRONG_NUMBER.as_bytes().to_vec()))
@@ -84,7 +80,7 @@ where
                 } else if version[0] != VELOREN_NETWORK_VERSION[0]
                     || version[1] != VELOREN_NETWORK_VERSION[1]
                 {
-                    error!(?version, "Connection with wrong network version");
+                    log::error!("Connection with wrong network version ");
                     #[cfg(debug_assertions)]
                     drain
                         .send(InitFrame::Raw(
@@ -98,7 +94,7 @@ where
                         .await?;
                     Err(InitProtocolError::WrongVersion(version))
                 } else {
-                    trace!("Handshake Frame completed");
+                    log::trace!("Handshake Frame completed");
                     if initializer {
                         drain
                             .send(InitFrame::Init {
@@ -119,20 +115,20 @@ where
             },
             InitFrame::Raw(bytes) => {
                 match std::str::from_utf8(bytes.as_slice()) {
-                    Ok(string) => error!(?string, ERR_S),
-                    _ => error!(?bytes, ERR_S),
+                    Ok(string) => log::error!("InitFrame::Raw error {} ",string),
+                    _ => log::error!("InitFrame::Raw error2"),
                 }
                 Err(InitProtocolError::Closed)
             },
             _ => {
-                info!("Handshake failed");
+                log::info!("Handshake failed");
                 Err(InitProtocolError::Closed)
             },
         }?;
 
         match sink.recv().await? {
             InitFrame::Init { pid, secret } => {
-                debug!(?pid, "Participant send their ID");
+                log::debug!("Participant send their ID {}", pid);
                 let stream_id_offset = if initializer {
                     STREAM_ID_OFFSET1
                 } else {
@@ -144,18 +140,18 @@ where
                         .await?;
                     STREAM_ID_OFFSET2
                 };
-                info!(?pid, "This Handshake is now configured!");
+                log::info!("This Handshake is now configured!  {}", pid);
                 Ok((pid, stream_id_offset, secret))
             },
             InitFrame::Raw(bytes) => {
                 match std::str::from_utf8(bytes.as_slice()) {
-                    Ok(string) => error!(?string, ERR_S),
-                    _ => error!(?bytes, ERR_S),
+                    Ok(string) => log::error!("InitFrame::Raw error {}", string),
+                    _ => log::error!("InitFrame::Raw error 2"),
                 }
                 Err(InitProtocolError::Closed)
             },
             _ => {
-                info!("Handshake failed");
+                log::info!("Handshake failed");
                 Err(InitProtocolError::Closed)
             },
         }

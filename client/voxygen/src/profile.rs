@@ -7,7 +7,6 @@ use std::{
     io::Write,
     path::{Path, PathBuf},
 };
-use tracing::warn;
 
 /// Represents a character in the profile.
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -72,15 +71,15 @@ impl Profile {
             match ron::de::from_reader(file) {
                 Ok(profile) => return profile,
                 Err(e) => {
-                    warn!(
-                        ?e,
-                        ?path,
-                        "Failed to parse profile file! Falling back to default."
+                    log::warn!(
+                        "{:?}   {:?}   Failed to parse profile file! Falling back to default.",
+                        e,
+                        path
                     );
                     // Rename the corrupted profile file.
                     let new_path = path.with_extension("invalid.ron");
                     if let Err(e) = std::fs::rename(path.clone(), new_path.clone()) {
-                        warn!(?e, ?path, ?new_path, "Failed to rename profile file.");
+                        log::warn!("{:?}  {:?}  {:?} Failed to rename profile file.", e, path, new_path);
                     }
                 },
             }
@@ -96,7 +95,7 @@ impl Profile {
     /// Save the current profile to disk, warn on failure.
     pub fn save_to_file_warn(&self, config_dir: &Path) {
         if let Err(e) = self.save_to_file(config_dir) {
-            warn!(?e, "Failed to save profile");
+            log::warn!("{:?}  Failed to save profile", e);
         }
     }
 

@@ -151,7 +151,7 @@ impl Body {
                         ori,
                     }) => {
                         if aspect_ratio > 25.0 {
-                            tracing::warn!(
+                            log::warn!(
                                 "Calculating lift for wings with an aspect ratio of {}. The \
                                  formulas are only valid for aspect ratios below 25.",
                                 aspect_ratio

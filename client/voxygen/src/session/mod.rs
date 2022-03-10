@@ -5,7 +5,6 @@ mod target;
 use std::{cell::RefCell, collections::HashSet, rc::Rc, result::Result, sync::Arc, time::Duration};
 use ordered_float::OrderedFloat;
 use specs::{Join, WorldExt};
-use tracing::{error, info, warn};
 use vek::*;
 
 use client::{self, Client};
@@ -27,7 +26,6 @@ use common::{
     util::{Dir, Plane},
     vol::ReadVol,
 };
-use common_base::{prof_span, span};
 use common_net::{
     msg::{server::InviteAnswer, PresenceKind},
     sync::WorldSyncExt,
@@ -136,7 +134,7 @@ impl SessionState {
         global_state: &mut GlobalState,
         outcomes: &mut Vec<Outcome>,
     ) -> Result<TickAction, Error> {
-        span!(_guard, "tick", "Session::tick");
+        
 
         let mut client = self.client.borrow_mut();
         self.scene
@@ -213,10 +211,10 @@ impl SessionState {
                                     });
                                 },
                                 Result::Err(e) => {
-                                    warn!(
-                                        ?e,
-                                        "Item not present on client: {}",
-                                        item.item_definition_id()
+                                    log::warn!(
+                                        "Item not present on client: {} | {:?}",
+                                        item.item_definition_id(),
+                                        e
                                     );
                                 },
                             }
@@ -292,7 +290,7 @@ impl PlayState for SessionState {
     }
 
     fn tick(&mut self, global_state: &mut GlobalState, events: Vec<Event>) -> PlayStateResult {
-        span!(_guard, "tick", "<Session as PlayState>::tick");
+        
         // TODO: let mut client = self.client.borrow_mut();
 
         // TODO: can this be a method on the session or are there borrowcheck issues?
@@ -986,7 +984,7 @@ impl PlayState for SessionState {
                                 .get("common.connection_lost")
                                 .to_owned(),
                         );
-                        error!("[session] Failed to tick the scene: {:?}", err);
+                        log::error!("[session] Failed to tick the scene: {:?}", err);
 
                         return PlayStateResult::Pop;
                     },
@@ -1316,7 +1314,7 @@ impl PlayState for SessionState {
                             .profile
                             .save_to_file_warn(&global_state.config_dir);
 
-                        info!("Event! -> ChangedHotbarState")
+                        log::info!("Event! -> ChangedHotbarState")
                     },
                     HudEvent::TradeAction(action) => {
                         self.client.borrow_mut().perform_trade_action(action);
@@ -1447,7 +1445,7 @@ impl PlayState for SessionState {
                 Rc::clone(&self.client),
             )))
         } else {
-            error!("Client not in the expected state, exiting session play state");
+            log::error!("Client not in the expected state, exiting session play state");
             PlayStateResult::Pop
         }
     }
@@ -1462,7 +1460,6 @@ impl PlayState for SessionState {
     ///
     /// This method should be called once per frame.
     fn render<'a>(&'a self, drawer: &mut Drawer<'a>, settings: &Settings) {
-        span!(_guard, "render", "<Session as PlayState>::render");
 
         // Render world
         {
@@ -1498,19 +1495,16 @@ impl PlayState for SessionState {
 
         // Clouds
         {
-            prof_span!("clouds");
             if let Some(mut second_pass) = drawer.second_pass() {
                 second_pass.draw_clouds();
             }
         }
         // Bloom (call does nothing if bloom is off)
         {
-            prof_span!("bloom");
             drawer.run_bloom_passes()
         }
         // PostProcess and UI
         {
-            prof_span!("post-process and ui");
             let mut third_pass = drawer.third_pass();
             third_pass.draw_postprocess();
             // Draw the UI to the screen

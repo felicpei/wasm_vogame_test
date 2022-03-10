@@ -17,7 +17,6 @@ common-base = { package = "veloren-common-base", path = "../base" }
 
 rand = "0.8"
 rayon = "1.5"
-tracing = { version = "0.1", default-features = false }
 vek = { version = "=0.14.1", features = ["serde"] }
 ordered-float = { version = "2.0.1", default-features = false }
 
@@ -31,3 +30,7 @@ specs = { git = "https://github.com/amethyst/specs.git", features = ["serde", "s
 
 # Tweak running code
 # inline_tweak = { version = "1.0.8", features = ["release_tweak"] }
+
+
+#log
+log = "0.4"

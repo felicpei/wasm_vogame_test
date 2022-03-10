@@ -154,7 +154,7 @@ impl BloomPipelines {
         layout: &BloomLayout,
         bloom_config: &BloomConfig,
     ) -> Self {
-        common_base::span!(_guard, "BloomPipelines::new");
+        
         let render_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Bloom pipelines layout"),

@@ -21,7 +21,6 @@ use crate::{
     },
 };
 use common::{slowjob::SlowJobPool, util::srgba_to_linear};
-use common_base::span;
 use std::{convert::TryInto, ops::Range};
 use vek::*;
 
@@ -190,7 +189,7 @@ impl IcedRenderer {
         renderer: &mut Renderer,
         pool: Option<&SlowJobPool>,
     ) {
-        span!(_guard, "draw", "IcedRenderer::draw");
+        
         // Re-use memory
         self.draw_commands.clear();
         self.mesh.clear();
@@ -301,7 +300,7 @@ impl IcedRenderer {
                     });
             },
             Err(glyph_brush::BrushError::TextureTooSmall { suggested: (x, y) }) => {
-                tracing::error!(
+                log::error!(
                     "Texture to small for all glyphs, would need one of the size: ({}, {})",
                     x,
                     y
@@ -774,7 +773,7 @@ impl IcedRenderer {
     }
 
     pub fn render<'a>(&'a self, drawer: &mut UiDrawer<'_, 'a>) {
-        span!(_guard, "render", "IcedRenderer::render");
+        
         let mut drawer = drawer.prepare(&self.interface_locals, &self.model, self.window_scissor);
         for draw_command in self.draw_commands.iter() {
             match draw_command {
@@ -832,7 +831,7 @@ impl iced::Renderer for IcedRenderer {
         element: &iced::Element<'a, M, Self>,
         limits: &iced::layout::Limits,
     ) -> iced::layout::Node {
-        span!(_guard, "layout", "IcedRenderer::layout");
+        
 
         // Trim text measurements cache?
 
@@ -845,7 +844,7 @@ impl iced::Renderer for IcedRenderer {
         (overlay_primitive, overlay_interaction): Self::Output,
         overlay_bounds: iced::Rectangle,
     ) -> Self::Output {
-        span!(_guard, "overlay", "IcedRenderer::overlay");
+        
         (
             Primitive::Group {
                 primitives: vec![base_primitive, Primitive::Clip {

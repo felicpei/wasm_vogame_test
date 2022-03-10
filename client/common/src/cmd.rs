@@ -13,7 +13,6 @@ use std::{
     str::FromStr,
 };
 use strum::IntoEnumIterator;
-use tracing::warn;
 
 /// Struct representing a command that a user can run from server chat.
 pub struct ChatCommandData {
@@ -247,7 +246,7 @@ lazy_static! {
     pub static ref ITEM_SPECS: Vec<String> = {
         let mut items = try_all_item_defs()
             .unwrap_or_else(|e| {
-                warn!(?e, "Failed to load item specifiers");
+                log::warn!("Failed to load item specifiers: {}", e);
                 Vec::new()
             });
         items.sort();
@@ -258,7 +257,7 @@ lazy_static! {
     static ref ENTITY_CONFIGS: Vec<String> = {
         try_all_entity_configs()
             .unwrap_or_else(|e| {
-                warn!(?e, "Failed to load entity configs");
+                log::warn!("Failed to load entity configs  {}", e);
                 Vec::new()
             })
     };
@@ -277,7 +276,7 @@ lazy_static! {
         if let Ok(presets) = SkillPresetManifest::load(PRESET_MANIFEST_PATH) {
             presets.read().0.clone()
         } else {
-            warn!("Error while loading presets");
+            log::warn!("Error while loading presets");
             HashMap::new()
         }
     };

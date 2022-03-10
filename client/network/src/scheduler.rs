@@ -22,7 +22,6 @@ use tokio::{
     sync::{mpsc, oneshot, Mutex},
 };
 use tokio_stream::wrappers::UnboundedReceiverStream;
-use tracing::*;
 
 // Naming of Channels `x2x`
 //  - a: api
@@ -151,7 +150,7 @@ impl Scheduler {
             .take()
             .expect("run() can only be called once");
 
-        trace!("#### scheduler run");
+            log::trace!("#### scheduler run");
         
         tokio::join!(
             self.listen_mgr(run_channels.a2s_listen_r),
@@ -163,7 +162,7 @@ impl Scheduler {
     }
 
     async fn listen_mgr(&self, a2s_listen_r: mpsc::UnboundedReceiver<A2sListen>) {
-        trace!("Start listen_mgr");
+        log::trace!("Start listen_mgr");
         let a2s_listen_r = UnboundedReceiverStream::new(a2s_listen_r);
         a2s_listen_r
             .for_each_concurrent(None, |(address, s2a_listen_result_s)| {
@@ -173,7 +172,7 @@ impl Scheduler {
                 #[cfg(feature = "metrics")]
                 let mcache = self.metrics.connect_requests_cache(&address);
 
-                debug!(?address, "Got request to open a channel_creator");
+                log::debug!("Got request to open a channel_creator");
                 self.metrics.listen_request(&address);
                 let (s2s_stop_listening_s, s2s_stop_listening_r) = oneshot::channel::<()>();
                 let (c2s_protocol_s, mut c2s_protocol_r) = mpsc::unbounded_channel();
@@ -208,11 +207,11 @@ impl Scheduler {
                 }
             })
             .await;
-        trace!("Stop listen_mgr");
+            log::trace!("Stop listen_mgr");
     }
 
     async fn connect_mgr(&self, mut a2s_connect_r: mpsc::UnboundedReceiver<A2sConnect>) {
-        trace!("Start connect_mgr");
+        log::trace!("Start connect_mgr");
         while let Some((addr, pid_sender)) = a2s_connect_r.recv().await {
             let cid = self.channel_ids.fetch_add(1, Ordering::Relaxed);
             let metrics =
@@ -231,11 +230,11 @@ impl Scheduler {
             self.init_protocol(protocol, cid, Some(pid_sender), false)
                 .await;
         }
-        trace!("Stop connect_mgr");
+        log::trace!("Stop connect_mgr");
     }
 
     async fn disconnect_mgr(&self, a2s_disconnect_r: mpsc::UnboundedReceiver<A2sDisconnect>) {
-        trace!("Start disconnect_mgr");
+        log::trace!("Start disconnect_mgr");
 
         let a2s_disconnect_r = UnboundedReceiverStream::new(a2s_disconnect_r);
         a2s_disconnect_r
@@ -249,9 +248,9 @@ impl Scheduler {
                     // their next api action, it will fail and be closed then.
                     let participants = Arc::clone(&self.participants);
                     async move {
-                        trace!(?pid, "Got request to close participant");
+                        log::trace!("{} Got request to close participant", pid);
                         let pi = participants.lock().await.remove(&pid);
-                        trace!(?pid, "dropped participants lock");
+                        log::trace!("{} dropped participants lock", pid);
                         let r = if let Some(mut pi) = pi {
                             let (finished_sender, finished_receiver) = oneshot::channel();
                             // NOTE: If there's nothing to synchronize on (because the send failed)
@@ -262,53 +261,53 @@ impl Scheduler {
                                 .unwrap()
                                 .send((timeout_time, finished_sender));
                             drop(pi);
-                            trace!(?pid, "dropped bparticipant, waiting for finish");
+                            log::trace!("{} dropped bparticipant, waiting for finish", pid);
                             // If await fails, already shut down, so send Ok(()).
                             let e = finished_receiver.await.unwrap_or(Ok(()));
-                            trace!(?pid, "waiting completed");
+                            log::trace!("{} waiting completed", pid);
                             // can fail as api.rs has a timeout
                             return_once_successful_shutdown.send(e)
                         } else {
-                            debug!(?pid, "Looks like participant is already dropped");
+                            log::debug!("{} Looks like participant is already dropped", pid);
                             return_once_successful_shutdown.send(Ok(()))
                         };
                         if r.is_err() {
-                            trace!(?pid, "Closed participant with timeout");
+                            log::trace!("{} Closed participant with timeout", pid);
                         } else {
-                            trace!(?pid, "Closed participant");
+                            log::trace!("{} Closed participant", pid);
                         }
                     }
                 },
             )
             .await;
-        trace!("Stop disconnect_mgr");
+            log::trace!("Stop disconnect_mgr");
     }
 
     async fn prio_adj_mgr(
         &self,
         mut b2s_prio_statistic_r: mpsc::UnboundedReceiver<B2sPrioStatistic>,
     ) {
-        trace!("Start prio_adj_mgr");
+        log::trace!("Start prio_adj_mgr");
         while let Some((_pid, _frame_cnt, _unused)) = b2s_prio_statistic_r.recv().await {
 
             //TODO adjust prios in participants here!
         }
-        trace!("Stop prio_adj_mgr");
+        log::trace!("Stop prio_adj_mgr");
     }
 
     async fn scheduler_shutdown_mgr(&self, a2s_scheduler_shutdown_r: oneshot::Receiver<()>) {
-        trace!("Start scheduler_shutdown_mgr");
+        log::trace!("Start scheduler_shutdown_mgr");
         if a2s_scheduler_shutdown_r.await.is_err() {
-            warn!("Schedule shutdown got triggered because a2s_scheduler_shutdown_r failed");
+            log::warn!("Schedule shutdown got triggered because a2s_scheduler_shutdown_r failed");
         };
-        info!("Shutdown of scheduler requested");
+        log::info!("Shutdown of scheduler requested");
         self.closed.store(true, Ordering::SeqCst);
-        debug!("Shutting down all BParticipants gracefully");
+        log::debug!("Shutting down all BParticipants gracefully");
         let mut participants = self.participants.lock().await;
         let waitings = participants
             .drain()
             .map(|(pid, mut pi)| {
-                trace!(?pid, "Shutting down BParticipants");
+                log::trace!( "{}  Shutting down BParticipants",pid);
                 let (finished_sender, finished_receiver) = oneshot::channel();
                 pi.s2b_shutdown_bparticipant_s
                     .take()
@@ -319,30 +318,30 @@ impl Scheduler {
             })
             .collect::<Vec<_>>();
         drop(participants);
-        debug!("Wait for partiticipants to be shut down");
+        log::debug!("Wait for partiticipants to be shut down");
         for (pid, recv) in waitings {
             if let Err(e) = recv.await {
-                error!(
-                    ?pid,
-                    ?e,
+                log::error!(
                     "Failed to finish sending all remaining messages to participant when shutting \
-                     down"
+                     down, {}, {}",
+                    pid,
+                    e,
                 );
             };
         }
-        debug!("shutting down protocol listeners");
+        log::debug!("shutting down protocol listeners");
         for (addr, end_channel_sender) in self.channel_listener.lock().await.drain() {
-            trace!(?addr, "stopping listen on protocol");
+            log::trace!("stopping listen on protocol : {:?}", addr);
             if let Err(e) = end_channel_sender.send(()) {
-                warn!(?addr, ?e, "listener crashed/disconnected already");
+                log::warn!("listener crashed/disconnected already: {:?} {:?}", addr, e);
             }
         }
-        debug!("Scheduler shut down gracefully");
+        log::debug!("Scheduler shut down gracefully");
         //removing the possibility to create new participants, needed to close down
         // some mgr:
         self.participant_channels.lock().await.take();
 
-        trace!("Stop scheduler_shutdown_mgr");
+        log::trace!("Stop scheduler_shutdown_mgr");
     }
 
     async fn init_protocol(
@@ -370,22 +369,21 @@ impl Scheduler {
         // this is necessary for UDP to work at all and to remove code duplication
         tokio::spawn(
             async move {
-                trace!(?cid, "Open channel and be ready for Handshake");
+                log::trace!( "Open channel and be ready for Handshake :{}",cid);
                 use network_protocol::InitProtocol;
                 let init_result = protocol
                     .initialize(send_handshake, local_pid, local_secret)
-                    .instrument(tracing::info_span!("handshake", ?cid))
                     .await;
                 match init_result {
                     Ok((pid, sid, secret)) => {
-                        trace!(
-                            ?cid,
-                            ?pid,
-                            "Detected that my channel is ready!, activating it :)"
+                        log::trace!(
+                            "{}  {}  Detected that my channel is ready!, activating it :)",
+                            cid,
+                            pid
                         );
                         let mut participants = participants.lock().await;
                         if !participants.contains_key(&pid) {
-                            debug!(?cid, "New participant connected via a channel");
+                            log::debug!("New participant connected via a channel: {}", cid);
                             let (
                                 bparticipant,
                                 a2b_open_stream_s,
@@ -412,12 +410,10 @@ impl Scheduler {
                                 s2b_shutdown_bparticipant_s: Some(s2b_shutdown_bparticipant_s),
                             });
                             drop(participants);
-                            trace!("dropped participants lock");
-                            let p = pid;
+                            log::trace!("dropped participants lock");
                             tokio::spawn(
                                 bparticipant
-                                    .run(participant_channels.b2s_prio_statistic_s)
-                                    .instrument(tracing::info_span!("remote", ?p)),
+                                    .run(participant_channels.b2s_prio_statistic_s),
                             );
                             //create a new channel within BParticipant and wait for it to run
                             let (b2s_create_channel_done_s, b2s_create_channel_done_r) =
@@ -437,23 +433,23 @@ impl Scheduler {
                                     .send(participant)
                                     .is_err()
                                 {
-                                    warn!("seems like Network already got closed");
+                                    log::warn!("seems like Network already got closed");
                                 };
                             }
                         } else {
                             let pi = &participants[&pid];
-                            trace!(
-                                ?cid,
-                                "2nd+ channel of participant, going to compare security ids"
+                            log::trace!(
+                                "2nd+ channel of participant, going to compare security ids : {}", 
+                                cid,
                             );
                             if pi.secret != secret {
-                                warn!(
-                                    ?cid,
-                                    ?pid,
-                                    ?secret,
-                                    "Detected incompatible Secret!, this is probably an attack!"
+                                log::warn!(
+                                    "{} {} {} Detected incompatible Secret!, this is probably an attack!",
+                                    cid,
+                                    pid,
+                                    secret
                                 );
-                                error!(?cid, "Just dropping here, TODO handle this correctly!");
+                                log::error!("Just dropping here, TODO handle this correctly!, {}", cid);
                                 //TODO
                                 if let Some(pid_oneshot) = s2a_return_pid_s {
                                     // someone is waiting with `connect`, so give them their Error
@@ -463,30 +459,28 @@ impl Scheduler {
                                 }
                                 return;
                             }
-                            error!(
-                                ?cid,
+                            log::error!(
                                 "Ufff i cant answer the pid_oneshot. as i need to create the SAME \
-                                 participant. maybe switch to ARC"
+                                 participant. maybe switch to ARC  : {}", cid
                             );
                         }
                         //From now on this CHANNEL can receiver other frames!
                         // move directly to participant!
                     },
                     Err(e) => {
-                        debug!(?cid, ?e, "Handshake from a new connection failed");
+                        log::debug!("Handshake from a new connection failed   {}   {}", cid, e);
                         #[cfg(feature = "metrics")]
                         metrics.failed_handshakes_total.inc();
                         if let Some(pid_oneshot) = s2a_return_pid_s {
                             // someone is waiting with `connect`, so give them their Error
-                            trace!(?cid, "returning the Err to api who requested the connect");
+                            log::trace!("returning the Err to api who requested the connect : {}", cid);
                             pid_oneshot
                                 .send(Err(NetworkConnectError::Handshake(e)))
                                 .unwrap();
                         }
                     },
                 }
-            }
-            .instrument(tracing::info_span!("")),
+            },
         ); /*WORKAROUND FOR SPAN NOT TO GET LOST*/
     }
 }

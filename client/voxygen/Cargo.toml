@@ -14,14 +14,23 @@ crate-type = ["cdylib", "rlib"]
 [features]
 #singleplayer = ["server"]
 #plugins = ["client/plugins"]
-simd = ["vek/platform_intrinsics"]
 #shaderc-from-source = ["shaderc/build-from-source"]
+
+simd = ["vek/platform_intrinsics"]
 default-publish = ["simd"]
 default = ["default-publish"]
+#wasm = ["wasm-bindgen", "web-sys", "wasm-logger"]
 
 [dependencies]
-wasm-bindgen = "0.2.79"
-web-sys = "0.3.50"
+
+#wasm 
+wasm-bindgen = {version = "0.2.79", optional = true}
+web-sys = {version = "0.3.50", optional = true}
+wasm-logger =  {version ="0.2", optional = true}
+
+#log
+log = "0.4"
+
 
 #时间库 代替标准库的time
 #instant = { version = "0.1", features = [ "wasm-bindgen", "inaccurate" ] }
@@ -30,11 +39,9 @@ client = {package = "veloren-client", path = "../client"}
 common = {package = "veloren-common", path = "../common"}
 common-base = {package = "veloren-common-base", path = "../common/base"}
 common-ecs = {package = "veloren-common-ecs", path = "../common/ecs"}
-#common-frontend = {package = "veloren-common-frontend", path = "../common/frontend"}
 common-net = {package = "veloren-common-net", path = "../common/net"}
 common-systems = {package = "veloren-common-systems", path = "../common/systems"}
 common-state = {package = "veloren-common-state", path = "../common/state"}
-
 anim = {package = "veloren-voxygen-anim", path = "anim"}
 i18n = {package = "veloren-voxygen-i18n", path = "i18n"}
 
@@ -107,12 +114,12 @@ tokio = { version = "=1.17.0", default-features = false, features = ["rt-multi-t
 inline_tweak = "1.0.2"
 itertools = "0.10.0"
 
-# Tracy
-tracing = "0.1"
-
-[target.'cfg(target_os = "macos")'.dependencies]
-dispatch = "0.1.4"
+# [target.'cfg(target_os = "macos")'.dependencies]
+# dispatch = "0.1.4"
 
 # Mumble
 # [target.'cfg(not(target_os="macos"))'.dependencies]
 # mumble-link = "0.1.0"
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+env_logger = "0.9"

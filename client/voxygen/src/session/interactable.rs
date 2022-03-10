@@ -16,7 +16,6 @@ use common::{
     util::find_dist::{Cube, Cylinder, FindDist},
     vol::ReadVol,
 };
-use common_base::span;
 
 use crate::scene::{terrain::Interaction, Scene};
 
@@ -53,7 +52,7 @@ pub(super) fn select_interactable(
     mine_target: Option<Target<target::Mine>>,
     scene: &Scene,
 ) -> Option<Interactable> {
-    span!(_guard, "select_interactable");
+    
     use common::{spiral::Spiral2d, terrain::TerrainChunk, vol::RectRasterableVol};
 
     let nearest_dist = find_shortest_distance(&[

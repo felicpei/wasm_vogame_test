@@ -1,6 +1,5 @@
 use crate::hud::CraftingTab;
 use common::terrain::{BlockKind, SpriteKind, TerrainChunk};
-use common_base::span;
 use rand::prelude::*;
 use rand_chacha::ChaCha8Rng;
 use vek::*;
@@ -39,7 +38,7 @@ pub struct BlocksOfInterest {
 
 impl BlocksOfInterest {
     pub fn from_chunk(chunk: &TerrainChunk) -> Self {
-        span!(_guard, "from_chunk", "BlocksOfInterest::from_chunk");
+        
         let mut leaves = Vec::new();
         let mut drip = Vec::new();
         let mut grass = Vec::new();

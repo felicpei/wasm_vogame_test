@@ -33,7 +33,7 @@ use common::{
     terrain::{BlockKind, TerrainChunk},
     vol::ReadVol,
 };
-use common_base::{prof_span, span};
+
 use common_state::State;
 use comp::item::Reagent;
 use hashbrown::HashMap;
@@ -394,7 +394,7 @@ impl Scene {
         scene_data: &SceneData,
         audio: &mut AudioFrontend,
     ) {
-        span!(_guard, "handle_outcome", "Scene::handle_outcome");
+        
         self.particle_mgr.handle_outcome(outcome, scene_data);
         self.sfx_mgr
             .handle_outcome(outcome, audio, scene_data.client);
@@ -451,7 +451,7 @@ impl Scene {
         scene_data: &SceneData,
         client: &Client,
     ) {
-        span!(_guard, "maintain", "Scene::maintain");
+        
         // Get player position.
         let ecs = scene_data.state.ecs();
 
@@ -1067,7 +1067,7 @@ impl Scene {
         tick: u64,
         scene_data: &SceneData,
     ) {
-        span!(_guard, "render", "Scene::render");
+        
         let sun_dir = scene_data.get_sun_dir();
         let is_daylight = sun_dir.z < 0.0;
         let focus_pos = self.camera.get_focus_pos();
@@ -1078,7 +1078,6 @@ impl Scene {
         // would instead have this as an extension.
         if drawer.pipeline_modes().shadow.is_map() && (is_daylight || !self.light_data.is_empty()) {
             if is_daylight {
-                prof_span!("directed shadows");
                 if let Some(mut shadow_pass) = drawer.shadow_pass() {
                     // Render terrain directed shadows.
                     self.terrain
@@ -1096,7 +1095,6 @@ impl Scene {
 
             // Render terrain point light shadows.
             {
-                prof_span!("point shadows");
                 drawer.draw_point_shadows(
                     &self.data.point_light_matrices,
                     self.terrain.chunks_for_point_shadows(focus_pos),
@@ -1104,7 +1102,7 @@ impl Scene {
             }
         }
 
-        prof_span!(guard, "main pass");
+        
         if let Some(mut first_pass) = drawer.first_pass() {
             self.figure_mgr.render_player(
                 &mut first_pass.draw_figures(),
@@ -1144,7 +1142,7 @@ impl Scene {
             // Render debug shapes
             self.debug.render(&mut first_pass.draw_debug());
         }
-        drop(guard);
+        
     }
 
     pub fn maintain_debug_hitboxes(

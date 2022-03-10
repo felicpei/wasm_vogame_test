@@ -5,7 +5,6 @@ use std::{
     sync::{Arc, Mutex},
     time::Instant,
 };
-use tracing::{error, warn};
 
 /// Provides a Wrapper around rayon threadpool to execute slow-jobs.
 /// slow means, the job doesn't need to not complete within the same tick.
@@ -98,7 +97,6 @@ impl Queue {
             id,
             name: name.to_owned(),
             task: Box::new(move || {
-                common_base::prof_span!(_guard, &name_cloned);
                 let execution_start = Instant::now();
                 f();
                 let execution_end = Instant::now();
@@ -280,7 +278,7 @@ impl InternalSlowJobPool {
         if let Some(c) = self.configs.get_mut(name) {
             c.local_spawned_and_running -= 1;
         } else {
-            warn!(?name, "sync_maintain on a no longer existing config");
+            log::warn!("sync_maintain on a no longer existing config {}", name);
         }
     }
 
@@ -309,12 +307,12 @@ impl InternalSlowJobPool {
                         self.last_spawned_configs.push(queue.name.to_owned());
                         self.threadpool.spawn(queue.task);
                     },
-                    None => error!(
+                    None => log::error!(
                         "internal calculation is wrong, we extected a schedulable job to be \
                          present in the queue"
                     ),
                 },
-                None => error!(
+                None => log::error!(
                     "internal calculation is wrong, we marked a queue as schedulable which \
                      doesn't exist"
                 ),

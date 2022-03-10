@@ -1,5 +1,4 @@
 use common::{terrain::TerrainGrid, vol::ReadVol};
-use common_base::span;
 use core::{f32::consts::PI, fmt::Debug};
 use num::traits::{real::Real, FloatConst};
 use treeculler::Frustum;
@@ -361,7 +360,7 @@ impl Camera {
         terrain: &V,
         is_transparent: fn(&V::Vox) -> bool,
     ) {
-        span!(_guard, "compute_dependents", "Camera::compute_dependents");
+        
         // TODO: More intelligent function to decide on which strategy to use
         if self.tgt_dist < CLIPPING_MODE_DISTANCE {
             self.compute_dependents_near(terrain, is_transparent)

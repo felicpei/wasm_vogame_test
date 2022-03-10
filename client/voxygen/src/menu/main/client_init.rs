@@ -12,7 +12,6 @@ use std::{
     time::Duration,
 };
 use tokio::runtime;
-use tracing::{trace, warn};
 
 #[derive(Debug)]
 #[allow(clippy::enum_variant_names)] //TODO: evaluate ClientError ends with Enum name
@@ -89,11 +88,11 @@ impl ClientInit {
                     Err(ClientError::NetworkErr(NetworkError::ConnectFailed(
                         NetworkConnectError::Io(e),
                     ))) => {
-                        warn!(?e, "Failed to connect to the server. Retrying...");
+                        log::warn!("{:?} Failed to connect to the server. Retrying...", e);
                     },
 
                     Err(e) => {
-                        trace!(?e, "Aborting server connection attempt");
+                        log::trace!("{:?}  Aborting server connection attempt", e);
                         last_err = Some(Error::ClientError {
                             error: e,
                             mismatched_server_info,

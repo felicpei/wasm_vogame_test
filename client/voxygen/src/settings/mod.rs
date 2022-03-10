@@ -4,7 +4,6 @@ use std::{
     fs,
     path::{Path, PathBuf},
 };
-use tracing::warn;
 
 pub mod audio;
 pub mod chat;
@@ -92,13 +91,13 @@ impl Settings {
             match ron::de::from_reader::<_, Self>(file) {
                 Ok(s) => return s,
                 Err(e) => {
-                    warn!(?e, "Failed to parse setting file! Fallback to default.");
+                    log::warn!("Failed to parse setting file! Fallback to default. {:?}", e);
                     // Rename the corrupted settings file
                     let mut new_path = path.to_owned();
                     new_path.pop();
                     new_path.push("settings.invalid.ron");
                     if let Err(e) = std::fs::rename(&path, &new_path) {
-                        warn!(?e, ?path, ?new_path, "Failed to rename settings file.");
+                        log::warn!("Failed to rename settings file. {:?} | {:?} | {:?}",e, path, new_path);
                     }
                 },
             }
@@ -113,7 +112,7 @@ impl Settings {
 
     pub fn save_to_file_warn(&self, config_dir: &Path) {
         if let Err(e) = self.save_to_file(config_dir) {
-            warn!(?e, "Failed to save settings");
+            log::warn!("Failed to save settings : {:?}", e);
         }
     }
 
@@ -131,7 +130,7 @@ impl Settings {
 
     pub fn display_warnings(&self) {
         if !self.graphics.render_mode.experimental_shaders.is_empty() {
-            warn!(
+            log::warn!(
                 "One or more experimental shaders are enabled, all rendering guarantees are off. \
                  Experimental shaders may be unmaintained, mutually-incompatible, entirely \
                  broken, or may cause your GPU to explode. You have been warned!"

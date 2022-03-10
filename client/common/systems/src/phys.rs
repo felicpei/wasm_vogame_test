@@ -17,7 +17,6 @@ use common::{
     util::{Projection, SpatialGrid},
     vol::{BaseVol, ReadVol},
 };
-use common_base::{prof_span, span};
 use common_ecs::{Job, Origin, ParMode, Phase, PhysicsMetrics, System};
 use rayon::iter::ParallelIterator;
 use specs::{
@@ -144,7 +143,7 @@ pub struct PhysicsData<'a> {
 impl<'a> PhysicsData<'a> {
     /// Add/reset physics state components
     fn reset(&mut self) {
-        span!(_guard, "Add/reset physics state components");
+        
         for (entity, _, _, _, _) in (
             &self.read.entities,
             &self.read.colliders,
@@ -163,7 +162,7 @@ impl<'a> PhysicsData<'a> {
     }
 
     fn maintain_pushback_cache(&mut self) {
-        span!(_guard, "Maintain pushback cache");
+        
         // Add PreviousPhysCache for all relevant entities
         for entity in (
             &self.read.entities,
@@ -273,7 +272,7 @@ impl<'a> PhysicsData<'a> {
     }
 
     fn construct_spatial_grid(&mut self) -> SpatialGrid {
-        span!(_guard, "Construct spatial grid");
+        
         let PhysicsData {
             ref read,
             ref write,
@@ -312,7 +311,7 @@ impl<'a> PhysicsData<'a> {
     }
 
     fn apply_pushback(&mut self, job: &mut Job<Sys>, spatial_grid: &SpatialGrid) {
-        span!(_guard, "Apply pushback");
+        
         job.cpu_stats.measure(ParMode::Rayon);
         let PhysicsData {
             ref read,
@@ -339,8 +338,7 @@ impl<'a> PhysicsData<'a> {
             .par_join()
             .map_init(
                 || {
-                    prof_span!(guard, "physics e<>e rayon job");
-                    guard
+                    
                 },
                 |_guard,
                  (
@@ -511,7 +509,7 @@ impl<'a> PhysicsData<'a> {
     }
 
     fn construct_voxel_collider_spatial_grid(&mut self) -> SpatialGrid {
-        span!(_guard, "Construct voxel collider spatial grid");
+        
         let PhysicsData {
             ref read,
             ref write,
@@ -566,7 +564,7 @@ impl<'a> PhysicsData<'a> {
             ref mut write,
         } = self;
 
-        prof_span!(guard, "insert PosVelOriDefer");
+        
         // NOTE: keep in sync with join below
         (
             &read.entities,
@@ -591,10 +589,10 @@ impl<'a> PhysicsData<'a> {
                     ori: Some(ori),
                 });
             });
-        drop(guard);
+        
 
         // Apply movement inputs
-        span!(guard, "Apply movement");
+        
         let (positions, velocities) = (&write.positions, &mut write.velocities);
 
         // First pass: update velocity using air resistance and gravity for each entity.
@@ -614,8 +612,7 @@ impl<'a> PhysicsData<'a> {
             .par_join()
             .for_each_init(
                 || {
-                    prof_span!(guard, "velocity update rayon job");
-                    guard
+
                 },
                 |_guard,
                  (
@@ -679,7 +676,7 @@ impl<'a> PhysicsData<'a> {
                     }
                 },
             );
-        drop(guard);
+
         job.cpu_stats.measure(ParMode::Single);
 
         // Second pass: resolve collisions for terrain-like entities, this is required
@@ -693,7 +690,7 @@ impl<'a> PhysicsData<'a> {
 
         // Update cached 'old' physics values to the current values ready for the next
         // tick
-        prof_span!(guard, "record ori into phys_cache");
+        
         for (pos, ori, previous_phys_cache, _) in (
             &write.positions,
             &write.orientations,
@@ -707,7 +704,7 @@ impl<'a> PhysicsData<'a> {
             previous_phys_cache.pos = Some(*pos);
             previous_phys_cache.ori = ori.to_quat();
         }
-        drop(guard);
+    
     }
 
     fn resolve_et_collision(
@@ -723,7 +720,7 @@ impl<'a> PhysicsData<'a> {
             &write.previous_phys_cache,
             &write.orientations,
         );
-        span!(guard, "Apply terrain collision");
+        
         job.cpu_stats.measure(ParMode::Rayon);
         let (land_on_grounds, mut outcomes) = (
             &read.entities,
@@ -744,8 +741,7 @@ impl<'a> PhysicsData<'a> {
             .filter(|tuple| tuple.3.is_voxel() == terrain_like_entities)
             .map_init(
                 || {
-                    prof_span!(guard, "physics e<>t rayon job");
-                    guard
+                    
                 },
                 |_guard,
                  (
@@ -1225,12 +1221,12 @@ impl<'a> PhysicsData<'a> {
                     (land_on_grounds_a, outcomes_a)
                 },
             );
-        drop(guard);
+
         job.cpu_stats.measure(ParMode::Single);
 
         write.outcomes.append(&mut outcomes);
 
-        prof_span!(guard, "write deferred pos and vel");
+        
         for (_, pos, vel, ori, pos_vel_ori_defer, _) in (
             &read.entities,
             &mut write.positions,
@@ -1252,7 +1248,7 @@ impl<'a> PhysicsData<'a> {
                 *ori = new_ori;
             }
         }
-        drop(guard);
+        
 
         let mut event_emitter = read.event_bus.emitter();
         land_on_grounds.into_iter().for_each(|(entity, vel)| {
@@ -1261,7 +1257,7 @@ impl<'a> PhysicsData<'a> {
     }
 
     fn update_cached_spatial_grid(&mut self) {
-        span!(_guard, "Update cached spatial grid");
+        
         let PhysicsData {
             ref read,
             ref mut write,

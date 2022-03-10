@@ -44,7 +44,6 @@ use common::{
     uid::UidAllocator,
     vol::RectRasterableVol,
 };
-use common_base::span;
 use common_state::State;
 use core::{
     borrow::Borrow,
@@ -256,7 +255,7 @@ impl FigureMgrStates {
     }
 
     fn retain(&mut self, mut f: impl FnMut(&EcsEntity, &mut FigureStateMeta) -> bool) {
-        span!(_guard, "retain", "FigureManagerStates::retain");
+        
         self.character_states.retain(|k, v| f(k, &mut *v));
         self.quadruped_small_states.retain(|k, v| f(k, &mut *v));
         self.quadruped_medium_states.retain(|k, v| f(k, &mut *v));
@@ -440,7 +439,7 @@ impl FigureMgr {
     pub fn col_lights(&self) -> &FigureColLights { &self.col_lights }
 
     pub fn clean(&mut self, tick: u64) {
-        span!(_guard, "clean", "FigureManager::clean");
+        
         self.model_cache.clean(&mut self.col_lights, tick);
         self.theropod_model_cache.clean(&mut self.col_lights, tick);
         self.quadruped_small_model_cache
@@ -471,7 +470,7 @@ impl FigureMgr {
     }
 
     pub fn update_lighting(&mut self, scene_data: &SceneData) {
-        span!(_guard, "update_lighting", "FigureManager::update_lighting");
+        
         let ecs = scene_data.state.ecs();
         for (entity, body, light_emitter) in (
             &ecs.entities(),
@@ -577,7 +576,7 @@ impl FigureMgr {
         camera: &Camera,
         terrain: Option<&Terrain>,
     ) -> anim::vek::Aabb<f32> {
-        span!(_guard, "maintain", "FigureManager::maintain");
+        
         let state = scene_data.state;
         let time = state.get_time() as f32;
         let tick = scene_data.tick;
@@ -5505,7 +5504,7 @@ impl FigureMgr {
         tick: u64,
         (camera, figure_lod_render_distance): CameraData,
     ) {
-        span!(_guard, "render_shadows", "FigureManager::render_shadows");
+        
         let ecs = state.ecs();
         let items = ecs.read_storage::<Item>();
 
@@ -5553,7 +5552,7 @@ impl FigureMgr {
         tick: u64,
         (camera, figure_lod_render_distance): CameraData,
     ) {
-        span!(_guard, "render", "FigureManager::render");
+        
         let ecs = state.ecs();
 
         let character_state_storage = state.read_storage::<common::comp::CharacterState>();
@@ -5608,7 +5607,7 @@ impl FigureMgr {
         tick: u64,
         (camera, figure_lod_render_distance): CameraData,
     ) {
-        span!(_guard, "render_player", "FigureManager::render_player");
+        
         let ecs = state.ecs();
 
         let character_state_storage = state.read_storage::<common::comp::CharacterState>();
@@ -6104,7 +6103,7 @@ impl FigureColLights {
         (opaque, bounds): (Mesh<TerrainVertex>, math::Aabb<f32>),
         vertex_ranges: [Range<u32>; N],
     ) -> FigureModelEntry<N> {
-        span!(_guard, "create_figure", "FigureColLights::create_figure");
+        
         let atlas = &mut self.atlas;
         let allocation = atlas
             .allocate(guillotiere::Size::new(tex_size.x as i32, tex_size.y as i32))

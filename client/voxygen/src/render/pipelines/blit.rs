@@ -74,7 +74,7 @@ impl BlitPipeline {
         sc_desc: &wgpu::SwapChainDescriptor,
         layout: &BlitLayout,
     ) -> Self {
-        common_base::span!(_guard, "BlitPipeline::new");
+        
         let render_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Blit pipeline layout"),

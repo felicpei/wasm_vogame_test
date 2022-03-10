@@ -9,7 +9,6 @@ use hashbrown::HashMap;
 use image::DynamicImage;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use tracing::{error, warn};
 use vek::*;
 
 pub fn animate_by_pulse(ids: &[Id], pulse: f32) -> Id {
@@ -121,9 +120,8 @@ impl ItemImgs {
             Some(id) => vec![*id],
             // There was no specification in the ron
             None => {
-                warn!(
-                    ?item_key,
-                    "missing specified image file (note: hot-reloading won't work here)",
+                log::warn!(
+                    "missing specified image file (note: hot-reloading won't work here), item_key:{:?}",item_key,
                 );
                 Vec::new()
             },
@@ -146,7 +144,7 @@ fn graceful_load_vox(specifier: &str) -> AssetHandle<DotVoxAsset> {
     match DotVoxAsset::load(full_specifier.as_str()) {
         Ok(dot_vox) => dot_vox,
         Err(_) => {
-            error!(?full_specifier, "Could not load vox file for item images",);
+            log::error!("Could not load vox file for item images, {:?}", full_specifier);
             DotVoxAsset::load_expect("voxygen.voxel.not_found")
         },
     }
@@ -156,7 +154,7 @@ fn graceful_load_img(specifier: &str) -> Arc<DynamicImage> {
     let handle = match assets::Image::load(&full_specifier) {
         Ok(img) => img,
         Err(_) => {
-            error!(?full_specifier, "Could not load image file for item images");
+            log::error!("Could not load image file for item images, {:?}", full_specifier);
             assets::Image::load_expect("voxygen.element.not_found")
         },
     };

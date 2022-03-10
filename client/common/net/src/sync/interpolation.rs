@@ -5,7 +5,6 @@ use super::InterpolatableComponent;
 use common::comp::{Ori, Pos, Vel};
 use specs::Component;
 use specs_idvs::IdvStorage;
-use tracing::warn;
 use vek::ops::{Lerp, Slerp};
 
 #[derive(Debug)]
@@ -83,7 +82,7 @@ impl InterpolatableComponent for Pos {
         if POSITION_INTERP_SANITY
             .map_or(false, |limit| p0.0.distance_squared(p1.0) > limit.powf(2.0))
         {
-            warn!("position delta exceeded sanity check, clamping");
+            log::warn!("position delta exceeded sanity check, clamping");
             return p1;
         }
         let (t0prime, m0) = vel.buf[(i + vel.buf.len() - 1) % vel.buf.len()];
@@ -100,7 +99,7 @@ impl InterpolatableComponent for Pos {
             h00(t) * p0.0 + h10(t) * dt * m0.0 + h01(t) * p1.0 + h11(t) * dt * m1.0
         } else {
             if ENABLE_POSITION_HERMITE {
-                warn!(
+                log::warn!(
                     "timestamps for pos and vel don't match ({:?}, {:?}), falling back to lerp",
                     interp_data, vel
                 );
@@ -109,7 +108,7 @@ impl InterpolatableComponent for Pos {
         };
 
         if out.map(|x| x.is_nan()).reduce_or() {
-            warn!("interpolation output is nan: {}, {}, {:?}", t2, t, buf);
+            log::warn!("interpolation output is nan: {}, {}, {:?}", t2, t, buf);
             out = p1.0;
         }
 
@@ -137,13 +136,13 @@ impl InterpolatableComponent for Vel {
         if VELOCITY_INTERP_SANITY
             .map_or(false, |limit| p0.0.distance_squared(p1.0) > limit.powf(2.0))
         {
-            warn!("velocity delta exceeded sanity check, clamping");
+            log::warn!("velocity delta exceeded sanity check, clamping");
             return p1;
         }
         let lerp_factor = 1.0 + ((t2 - t1) / (t1 - t0)) as f32;
         let mut out = Lerp::lerp_unclamped(p0.0, p1.0, lerp_factor);
         if out.map(|x| x.is_nan()).reduce_or() {
-            warn!(
+            log::warn!(
                 "interpolation output is nan: {}, {}, {:?}",
                 t2, lerp_factor, buf
             );
@@ -174,7 +173,7 @@ impl InterpolatableComponent for Ori {
         let lerp_factor = 1.0 + ((t2 - t1) / (t1 - t0)) as f32;
         let mut out = Slerp::slerp_unclamped(p0.to_quat(), p1.to_quat(), lerp_factor);
         if out.into_vec4().map(|x| x.is_nan()).reduce_or() {
-            warn!(
+            log::warn!(
                 "interpolation output is nan: {}, {}, {:?}",
                 t2, lerp_factor, buf
             );

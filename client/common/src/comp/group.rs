@@ -4,7 +4,6 @@ use serde::{Deserialize, Serialize};
 use slab::Slab;
 use specs::{Component, DerefFlaggedStorage, Join};
 use specs_idvs::IdvStorage;
-use tracing::{error, warn};
 
 // Primitive group system
 // Shortcomings include:
@@ -167,7 +166,7 @@ impl GroupManager {
     ) {
         // Ensure leader is not inviting themselves
         if leader == new_member {
-            warn!("Attempt to form group with leader as the only member (this is disallowed)");
+            log::warn!("Attempt to form group with leader as the only member (this is disallowed)");
             return;
         }
 
@@ -175,7 +174,7 @@ impl GroupManager {
         let new_member_uid = if let Some(uid) = uids.get(new_member) {
             *uid
         } else {
-            error!("Failed to retrieve uid for the new group member");
+            log::error!("Failed to retrieve uid for the new group member");
             return;
         };
 
@@ -415,7 +414,7 @@ impl GroupManager {
             let leaving_member_uid = if let Some(uid) = uids.get(member) {
                 *uid
             } else {
-                error!("Failed to retrieve uid for the leaving member");
+                log::error!("Failed to retrieve uid for the leaving member");
                 return;
             };
 
@@ -453,7 +452,7 @@ impl GroupManager {
                     if info.num_members > 0 {
                         info.num_members -= 1;
                     } else {
-                        error!("Group with invalid number of members")
+                        log::error!("Group with invalid number of members")
                     }
                 }
 
@@ -479,7 +478,7 @@ impl GroupManager {
                     groups.remove(leader);
                     notifier(leader, ChangeNotification::NoGroup);
                 } else if remaining_count == 0 {
-                    error!("Somehow group has no members")
+                    log::error!("Somehow group has no members")
                 }
             }
         }

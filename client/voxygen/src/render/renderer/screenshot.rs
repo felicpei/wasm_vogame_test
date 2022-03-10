@@ -1,5 +1,4 @@
 use super::super::pipelines::blit;
-use tracing::error;
 
 pub type ScreenshotFn = Box<dyn FnOnce(Result<image::DynamicImage, String>) + Send>;
 
@@ -137,7 +136,7 @@ impl TakeScreenshot {
         let singlethread_rt = match tokio::runtime::Builder::new_current_thread().build() {
             Ok(rt) => rt,
             Err(err) => {
-                error!(?err, "Could not create tokio runtime");
+                log::error!("{:?}  Could not create tokio runtime", err);
                 return;
             },
         };
@@ -163,9 +162,9 @@ impl TakeScreenshot {
             },
             // Error
             Err(err) => {
-                error!(
-                    ?err,
-                    "Failed to map buffer for downloading a screenshot from the GPU"
+                log::error!(
+                    "{:?}  Failed to map buffer for downloading a screenshot from the GPU", 
+                    err
                 );
                 return;
             },

@@ -29,10 +29,8 @@ use super::{
     ShadowMapMode, ShadowMode, Vertex,
 };
 use common::assets::{self, AssetExt, AssetHandle, ReloadWatcher};
-use common_base::span;
 use core::convert::TryFrom;
 use std::sync::Arc;
-use tracing::{error, info, warn};
 use vek::*;
 
 // TODO: yeet this somewhere else
@@ -226,13 +224,14 @@ impl Renderer {
 
         for (i, adapter) in adapters.iter() {
             let info = adapter.get_info();
-            info!(
-                ?info.name,
-                ?info.vendor,
-                ?info.backend,
-                ?info.device,
-                ?info.device_type,
-                "graphics device #{}", i,
+            log::info!(
+                "{:?} {:?} {:?} {:?} {:?} graphics device #{}",
+                info.name,
+                info.vendor,
+                info.backend,
+                info.device,
+                info.device_type, 
+                i,
             );
         }
 
@@ -254,13 +253,13 @@ impl Renderer {
         .ok_or(RenderError::CouldNotFindAdapter)?;
 
         let info = adapter.get_info();
-        info!(
-            ?info.name,
-            ?info.vendor,
-            ?info.backend,
-            ?info.device,
-            ?info.device_type,
-            "selected graphics device"
+        log::info!(
+            "{:?}  {:?}  {:?}  {:?}  {:?}  selected graphics device",
+            info.name,
+            info.vendor,
+            info.backend,
+            info.device,
+            info.device_type,
         );
         let graphics_backend = format!("{:?}", &info.backend);
 
@@ -312,7 +311,7 @@ impl Renderer {
         // This is better for use than their default because it includes the error in
         // the panic message
         device.on_uncaptured_error(move |error| {
-            error!("{}", &error);
+            log::error!("{}", &error);
             panic!(
                 "wgpu error (handling all wgpu errors as fatal):\n{:?}\n{:?}",
                 &error, &info,
@@ -323,7 +322,7 @@ impl Renderer {
             .features()
             .contains(wgpu_profiler::GpuProfiler::REQUIRED_WGPU_FEATURES);
         if !profiler_features_enabled {
-            info!(
+            log::info!(
                 "The features for GPU profiling (timestamp queries) are not available on this \
                  adapter"
             );
@@ -332,7 +331,7 @@ impl Renderer {
         let format = adapter
             .get_swap_chain_preferred_format(&surface)
             .expect("No supported swap chain format found");
-        info!("Using {:?} as the swapchain format", format);
+        log::info!("Using {:?} as the swapchain format", format);
 
         let sc_desc = wgpu::SwapChainDescriptor {
             usage: wgpu::TextureUsage::RENDER_ATTACHMENT,
@@ -350,7 +349,7 @@ impl Renderer {
             &ShadowMapMode::try_from(pipeline_modes.shadow).unwrap_or_default(),
         )
         .map_err(|err| {
-            warn!("Could not create shadow map views: {:?}", err);
+            log::warn!("Could not create shadow map views: {:?}", err);
         })
         .ok();
 
@@ -705,7 +704,7 @@ impl Renderer {
                         }
                     },
                     Err(err) => {
-                        warn!("Could not create shadow map views: {:?}", err);
+                        log::warn!("Could not create shadow map views: {:?}", err);
                     },
                 }
             }
@@ -906,12 +905,7 @@ impl Renderer {
         &'a mut self,
         globals: &'a GlobalsBindGroup,
     ) -> Result<Option<drawer::Drawer<'a>>, RenderError> {
-        span!(
-            _guard,
-            "start_recording_frame",
-            "Renderer::start_recording_frame"
-        );
-
+       
         if self.is_minimized {
             return Ok(None);
         }
@@ -1017,7 +1011,7 @@ impl Renderer {
                     }
                 },
                 Ok(Err(e)) => {
-                    error!(?e, "Could not recreate shaders from assets due to an error");
+                    log::error!("{:?} Could not recreate shaders from assets due to an error", e);
                     State::Complete {
                         pipelines,
                         shadow,
@@ -1061,7 +1055,7 @@ impl Renderer {
             Ok(frame) => frame.output,
             // If lost recreate the swap chain
             Err(err @ wgpu::SwapChainError::Lost) => {
-                warn!("{}. Recreating swap chain. A frame will be missed", err);
+                log::warn!("{}. Recreating swap chain. A frame will be missed", err);
                 self.on_resize(self.resolution);
                 return Ok(None);
             },
@@ -1072,7 +1066,7 @@ impl Renderer {
                 return Ok(None);
             },
             Err(err @ wgpu::SwapChainError::Outdated) => {
-                warn!("{}. Recreating the swapchain", err);
+                log::warn!("{}. Recreating the swapchain", err);
                 self.swap_chain = self.device.create_swap_chain(&self.surface, &self.sc_desc);
                 return Ok(None);
             },
@@ -1347,9 +1341,9 @@ impl Renderer {
                 std::path::Path::new(&file_name),
                 &self.profile_times,
             ) {
-                error!(?err, "Failed to save GPU timing snapshot");
+                log::error!("{:?} Failed to save GPU timing snapshot", err);
             } else {
-                info!("Saved GPU timing snapshot as: {}", file_name);
+                log::info!("Saved GPU timing snapshot as: {}", file_name);
             }
         }
     }

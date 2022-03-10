@@ -28,7 +28,7 @@ use common::{
     vol::{BaseVol, ReadVol, RectRasterableVol, SampleVol},
     volumes::vol_grid_2d::{VolGrid2d, VolGrid2dError},
 };
-use common_base::span;
+
 use core::{f32, fmt::Debug, i32, marker::PhantomData, time::Duration};
 use crossbeam_channel as channel;
 use enum_iterator::IntoEnumIterator;
@@ -39,7 +39,6 @@ use std::sync::{
     atomic::{AtomicU64, Ordering},
     Arc,
 };
-use tracing::warn;
 use treeculler::{BVol, Frustum, AABB};
 use vek::*;
 
@@ -181,7 +180,7 @@ fn mesh_worker<V: BaseVol<Vox = Block> + RectRasterableVol + ReadVol + Debug + '
     sprite_data: &HashMap<(SpriteKind, usize), [SpriteData; SPRITE_LOD_LEVELS]>,
     sprite_config: &SpriteSpec,
 ) -> MeshWorkerResponse {
-    span!(_guard, "mesh_worker");
+    
     let blocks_of_interest = BlocksOfInterest::from_chunk(&chunk);
 
     let mesh;
@@ -216,7 +215,7 @@ fn mesh_worker<V: BaseVol<Vox = Block> + RectRasterableVol + ReadVol + Debug + '
         pos,
         // Extract sprite locations from volume
         sprite_instances: {
-            span!(_guard, "extract sprite_instances");
+            
             let mut instances = [(); SPRITE_LOD_LEVELS].map(|()| Vec::new());
 
             for x in 0..V::RECT_SIZE.x as i32 {
@@ -571,7 +570,7 @@ impl<V: RectRasterableVol> Terrain<V> {
     fn make_atlas(
         renderer: &mut Renderer,
     ) -> Result<(AtlasAllocator, ColLights<pipelines::terrain::Locals>), RenderError> {
-        span!(_guard, "make_atlas", "Terrain::make_atlas");
+        
         let max_texture_size = renderer.max_texture_size();
         let atlas_size = guillotiere::Size::new(max_texture_size as i32, max_texture_size as i32);
         let atlas = AtlasAllocator::with_options(atlas_size, &guillotiere::AllocatorOptions {
@@ -776,14 +775,14 @@ impl<V: RectRasterableVol> Terrain<V> {
             }
         }
 
-        span!(_guard, "maintain", "Terrain::maintain");
+    
         let current_tick = scene_data.tick;
         let current_time = scene_data.state.get_time();
         let mut visible_bounding_box: Option<Aabb<f32>> = None;
 
         // Add any recently created or changed chunks to the list of chunks to be
         // meshed.
-        span!(guard, "Add new/modified chunks to mesh todo list");
+        
         for (modified, pos) in scene_data
             .state
             .terrain_changes()
@@ -833,11 +832,11 @@ impl<V: RectRasterableVol> Terrain<V> {
                 }
             }
         }
-        drop(guard);
+        
 
         // Add the chunks belonging to recently changed blocks to the list of chunks to
         // be meshed
-        span!(guard, "Add chunks with modified blocks to mesh todo list");
+        
         // TODO: would be useful if modified blocks were grouped by chunk
         for (&pos, &old_block) in scene_data.state.terrain_changes().modified_blocks.iter() {
             // terrain_changes() are both set and applied during the same tick on the
@@ -853,7 +852,7 @@ impl<V: RectRasterableVol> Terrain<V> {
                 // client.  So this is definitely a bug, but we can recover safely by just
                 // conservatively doing a full remesh in this case, rather than crashing the
                 // game.
-                warn!(
+                log::warn!(
                     "Invariant violation: pos={:?} should be a valid block position.  This is a \
                      bug; please contact the developers if you see this error message!",
                     pos
@@ -933,7 +932,7 @@ impl<V: RectRasterableVol> Terrain<V> {
                 }
             }
         }
-        drop(guard);
+        
 
         // Limit ourselves to u16::MAX even if larger textures are supported.
         let max_texture_size = renderer.max_texture_size();
@@ -947,7 +946,7 @@ impl<V: RectRasterableVol> Terrain<V> {
         //     n => n - 4,
         // };
 
-        span!(guard, "Queue meshing from todo list");
+        
         let mesh_focus_pos = focus_pos.map(|e| e.trunc()).xy().as_::<i64>();
         for (todo, chunk) in self
             .mesh_todo
@@ -962,7 +961,7 @@ impl<V: RectRasterableVol> Terrain<V> {
                     .get_key_arc(pos)
                     .cloned()
                     .or_else(|| {
-                        warn!("Invariant violation: a chunk whose neighbors have not been fetched was found in the todo list,
+                        log::warn!("Invariant violation: a chunk whose neighbors have not been fetched was found in the todo list,
                               which could halt meshing entirely.");
                         None
                     })?))
@@ -1048,12 +1047,12 @@ impl<V: RectRasterableVol> Terrain<V> {
                 });
             todo.is_worker_active = true;
         }
-        drop(guard);
+        
 
         // Receive a chunk mesh from a worker thread and upload it to the GPU, then
         // store it. Vary the rate at which we pull items out to correlate with the
         // framerate, preventing tail latency.
-        span!(guard, "Get/upload meshed chunk");
+        
         const CHUNKS_PER_SECOND: f32 = 240.0;
         let recv_count =
             scene_data.state.get_delta_time() * CHUNKS_PER_SECOND + self.mesh_recv_overflow;
@@ -1172,18 +1171,18 @@ impl<V: RectRasterableVol> Terrain<V> {
                 None => {},
             }
         }
-        drop(guard);
+        
 
         // Construct view frustum
-        span!(guard, "Construct view frustum");
+        
         let focus_off = focus_pos.map(|e| e.trunc());
         let frustum = Frustum::from_modelview_projection(
             (proj_mat_treeculler * view_mat * Mat4::translation_3d(-focus_off)).into_col_arrays(),
         );
-        drop(guard);
+        
 
         // Update chunk visibility
-        span!(guard, "Update chunk visibility");
+        
         let chunk_sz = V::RECT_SIZE.x as f32;
         for (pos, chunk) in &mut self.chunks {
             let chunk_pos = pos.as_::<f32>() * chunk_sz;
@@ -1226,9 +1225,9 @@ impl<V: RectRasterableVol> Terrain<V> {
             // (and hardcodes the shadow distance).  Should ideally exist per-light, too.
             chunk.can_shadow_point = distance_2 < (128.0 * 128.0);
         }
-        drop(guard);
+        
 
-        span!(guard, "Shadow magic");
+        
         // PSRs: potential shadow receivers
         let visible_bounding_box = visible_bounding_box.unwrap_or(Aabb {
             min: focus_pos - 2.0,
@@ -1339,7 +1338,7 @@ impl<V: RectRasterableVol> Terrain<V> {
                 max: math::Vec2::zero(),
             })
         };
-        drop(guard);
+        
 
         (
             visible_bounding_box,
@@ -1368,7 +1367,7 @@ impl<V: RectRasterableVol> Terrain<V> {
         drawer: &mut TerrainShadowDrawer<'_, 'a>,
         focus_pos: Vec3<f32>,
     ) {
-        span!(_guard, "render_shadows", "Terrain::render_shadows");
+        
         let focus_chunk = Vec2::from(focus_pos).map2(TerrainChunk::RECT_SIZE, |e: f32, sz| {
             (e as i32).div_euclid(sz as i32)
         });
@@ -1433,7 +1432,7 @@ impl<V: RectRasterableVol> Terrain<V> {
     }
 
     pub fn render<'a>(&'a self, drawer: &mut FirstPassDrawer<'a>, focus_pos: Vec3<f32>) {
-        span!(_guard, "render", "Terrain::render");
+        
         let mut drawer = drawer.draw_terrain();
 
         let focus_chunk = Vec2::from(focus_pos).map2(TerrainChunk::RECT_SIZE, |e: f32, sz| {
@@ -1463,7 +1462,7 @@ impl<V: RectRasterableVol> Terrain<V> {
         cam_pos: Vec3<f32>,
         sprite_render_distance: f32,
     ) {
-        span!(_guard, "render_translucent", "Terrain::render_translucent");
+        
         let focus_chunk = Vec2::from(focus_pos).map2(TerrainChunk::RECT_SIZE, |e: f32, sz| {
             (e as i32).div_euclid(sz as i32)
         });
@@ -1478,7 +1477,7 @@ impl<V: RectRasterableVol> Terrain<V> {
 
         // Terrain sprites
         // TODO: move to separate functions
-        span!(guard, "Terrain sprites");
+        
         let chunk_size = V::RECT_SIZE.map(|e| e as f32);
 
         let sprite_low_detail_distance = sprite_render_distance * 0.75;
@@ -1522,10 +1521,10 @@ impl<V: RectRasterableVol> Terrain<V> {
                 }
             });
         drop(sprite_drawer);
-        drop(guard);
+        
 
         // Translucent
-        span!(guard, "Fluid chunks");
+        
         let mut fluid_drawer = drawer.draw_fluid();
         chunk_iter
             .filter(|(_, chunk)| chunk.visible.is_visible())
@@ -1545,6 +1544,6 @@ impl<V: RectRasterableVol> Terrain<V> {
                 )
             });
         drop(fluid_drawer);
-        drop(guard);
+        
     }
 }

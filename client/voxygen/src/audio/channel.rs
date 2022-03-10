@@ -22,7 +22,6 @@ use crate::audio::{
 };
 use rodio::{OutputStreamHandle, Sample, Sink, Source, SpatialSink};
 use serde::Deserialize;
-use tracing::warn;
 use vek::*;
 
 #[derive(PartialEq, Clone, Copy)]
@@ -66,7 +65,7 @@ impl MusicChannel {
                 fader: Fader::default(),
             },
             Err(_) => {
-                warn!("Failed to create a rodio sink. May not play sounds.");
+                log::warn!("Failed to create a rodio sink. May not play sounds.");
                 Self {
                     sink: Sink::new_idle().0,
                     tag: MusicChannelTag::TitleMusic,
@@ -179,7 +178,7 @@ impl AmbientChannel {
                 sink,
             },
             Err(_) => {
-                warn!("Failed to create rodio sink. May not play wind sounds.");
+                log::warn!("Failed to create rodio sink. May not play wind sounds.");
                 Self {
                     tag,
                     multiplier,

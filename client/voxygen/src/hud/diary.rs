@@ -383,7 +383,6 @@ impl<'a> Widget for Diary<'a> {
     fn style(&self) -> Self::Style {}
 
     fn update(mut self, args: widget::UpdateArgs<Self>) -> Self::Event {
-        common_base::prof_span!("Diary::update");
         let widget::UpdateArgs { state, ui, .. } = args;
         let mut events = Vec::new();
 
@@ -471,7 +470,7 @@ impl<'a> Widget for Diary<'a> {
             let section = match section_from_str(section_name) {
                 Some(st) => st,
                 None => {
-                    tracing::warn!("unexpected section name: {}", section_name);
+                    log::warn!("unexpected section name: {}", section_name);
                     continue;
                 },
             };
@@ -558,7 +557,7 @@ impl<'a> Widget for Diary<'a> {
                     let skill_group = match skill_tree_from_str(skilltree_name) {
                         Some(st) => st,
                         None => {
-                            tracing::warn!("unexpected tree name: {}", skilltree_name);
+                            log::warn!("unexpected tree name: {}", skilltree_name);
                             continue;
                         },
                     };
@@ -2853,7 +2852,7 @@ fn unlock_skill_strings(group: SkillGroupKind, i18n: &Localization) -> (&str, Co
             | ToolKind::Natural
             | ToolKind::Empty,
         ) => {
-            tracing::warn!("Requesting title for unlocking unexpected skill group");
+            log::warn!("Requesting title for unlocking unexpected skill group");
             ("", Cow::Owned(String::new()))
         },
     }

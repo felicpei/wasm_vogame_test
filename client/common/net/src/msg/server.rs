@@ -17,7 +17,6 @@ use common::{
 use hashbrown::HashMap;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
-use tracing::warn;
 use vek::*;
 
 ///This struct contains all messages the server might send (on different
@@ -99,7 +98,7 @@ impl SerializedTerrainChunk {
         if let Some(wc) = WireChonk::from_chonk(QuadPngEncoding(), WidePacking(), chunk) {
             Self::QuadPng(wc)
         } else {
-            warn!("Image encoding failure occurred, falling back to deflate");
+            log::warn!("Image encoding failure occurred, falling back to deflate");
             Self::deflate(chunk)
         }
     }
@@ -108,7 +107,7 @@ impl SerializedTerrainChunk {
         if let Some(wc) = WireChonk::from_chonk(TriPngEncoding(), WidePacking(), chunk) {
             Self::TriPng(wc)
         } else {
-            warn!("Image encoding failure occurred, falling back to deflate");
+            log::warn!("Image encoding failure occurred, falling back to deflate");
             Self::deflate(chunk)
         }
     }

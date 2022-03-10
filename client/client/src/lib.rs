@@ -46,7 +46,6 @@ use common::{
     uid::{Uid, UidAllocator},
     vol::RectVolSize,
 };
-use common_base::{prof_span, span};
 use common_net::{
     msg::{
         self, validate_chat_msg,
@@ -74,7 +73,6 @@ use std::{
     time::{Duration, Instant},
 };
 use tokio::runtime::Runtime;
-use tracing::{debug, error, trace, warn};
 use vek::*;
 
 const PING_ROLLING_AVERAGE_SECS: usize = 10;
@@ -241,7 +239,7 @@ impl Client {
         //版本号验证
         let server_info: ServerInfo = register_stream.recv().await?;
         if server_info.git_hash != *common::util::GIT_HASH {
-            warn!(
+            log::warn!(
                 "Server is running {}[{}], you are running {}[{}], versions might be incompatible!",
                 server_info.git_hash,
                 server_info.git_date,
@@ -254,7 +252,7 @@ impl Client {
             mem::swap(mismatched_server_info, &mut Some(server_info.clone()));
         }
         
-        dbg!("server_info:{}", &server_info);
+        log::info!("server_info:{:?}", server_info);
         //debug!("Auth Server: {:?}", server_info.auth_provider);
 
         //心跳
@@ -325,7 +323,7 @@ impl Client {
                 let scale_height_big = |h: u32| (h >> 3) as f32 / 8191.0 * max_height;
                 ping_stream.send(PingMsg::Ping)?;
 
-                debug!("Preparing image...");
+                log::debug!("Preparing image...");
                 let unzip_horizons = |(angles, heights): &(Vec<_>, Vec<_>)| {
                     (
                         angles.iter().copied().map(scale_angle).collect::<Vec<_>>(),
@@ -562,7 +560,7 @@ impl Client {
                     .collect::<Vec<_>>();
                 let lod_horizon = horizons;
                 let map_bounds = Vec2::new(sea_level, max_height);
-                debug!("Done preparing image...");
+                log::debug!("Done preparing image...");
 
                 Ok((
                     state,
@@ -581,7 +579,7 @@ impl Client {
         }?;
         ping_stream.send(PingMsg::Ping)?;
 
-        debug!("Initial sync done");
+        log::debug!("Initial sync done");
 
         Ok(Self {
             registered: false,
@@ -663,7 +661,6 @@ impl Client {
     where
         S: Into<ClientMsg>,
     {
-        prof_span!("send_msg_err");
         let msg: ClientMsg = msg.into();
 
         #[cfg(debug_assertions)]
@@ -675,7 +672,7 @@ impl Client {
             // initial connect it is possible to receive messages after a character load
             // error while in the wrong state.
             if !verified {
-                warn!(
+                log::warn!(
                     "Received ClientType::Game message when not in game (Registered: {} Presence: \
                      {:?}), dropping message: {:?} ",
                     self.registered, self.presence, msg
@@ -745,9 +742,9 @@ impl Client {
     {
         let res = self.send_msg_err(msg);
         if let Err(e) = res {
-            warn!(
-                ?e,
-                "connection to server no longer possible, couldn't send msg"
+            log::warn!(
+                "connection to server no longer possible, couldn't send msg. {:?}",
+                e
             );
         }
     }
@@ -798,7 +795,7 @@ impl Client {
 
     /// Send disconnect message to the server
     pub fn logout(&mut self) {
-        debug!("Sending logout from server");
+        log::debug!("Sending logout from server");
         self.send_msg(ClientGeneral::Terminate);
         self.registered = false;
         self.presence = None;
@@ -1151,7 +1148,7 @@ impl Client {
         match self.is_wielding() {
             Some(true) => self.control_action(ControlAction::Unwield),
             Some(false) => self.control_action(ControlAction::Wield),
-            None => warn!("Can't toggle wield, client entity doesn't have a `CharacterState`"),
+            None => log::warn!("Can't toggle wield, client entity doesn't have a `CharacterState`"),
         }
     }
 
@@ -1166,7 +1163,7 @@ impl Client {
         match is_sitting {
             Some(true) => self.control_action(ControlAction::Stand),
             Some(false) => self.control_action(ControlAction::Sit),
-            None => warn!("Can't toggle sit, client entity doesn't have a `CharacterState`"),
+            None => log::warn!("Can't toggle sit, client entity doesn't have a `CharacterState`"),
         }
     }
 
@@ -1181,7 +1178,7 @@ impl Client {
         match is_dancing {
             Some(true) => self.control_action(ControlAction::Stand),
             Some(false) => self.control_action(ControlAction::Dance),
-            None => warn!("Can't toggle dance, client entity doesn't have a `CharacterState`"),
+            None => log::warn!("Can't toggle dance, client entity doesn't have a `CharacterState`"),
         }
     }
 
@@ -1200,7 +1197,7 @@ impl Client {
         match is_sneaking {
             Some(true) => self.control_action(ControlAction::Stand),
             Some(false) => self.control_action(ControlAction::Sneak),
-            None => warn!("Can't toggle sneak, client entity doesn't have a `CharacterState`"),
+            None => log::warn!("Can't toggle sneak, client entity doesn't have a `CharacterState`"),
         }
     }
 
@@ -1215,7 +1212,7 @@ impl Client {
         match using_glider {
             Some(true) => self.control_action(ControlAction::Unwield),
             Some(false) => self.control_action(ControlAction::GlideWield),
-            None => warn!("Can't toggle glide, client entity doesn't have a `CharacterState`"),
+            None => log::warn!("Can't toggle glide, client entity doesn't have a `CharacterState`"),
         }
     }
 
@@ -1319,7 +1316,7 @@ impl Client {
     pub fn send_chat(&mut self, message: String) {
         match validate_chat_msg(&message) {
             Ok(()) => self.send_msg(ClientGeneral::ChatMsg(message)),
-            Err(ChatMsgValidationError::TooLong) => tracing::warn!(
+            Err(ChatMsgValidationError::TooLong) => log::warn!(
                 "Attempted to send a message that's too long (Over {} bytes)",
                 MAX_BYTES_CHAT_MSG
             ),
@@ -1388,7 +1385,7 @@ impl Client {
         dt: Duration,
         add_foreign_systems: impl Fn(&mut DispatcherBuilder),
     ) -> Result<Vec<Event>, Error> {
-        span!(_guard, "tick", "Client::tick");
+
         // This tick function is the centre of the Veloren universe. Most client-side
         // things are managed from here, and as such it's important that it
         // stays organised. Please consult the core developers before making
@@ -1411,7 +1408,6 @@ impl Client {
         // 1) Handle input from frontend.
         // Pass character actions from frontend input to the player's entity.
         if self.presence.is_some() {
-            prof_span!("handle and send inputs");
             if let Err(e) = self
                 .state
                 .ecs()
@@ -1429,10 +1425,10 @@ impl Client {
                 })
             {
                 let entry = self.entity();
-                error!(
-                    ?e,
-                    ?entry,
-                    "Couldn't access controller component on client entity"
+                log::error!(
+                    "Couldn't access controller component on client entity. {:?}  {:?}",
+                    e,
+                    entry,
                 );
             }
             self.send_msg_err(ClientGeneral::ControllerInputs(Box::new(inputs)))?;
@@ -1443,7 +1439,6 @@ impl Client {
 
         // Prepare for new events
         {
-            prof_span!("Last<CharacterState> comps update");
             let ecs = self.state.ecs();
             let mut last_character_states = ecs.write_storage::<comp::Last<CharacterState>>();
             for (entity, _, character_state) in (
@@ -1558,7 +1553,6 @@ impl Client {
             .get(self.entity())
             .cloned();
         if let (Some(pos), Some(view_distance)) = (pos, self.view_distance) {
-            prof_span!("terrain");
             let chunk_pos = self.state.terrain().pos_key(pos.0.map(|e| e as i32));
 
             // Remove chunks that are too far from the player.
@@ -1654,12 +1648,11 @@ impl Client {
         frontend_events: &mut Vec<Event>,
         msg: ServerGeneral,
     ) -> Result<(), Error> {
-        prof_span!("handle_server_msg");
         match msg {
             ServerGeneral::Disconnect(reason) => match reason {
                 DisconnectReason::Shutdown => return Err(Error::ServerShutdown),
                 DisconnectReason::Kicked(reason) => {
-                    debug!("sending ClientMsg::Terminate because we got kicked");
+                    log::debug!("sending ClientMsg::Terminate because we got kicked");
                     frontend_events.push(Event::Kicked(reason));
                     self.send_msg_err(ClientGeneral::Terminate)?;
                 },
@@ -1669,7 +1662,7 @@ impl Client {
             },
             ServerGeneral::PlayerListUpdate(PlayerListUpdate::Add(uid, player_info)) => {
                 if let Some(old_player_info) = self.player_list.insert(uid, player_info.clone()) {
-                    warn!(
+                    log::warn!(
                         "Received msg to insert {} with uid {} into the player list but there was \
                          already an entry for {} with the same uid that was overwritten!",
                         player_info.player_alias, uid, old_player_info.player_alias
@@ -1680,7 +1673,7 @@ impl Client {
                 if let Some(player_info) = self.player_list.get_mut(&uid) {
                     player_info.is_moderator = moderator;
                 } else {
-                    warn!(
+                    log::warn!(
                         "Received msg to update admin status of uid {}, but they were not in the \
                          list.",
                         uid
@@ -1694,7 +1687,7 @@ impl Client {
                 if let Some(player_info) = self.player_list.get_mut(&uid) {
                     player_info.character = Some(char_info);
                 } else {
-                    warn!(
+                    log::warn!(
                         "Received msg to update character info for uid {}, but they were not in \
                          the list.",
                         uid
@@ -1708,7 +1701,7 @@ impl Client {
                             name: character.name.to_string(),
                         }),
                         None => {
-                            warn!(
+                            log::warn!(
                                 "Received msg to update character level info to {} for uid {}, \
                                  but this player's character is None.",
                                 next_level, uid
@@ -1734,14 +1727,14 @@ impl Client {
                     if player_info.is_online {
                         player_info.is_online = false;
                     } else {
-                        warn!(
+                        log::warn!(
                             "Received msg to remove uid {} from the player list by they were \
                              already marked offline",
                             uid
                         );
                     }
                 } else {
-                    warn!(
+                    log::warn!(
                         "Received msg to remove uid {} from the player list by they weren't in \
                          the list!",
                         uid
@@ -1752,7 +1745,7 @@ impl Client {
                 if let Some(player_info) = self.player_list.get_mut(&uid) {
                     player_info.player_alias = new_name;
                 } else {
-                    warn!(
+                    log::warn!(
                         "Received msg to alias player with uid {} to {} but this uid is not in \
                          the player list",
                         uid, new_name
@@ -1774,9 +1767,9 @@ impl Client {
                         let mut controllers = self.state.ecs().write_storage::<Controller>();
                         if let Some(controller) = controllers.remove(old_entity) {
                             if let Err(e) = controllers.insert(entity, controller) {
-                                error!(
-                                    ?e,
-                                    "Failed to insert controller when setting new player entity!"
+                                log::error!(
+                                    "Failed to insert controller when setting new player entity! {:?}",
+                                    e
                                 );
                             }
                         }
@@ -1829,7 +1822,6 @@ impl Client {
         frontend_events: &mut Vec<Event>,
         msg: ServerGeneral,
     ) -> Result<(), Error> {
-        prof_span!("handle_server_in_game_msg");
         match msg {
             ServerGeneral::GroupUpdate(change_notification) => {
                 use comp::group::ChangeNotification::*;
@@ -1859,7 +1851,7 @@ impl Client {
                             ));
                         }
                         if self.group_members.insert(uid, role) == Some(role) {
-                            warn!(
+                            log::warn!(
                                 "Received msg to add uid {} to the group members but they were \
                                  already there",
                                 uid
@@ -1879,7 +1871,7 @@ impl Client {
                             ));
                         }
                         if self.group_members.remove(&uid).is_none() {
-                            warn!(
+                            log::warn!(
                                 "Received msg to remove uid {} from group members but by they \
                                  weren't in there!",
                                 uid
@@ -1917,7 +1909,7 @@ impl Client {
             },
             ServerGeneral::InvitePending(uid) => {
                 if !self.pending_invites.insert(uid) {
-                    warn!("Received message about pending invite that was already pending");
+                    log::warn!("Received message about pending invite that was already pending");
                 }
             },
             ServerGeneral::InviteComplete {
@@ -1926,7 +1918,7 @@ impl Client {
                 kind,
             } => {
                 if !self.pending_invites.remove(&target) {
-                    warn!(
+                    log::warn!(
                         "Received completed invite message for invite that was not in the list of \
                          pending invites"
                     )
@@ -1958,10 +1950,10 @@ impl Client {
                             .write_storage()
                             .insert(entity, inventory)
                         {
-                            warn!(
-                                ?e,
+                            log::warn!(
                                 "Received an inventory update event for client entity, but this \
-                                 entity was not found... this may be a bug."
+                                 entity was not found... this may be a bug. {:?}",
+                                 e
                             );
                         }
                     },
@@ -1988,7 +1980,7 @@ impl Client {
                     });
             },
             ServerGeneral::UpdatePendingTrade(id, trade, pricing) => {
-                tracing::trace!("UpdatePendingTrade {:?} {:?}", id, trade);
+                log::info!("UpdatePendingTrade {:?} {:?}", id, trade);
                 self.pending_trade = Some((id, trade, pricing));
             },
             ServerGeneral::FinishedTrade(result) => {
@@ -2011,7 +2003,6 @@ impl Client {
     }
 
     fn handle_server_terrain_msg(&mut self, msg: ServerGeneral) -> Result<(), Error> {
-        prof_span!("handle_server_terrain_mgs");
         match msg {
             ServerGeneral::TerrainChunkUpdate { key, chunk } => {
                 if let Some(chunk) = chunk.ok().and_then(|c| c.to_chunk()) {
@@ -2036,18 +2027,17 @@ impl Client {
         events: &mut Vec<Event>,
         msg: ServerGeneral,
     ) -> Result<(), Error> {
-        prof_span!("handle_server_character_screen_msg");
         match msg {
             ServerGeneral::CharacterListUpdate(character_list) => {
                 self.character_list.characters = character_list;
                 self.character_list.loading = false;
             },
             ServerGeneral::CharacterActionError(error) => {
-                warn!("CharacterActionError: {:?}.", error);
+                log::warn!("CharacterActionError: {:?}.", error);
                 events.push(Event::CharacterError(error));
             },
             ServerGeneral::CharacterDataLoadError(error) => {
-                trace!("Handling join error by server");
+                log::trace!("Handling join error by server");
                 self.presence = None;
                 self.clean_state();
                 events.push(Event::CharacterError(error));
@@ -2059,7 +2049,7 @@ impl Client {
                 events.push(Event::CharacterEdited(character_id));
             },
             ServerGeneral::CharacterSuccess => {
-                dbg!("### client is now in ingame state on server");
+                log::info!("### client is now in ingame state on server");
                 if let Some(vd) = self.view_distance {
                     self.set_view_distance(vd);
                 }
@@ -2070,7 +2060,6 @@ impl Client {
     }
 
     fn handle_ping_msg(&mut self, msg: PingMsg) -> Result<(), Error> {
-        prof_span!("handle_ping_msg");
         match msg {
             PingMsg::Ping => {
                 self.send_msg_err(PingMsg::Pong)?;
@@ -2125,7 +2114,6 @@ impl Client {
 
     /// Handle new server messages.
     fn handle_new_messages(&mut self) -> Result<Vec<Event>, Error> {
-        prof_span!("handle_new_messages");
         let mut frontend_events = Vec::new();
 
         // Check that we have an valid connection.
@@ -2471,7 +2459,6 @@ impl Client {
     #[cfg(feature = "tick_network")]
     #[allow(clippy::needless_collect)] // False positive
     pub fn tick_network(&mut self, dt: Duration) -> Result<(), Error> {
-        span!(_guard, "tick_network", "Client::tick_network");
         // Advance state time manually since we aren't calling `State::tick`
         self.state
             .ecs()
@@ -2527,17 +2514,17 @@ impl Client {
 
 impl Drop for Client {
     fn drop(&mut self) {
-        trace!("Dropping client");
+        log::trace!("Dropping client");
         if self.registered {
             if let Err(e) = self.send_msg_err(ClientGeneral::Terminate) {
-                warn!(
-                    ?e,
+                log::warn!(
                     "Error during drop of client, couldn't send disconnect package, is the \
-                     connection already closed?",
+                     connection already closed? | {:?}",
+                     e,
                 );
             }
         } else {
-            trace!("no disconnect msg necessary as client wasn't registered")
+            log::trace!("no disconnect msg necessary as client wasn't registered")
         }
 
         //########## 去掉多线程 rt_multi_thread

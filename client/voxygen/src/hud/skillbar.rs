@@ -797,7 +797,6 @@ impl<'a> Widget for Skillbar<'a> {
     fn style(&self) -> Self::Style {}
 
     fn update(mut self, args: widget::UpdateArgs<Self>) -> Self::Event {
-        common_base::prof_span!("Skillbar::update");
         let widget::UpdateArgs { state, ui, .. } = args;
 
         let slot_offset = 3.0;

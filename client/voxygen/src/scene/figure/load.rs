@@ -29,7 +29,6 @@ use common::{
 use hashbrown::HashMap;
 use serde::Deserialize;
 use std::{fmt, hash::Hash, sync::Arc};
-use tracing::{error, warn};
 use vek::*;
 
 pub type BoneMeshes = (Segment, Vec3<f32>);
@@ -46,7 +45,7 @@ fn graceful_load_vox_fullspec(full_specifier: &str) -> AssetHandle<DotVoxAsset> 
     match DotVoxAsset::load(full_specifier) {
         Ok(dot_vox) => dot_vox,
         Err(_) => {
-            error!(?full_specifier, "Could not load vox file for figure");
+            log::error!("Could not load vox file for figure {:?}",full_specifier);
             DotVoxAsset::load_expect("voxygen.voxel.not_found")
         },
     }
@@ -258,10 +257,10 @@ impl HumHeadSpec {
         let spec = match self.0.get(&(body.species, body.body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
-                    ?body.species,
-                    ?body.body_type,
-                    "No head specification exists for the combination of species and body"
+                log::error!(
+                    "No head specification exists for the combination of species and body  {:?}  {:?}",
+                    body.species,
+                    body.body_type,
                 );
                 return load_mesh("not_found", Vec3::new(-5.0, -5.0, -2.5));
             },
@@ -287,7 +286,7 @@ impl HumHeadSpec {
             )),
             Some(None) => None,
             None => {
-                warn!("No specification for these eyes: {:?}", body.eyes);
+                log::warn!("No specification for these eyes: {:?}", body.eyes);
                 None
             },
         };
@@ -298,7 +297,7 @@ impl HumHeadSpec {
             )),
             Some(None) => None,
             None => {
-                warn!("No specification for hair style {}", body.hair_style);
+                log::warn!("No specification for hair style {}", body.hair_style);
                 None
             },
         };
@@ -309,7 +308,7 @@ impl HumHeadSpec {
             )),
             Some(None) => None,
             None => {
-                warn!("No specification for this beard: {:?}", body.beard);
+                log::warn!("No specification for this beard: {:?}", body.beard);
                 None
             },
         };
@@ -317,7 +316,7 @@ impl HumHeadSpec {
             Some(Some(spec)) => Some((graceful_load_segment(&spec.0), Vec3::from(spec.1))),
             Some(None) => None,
             None => {
-                warn!("No specification for this accessory: {:?}", body.accessory);
+                log::warn!("No specification for this accessory: {:?}", body.accessory);
                 None
             },
         };
@@ -534,7 +533,7 @@ impl HumArmorShoulderSpec {
             match self.0.map.get(shoulder) {
                 Some(spec) => spec,
                 None => {
-                    error!(?shoulder, "No shoulder specification exists");
+                    log::error!("No shoulder specification exists   {:?}", shoulder);
                     return load_mesh("not_found", Vec3::new(-3.0, -3.5, 0.1));
                 },
             }
@@ -607,7 +606,7 @@ impl HumArmorChestSpec {
             match self.0.map.get(chest) {
                 Some(spec) => spec,
                 None => {
-                    error!(?chest, "No chest specification exists");
+                    log::error!("No chest specification exists  {:?}", chest);
                     return load_mesh("not_found", Vec3::new(-7.0, -3.5, 2.0));
                 },
             }
@@ -655,7 +654,7 @@ impl HumArmorHandSpec {
             match self.0.map.get(hand) {
                 Some(spec) => spec,
                 None => {
-                    error!(?hand, "No hand specification exists");
+                    log::error!("No hand specification exists   {:?}", hand);
                     return load_mesh("not_found", Vec3::new(-1.5, -1.5, -7.0));
                 },
             }
@@ -717,7 +716,7 @@ impl HumArmorBeltSpec {
             match self.0.map.get(belt) {
                 Some(spec) => spec,
                 None => {
-                    error!(?belt, "No belt specification exists");
+                    log::error!("{:?}  No belt specification exists", belt);
                     return load_mesh("not_found", Vec3::new(-4.0, -3.5, 2.0));
                 },
             }
@@ -747,7 +746,7 @@ impl HumArmorBackSpec {
             match self.0.map.get(back) {
                 Some(spec) => spec,
                 None => {
-                    error!(?back, "No back specification exists");
+                    log::error!("No back specification exists  {:?}", back);
                     return load_mesh("not_found", Vec3::new(-4.0, -3.5, 2.0));
                 },
             }
@@ -781,7 +780,7 @@ impl HumArmorPantsSpec {
             match self.0.map.get(pants) {
                 Some(spec) => spec,
                 None => {
-                    error!(?pants, "No pants specification exists");
+                    log::error!("No pants specification exists   {:?}", pants);
                     return load_mesh("not_found", Vec3::new(-5.0, -3.5, 1.0));
                 },
             }
@@ -829,7 +828,7 @@ impl HumArmorFootSpec {
             match self.0.map.get(foot) {
                 Some(spec) => spec,
                 None => {
-                    error!(?foot, "No foot specification exists");
+                    log::error!("No foot specification exists  {:?}", foot);
                     return load_mesh("not_found", Vec3::new(-2.5, -3.5, -9.0));
                 },
             }
@@ -885,7 +884,7 @@ impl HumMainWeaponSpec {
         // TODO: resolve ItemDef info into the ToolKey earlier
         let itemdef = Arc::<ItemDef>::load_expect_cloned(&tool.name);
         let not_found = |name: &str| {
-            error!(?name, "No tool/weapon specification exists");
+            log::error!("No tool/weapon specification exists  {:?}", name);
             load_mesh("not_found", Vec3::new(-1.5, -1.5, -7.0))
         };
         let (tool_kind_segment, mut offset) = if itemdef.is_modular() {
@@ -920,7 +919,7 @@ impl HumMainWeaponSpec {
                 ]);
                 (segment, segment_origin.map(|x: i32| x as f32) + heldspec.1)
             } else {
-                error!(
+                log::error!(
                     "A modular weapon is missing some components (damage: {:?}, held: {:?})",
                     damage, held
                 );
@@ -958,7 +957,7 @@ impl HumArmorLanternSpec {
             match self.0.map.get(kind) {
                 Some(spec) => spec,
                 None => {
-                    error!(?kind, "No lantern specification exists");
+                    log::error!("No lantern specification exists,  {:?}", kind);
                     return load_mesh("not_found", Vec3::new(-4.0, -3.5, 2.0));
                 },
             }
@@ -993,7 +992,7 @@ impl HumArmorHeadSpec {
                 Vec3::<f32>::from(spec.vox_spec.1).as_(),
             )),
             None => {
-                warn!("No specification for this head: {:?}", head);
+                log::warn!("No specification for this head: {:?}", head);
                 None
             },
         }
@@ -1013,7 +1012,7 @@ impl HumArmorTabardSpec {
             match self.0.map.get(tabard) {
                 Some(spec) => spec,
                 None => {
-                    error!(?tabard, "No tabard specification exists");
+                    log::error!("No tabard specification exists. {:?}", tabard);
                     return load_mesh("not_found", Vec3::new(-5.0, -3.5, 1.0));
                 },
             }
@@ -1059,7 +1058,7 @@ impl HumArmorGliderSpec {
             match self.0.map.get(kind) {
                 Some(spec) => spec,
                 None => {
-                    error!(?kind, "No glider specification exists");
+                    log::error!("No glider specification exists. {:?}", kind);
                     return load_mesh("not_found", Vec3::new(-4.0, -3.5, 2.0));
                 },
             }
@@ -1176,7 +1175,7 @@ impl QuadrupedSmallCentralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No head specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -1192,7 +1191,7 @@ impl QuadrupedSmallCentralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No chest specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -1208,7 +1207,7 @@ impl QuadrupedSmallCentralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No tail specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -1226,7 +1225,7 @@ impl QuadrupedSmallLateralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No leg specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -1242,7 +1241,7 @@ impl QuadrupedSmallLateralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No leg specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -1258,7 +1257,7 @@ impl QuadrupedSmallLateralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No leg specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -1274,7 +1273,7 @@ impl QuadrupedSmallLateralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No leg specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -1404,7 +1403,7 @@ impl QuadrupedMediumCentralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No head specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -1420,7 +1419,7 @@ impl QuadrupedMediumCentralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No neck specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -1436,7 +1435,7 @@ impl QuadrupedMediumCentralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No jaw specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -1452,7 +1451,7 @@ impl QuadrupedMediumCentralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No ears specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -1468,7 +1467,7 @@ impl QuadrupedMediumCentralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No torso specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -1484,7 +1483,7 @@ impl QuadrupedMediumCentralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No torso specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -1500,7 +1499,7 @@ impl QuadrupedMediumCentralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No tail specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -1518,7 +1517,7 @@ impl QuadrupedMediumLateralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No leg specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -1534,7 +1533,7 @@ impl QuadrupedMediumLateralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No leg specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -1550,7 +1549,7 @@ impl QuadrupedMediumLateralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No leg specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -1566,7 +1565,7 @@ impl QuadrupedMediumLateralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No leg specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -1582,7 +1581,7 @@ impl QuadrupedMediumLateralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No foot specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -1598,7 +1597,7 @@ impl QuadrupedMediumLateralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No foot specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -1614,7 +1613,7 @@ impl QuadrupedMediumLateralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No foot specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -1630,7 +1629,7 @@ impl QuadrupedMediumLateralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No foot specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -1729,7 +1728,7 @@ impl BirdMediumCentralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No head specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -1745,7 +1744,7 @@ impl BirdMediumCentralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No torso specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -1761,7 +1760,7 @@ impl BirdMediumCentralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No tail specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -1778,7 +1777,7 @@ impl BirdMediumLateralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No wing specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -1794,7 +1793,7 @@ impl BirdMediumLateralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No wing specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -1810,7 +1809,7 @@ impl BirdMediumLateralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No foot specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -1826,7 +1825,7 @@ impl BirdMediumLateralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No foot specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -1946,7 +1945,7 @@ impl TheropodCentralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No head specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -1962,7 +1961,7 @@ impl TheropodCentralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No jaw specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -1978,7 +1977,7 @@ impl TheropodCentralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No jaw specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -1994,7 +1993,7 @@ impl TheropodCentralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No front chest specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -2010,7 +2009,7 @@ impl TheropodCentralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No back chest specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -2026,7 +2025,7 @@ impl TheropodCentralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No front tail specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -2042,7 +2041,7 @@ impl TheropodCentralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No back tail specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -2059,7 +2058,7 @@ impl TheropodLateralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No left hand specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -2075,7 +2074,7 @@ impl TheropodLateralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No right hand specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -2091,7 +2090,7 @@ impl TheropodLateralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No left leg specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -2107,7 +2106,7 @@ impl TheropodLateralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No right leg specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -2123,7 +2122,7 @@ impl TheropodLateralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No left foot specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -2139,7 +2138,7 @@ impl TheropodLateralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No right foot specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -2272,7 +2271,7 @@ impl ArthropodCentralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No head specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -2288,7 +2287,7 @@ impl ArthropodCentralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No chest specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -2305,7 +2304,7 @@ impl ArthropodLateralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No left mandible specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -2321,7 +2320,7 @@ impl ArthropodLateralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No right mandible specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -2337,7 +2336,7 @@ impl ArthropodLateralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No front left wing specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -2353,7 +2352,7 @@ impl ArthropodLateralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No front right wing specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -2369,7 +2368,7 @@ impl ArthropodLateralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No back left wing specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -2385,7 +2384,7 @@ impl ArthropodLateralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No back right wing specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -2401,7 +2400,7 @@ impl ArthropodLateralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No front left leg specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -2417,7 +2416,7 @@ impl ArthropodLateralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No front right leg specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -2433,7 +2432,7 @@ impl ArthropodLateralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No front center left leg specification exists for the combination of {:?} \
                      and {:?}",
                     species, body_type
@@ -2450,7 +2449,7 @@ impl ArthropodLateralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No front center right leg specification exists for the combination of {:?} \
                      and {:?}",
                     species, body_type
@@ -2467,7 +2466,7 @@ impl ArthropodLateralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No back center left leg specification exists for the combination of {:?} and \
                      {:?}",
                     species, body_type
@@ -2484,7 +2483,7 @@ impl ArthropodLateralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No back center right leg specification exists for the combination of {:?} \
                      and {:?}",
                     species, body_type
@@ -2501,7 +2500,7 @@ impl ArthropodLateralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No back left leg specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -2517,7 +2516,7 @@ impl ArthropodLateralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No back right leg specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -2613,7 +2612,7 @@ impl FishMediumCentralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No head specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -2629,7 +2628,7 @@ impl FishMediumCentralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No jaw specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -2645,7 +2644,7 @@ impl FishMediumCentralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No front chest specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -2661,7 +2660,7 @@ impl FishMediumCentralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No back chest specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -2677,7 +2676,7 @@ impl FishMediumCentralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No tail specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -2695,7 +2694,7 @@ impl FishMediumLateralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No fin specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -2711,7 +2710,7 @@ impl FishMediumLateralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No fin specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -2796,7 +2795,7 @@ impl FishSmallCentralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No chest specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -2812,7 +2811,7 @@ impl FishSmallCentralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No tail specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -2830,7 +2829,7 @@ impl FishSmallLateralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No fin specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -2846,7 +2845,7 @@ impl FishSmallLateralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No fin specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -2962,7 +2961,7 @@ impl BipedSmallArmorHeadSpec {
             match self.0.map.get(head) {
                 Some(spec) => spec,
                 None => {
-                    error!(?head, "No head specification exists");
+                    log::error!("No head specification exists  {:?}", head);
                     return load_mesh("not_found", Vec3::new(-1.5, -1.5, -7.0));
                 },
             }
@@ -2983,7 +2982,7 @@ impl BipedSmallArmorChestSpec {
             match self.0.map.get(chest) {
                 Some(spec) => spec,
                 None => {
-                    error!(?chest, "No chest specification exists");
+                    log::error!("No chest specification exists  {:?}", chest);
                     return load_mesh("not_found", Vec3::new(-1.5, -1.5, -7.0));
                 },
             }
@@ -3004,7 +3003,7 @@ impl BipedSmallArmorTailSpec {
             match self.0.map.get(tail) {
                 Some(spec) => spec,
                 None => {
-                    error!(?tail, "No tail specification exists");
+                    log::error!("No tail specification exists   {:?}", tail);
                     return load_mesh("not_found", Vec3::new(-1.5, -1.5, -7.0));
                 },
             }
@@ -3025,7 +3024,7 @@ impl BipedSmallArmorPantsSpec {
             match self.0.map.get(pants) {
                 Some(spec) => spec,
                 None => {
-                    error!(?pants, "No pants specification exists");
+                    log::error!("No pants specification exists  {:?}", pants);
                     return load_mesh("not_found", Vec3::new(-1.5, -1.5, -7.0));
                 },
             }
@@ -3046,7 +3045,7 @@ impl BipedSmallArmorHandSpec {
             match self.0.map.get(hand) {
                 Some(spec) => spec,
                 None => {
-                    error!(?hand, "No hand specification exists");
+                    log::error!("No hand specification exists  {:?}", hand);
                     return load_mesh("not_found", Vec3::new(-1.5, -1.5, -7.0));
                 },
             }
@@ -3078,7 +3077,7 @@ impl BipedSmallArmorFootSpec {
             match self.0.map.get(foot) {
                 Some(spec) => spec,
                 None => {
-                    error!(?foot, "No foot specification exists");
+                    log::error!("No foot specification exists  {:?}", foot);
                     return load_mesh("not_found", Vec3::new(-1.5, -1.5, -7.0));
                 },
             }
@@ -3110,7 +3109,7 @@ impl BipedSmallWeaponSpec {
         let spec = match self.0.get(item_definition_id) {
             Some(spec) => spec,
             None => {
-                error!(?item_definition_id, "No tool/weapon specification exists");
+                log::error!("No tool/weapon specification exists  {:?} ", item_definition_id);
                 return load_mesh("not_found", Vec3::new(-1.5, -1.5, -7.0));
             },
         };
@@ -3253,7 +3252,7 @@ impl DragonCentralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No upper head specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -3269,7 +3268,7 @@ impl DragonCentralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No lower head specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -3285,7 +3284,7 @@ impl DragonCentralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No jaw specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -3301,7 +3300,7 @@ impl DragonCentralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No chest front specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -3317,7 +3316,7 @@ impl DragonCentralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No chest rear specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -3333,7 +3332,7 @@ impl DragonCentralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No tail front specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -3349,7 +3348,7 @@ impl DragonCentralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No tail rear specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -3366,7 +3365,7 @@ impl DragonLateralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No wing specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -3382,7 +3381,7 @@ impl DragonLateralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No wing specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -3398,7 +3397,7 @@ impl DragonLateralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No wing specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -3414,7 +3413,7 @@ impl DragonLateralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No wing specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -3430,7 +3429,7 @@ impl DragonLateralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No foot specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -3446,7 +3445,7 @@ impl DragonLateralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No foot specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -3462,7 +3461,7 @@ impl DragonLateralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No foot specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -3478,7 +3477,7 @@ impl DragonLateralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No foot specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -3613,7 +3612,7 @@ impl BirdLargeCentralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No head specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -3629,7 +3628,7 @@ impl BirdLargeCentralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No beak specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -3645,7 +3644,7 @@ impl BirdLargeCentralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No neck specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -3661,7 +3660,7 @@ impl BirdLargeCentralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No chest specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -3677,7 +3676,7 @@ impl BirdLargeCentralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No tail front specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -3693,7 +3692,7 @@ impl BirdLargeCentralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No tail rear specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -3710,7 +3709,7 @@ impl BirdLargeLateralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No wing in in left specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -3726,7 +3725,7 @@ impl BirdLargeLateralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No wing in right specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -3742,7 +3741,7 @@ impl BirdLargeLateralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No wing mid specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -3758,7 +3757,7 @@ impl BirdLargeLateralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No wing mid specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -3774,7 +3773,7 @@ impl BirdLargeLateralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No wing out specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -3790,7 +3789,7 @@ impl BirdLargeLateralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No wing out specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -3806,7 +3805,7 @@ impl BirdLargeLateralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No leg specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -3822,7 +3821,7 @@ impl BirdLargeLateralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No leg specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -3838,7 +3837,7 @@ impl BirdLargeLateralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No foot specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -3854,7 +3853,7 @@ impl BirdLargeLateralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No foot specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -4006,7 +4005,7 @@ impl BipedLargeCentralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No head specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -4022,7 +4021,7 @@ impl BipedLargeCentralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No jaw specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -4038,7 +4037,7 @@ impl BipedLargeCentralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No torso upper specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -4054,7 +4053,7 @@ impl BipedLargeCentralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No torso lower specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -4070,7 +4069,7 @@ impl BipedLargeCentralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No tail specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -4087,7 +4086,7 @@ impl BipedLargeLateralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No shoulder specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -4103,7 +4102,7 @@ impl BipedLargeLateralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No shoulder specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -4119,7 +4118,7 @@ impl BipedLargeLateralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No hand specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -4135,7 +4134,7 @@ impl BipedLargeLateralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No hand specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -4151,7 +4150,7 @@ impl BipedLargeLateralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No leg specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -4167,7 +4166,7 @@ impl BipedLargeLateralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No leg specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -4183,7 +4182,7 @@ impl BipedLargeLateralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No foot specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -4199,7 +4198,7 @@ impl BipedLargeLateralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No foot specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -4216,7 +4215,7 @@ impl BipedLargeMainSpec {
         let spec = match self.0.get(item_definition_id) {
             Some(spec) => spec,
             None => {
-                error!(?item_definition_id, "No tool/weapon specification exists");
+                log::error!("No tool/weapon specification exists {:?}", item_definition_id);
                 return load_mesh("not_found", Vec3::new(-1.5, -1.5, -7.0));
             },
         };
@@ -4245,7 +4244,7 @@ impl BipedLargeSecondSpec {
         let spec = match self.0.get(item_definition_id) {
             Some(spec) => spec,
             None => {
-                error!(?item_definition_id, "No tool/weapon specification exists");
+                log::error!("No tool/weapon specification exists {:?}", item_definition_id);
                 return load_mesh("not_found", Vec3::new(-1.5, -1.5, -7.0));
             },
         };
@@ -4375,7 +4374,7 @@ impl GolemCentralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No head specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -4391,7 +4390,7 @@ impl GolemCentralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No jaw specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -4407,7 +4406,7 @@ impl GolemCentralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No torso upper specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -4423,7 +4422,7 @@ impl GolemCentralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No torso lower specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -4440,7 +4439,7 @@ impl GolemLateralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No shoulder specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -4456,7 +4455,7 @@ impl GolemLateralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No shoulder specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -4472,7 +4471,7 @@ impl GolemLateralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No hand specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -4488,7 +4487,7 @@ impl GolemLateralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No hand specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -4504,7 +4503,7 @@ impl GolemLateralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No leg specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -4520,7 +4519,7 @@ impl GolemLateralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No leg specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -4536,7 +4535,7 @@ impl GolemLateralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No foot specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -4552,7 +4551,7 @@ impl GolemLateralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No foot specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -4663,7 +4662,7 @@ impl QuadrupedLowCentralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No upper head specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -4679,7 +4678,7 @@ impl QuadrupedLowCentralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No lower head specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -4695,7 +4694,7 @@ impl QuadrupedLowCentralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No jaw specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -4711,7 +4710,7 @@ impl QuadrupedLowCentralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No chest specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -4727,7 +4726,7 @@ impl QuadrupedLowCentralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No tail_rear specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -4743,7 +4742,7 @@ impl QuadrupedLowCentralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No tail_front specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -4761,7 +4760,7 @@ impl QuadrupedLowLateralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No foot specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -4778,7 +4777,7 @@ impl QuadrupedLowLateralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No foot specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -4795,7 +4794,7 @@ impl QuadrupedLowLateralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No foot specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -4812,7 +4811,7 @@ impl QuadrupedLowLateralSpec {
         let spec = match self.0.get(&(species, body_type)) {
             Some(spec) => spec,
             None => {
-                error!(
+                log::error!(
                     "No foot specification exists for the combination of {:?} and {:?}",
                     species, body_type
                 );
@@ -4878,7 +4877,7 @@ impl ObjectCentralSpec {
         let spec = match self.0.get(obj) {
             Some(spec) => spec,
             None => {
-                error!("No specification exists for {:?}", obj);
+                log::error!("No specification exists for {:?}", obj);
                 return load_mesh("not_found", Vec3::new(-5.0, -5.0, -2.5));
             },
         };
@@ -4891,7 +4890,7 @@ impl ObjectCentralSpec {
         let spec = match self.0.get(obj) {
             Some(spec) => spec,
             None => {
-                error!("No specification exists for {:?}", obj);
+                log::error!("No specification exists for {:?}", obj);
                 return load_mesh("not_found", Vec3::new(-5.0, -5.0, -2.5));
             },
         };
@@ -4967,7 +4966,7 @@ impl ItemDropCentralSpec {
                 _ => offset * Vec3::new(1.0, 1.0, 0.0),
             })
         } else {
-            error!(
+            log::error!(
                 "No specification exists for {:?}, {:?}",
                 item_drop, item_key
             );
@@ -5016,7 +5015,7 @@ fn mesh_ship_bone<K: fmt::Debug + Eq + Hash, V, F: Fn(&V) -> &ShipCentralSubSpec
     let spec = match map.get(obj) {
         Some(spec) => spec,
         None => {
-            error!("No specification exists for {:?}", obj);
+            log::error!("No specification exists for {:?}", obj);
             return load_mesh("not_found", Vec3::new(-5.0, -5.0, -2.5));
         },
     };

@@ -9,7 +9,6 @@ use hashbrown::HashMap;
 use lazy_static::lazy_static;
 use serde::Deserialize;
 use std::cmp::Ordering;
-use tracing::{info, warn};
 
 const PRICING_DEBUG: bool = false;
 
@@ -51,12 +50,12 @@ impl Entries {
         // Increase probability if already in entries, or add new entry
         if let Some((asset, ref mut old_probability, _)) = old {
             if PRICING_DEBUG {
-                info!("Update {} {}+{}", asset, old_probability, probability);
+                log::info!("Update {} {}+{}", asset, old_probability, probability);
             }
             *old_probability += probability;
         } else {
             if PRICING_DEBUG {
-                info!("New {} {}", item_name, probability);
+                log::info!("New {} {}", item_name, probability);
             }
             self.entries
                 .push((canonical_itemname.to_owned(), probability, can_sell));
@@ -279,7 +278,7 @@ impl TradePricing {
             _ if name.starts_with("common.items.crafting_tools.") => &self.other.entries,
             _ if name.starts_with("common.items.lantern.") => &self.other.entries,
             _ => {
-                warn!("unknown loot item {}", name);
+                log::warn!("unknown loot item {}", name);
                 &self.other.entries
             },
         }
@@ -307,7 +306,7 @@ impl TradePricing {
             _ if name.starts_with("common.items.crafting_tools.") => &mut self.other,
             _ if name.starts_with("common.items.lantern.") => &mut self.other,
             _ => {
-                warn!("unknown loot item {}", name);
+                log::warn!("unknown loot item {}", name);
                 &mut self.other
             },
         }
@@ -361,9 +360,7 @@ impl TradePricing {
         let eqset = EqualitySet::load_expect("common.trading.item_price_equality").read();
         result.equality_set = eqset.clone();
         for table in &price_config.loot_tables {
-            if PRICING_DEBUG {
-                info!(?table);
-            }
+     
             let (frequency, can_sell, asset_path) = table;
             let loot = ProbabilityFile::load_expect(asset_path);
             for (p, item_asset, amount) in &loot.read().content {
@@ -470,7 +467,7 @@ impl TradePricing {
             if table.is_empty()
                 || (selling && table.iter().filter(|(_, _, can_sell)| *can_sell).count() == 0)
             {
-                warn!("Good: {:?}, was unreachable.", good);
+                log::warn!("Good: {:?}, was unreachable.", good);
                 return None;
             }
             let upper = table.len();

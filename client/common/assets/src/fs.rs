@@ -19,7 +19,7 @@ impl FileSystem {
         let default = RawFs::new(&*super::ASSETS_PATH)?;
         let override_dir = std::env::var_os("VELOREN_ASSETS_OVERRIDE").and_then(|path| {
             RawFs::new(path)
-                .map_err(|err| tracing::error!("Error setting override assets directory: {}", err))
+                .map_err(|err| log::error!("Error setting override assets directory: {}", err))
                 .ok()
         });
 
@@ -38,7 +38,7 @@ impl Source for FileSystem {
                 Err(err) => {
                     if err.kind() != io::ErrorKind::NotFound {
                         let path = dir.path_of(DirEntry::File(id, ext));
-                        tracing::warn!(
+                        log::warn!(
                             "Error reading \"{}\": {}. Falling back to default",
                             path.display(),
                             err
@@ -59,7 +59,7 @@ impl Source for FileSystem {
                 Err(err) => {
                     if err.kind() != io::ErrorKind::NotFound {
                         let path = dir.path_of(DirEntry::Directory(id));
-                        tracing::warn!(
+                        log::warn!(
                             "Error reading \"{}\": {}. Falling back to default",
                             path.display(),
                             err

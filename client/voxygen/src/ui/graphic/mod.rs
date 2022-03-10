@@ -14,7 +14,6 @@ use image::{DynamicImage, RgbaImage};
 use pixel_art::resize_pixel_art;
 use slab::Slab;
 use std::{hash::Hash, sync::Arc};
-use tracing::warn;
 use vek::*;
 
 #[derive(Clone)]
@@ -440,9 +439,8 @@ fn draw_graphic(
                 .and_then(|(_, v)| v)
         },
         None => {
-            warn!(
-                ?graphic_id,
-                "A graphic was requested via an id which is not in use"
+            log::warn!(
+                "A graphic was requested via an id which is not in use :{:?}", graphic_id
             );
             None
         },

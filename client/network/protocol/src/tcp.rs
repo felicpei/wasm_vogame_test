@@ -13,9 +13,6 @@ use async_trait::async_trait;
 use bytes::BytesMut;
 use hashbrown::HashMap;
 use std::time::{Duration, Instant};
-use tracing::info;
-#[cfg(feature = "trace_pedantic")]
-use tracing::trace;
 
 /// TCP implementation of [`SendProtocol`]
 ///
@@ -263,10 +260,10 @@ where
                                 let m = match self.incoming.get_mut(&mid) {
                                     Some(m) => m,
                                     None => {
-                                        info!(
-                                            ?mid,
+                                        log::info!(
                                             "protocol violation by remote side: send Data before \
-                                             Header"
+                                             Header {}",
+                                             mid
                                         );
                                         break 'outer Err(ProtocolError::Violated);
                                     },

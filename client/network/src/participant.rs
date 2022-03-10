@@ -24,7 +24,6 @@ use tokio::{
     task::JoinHandle,
 };
 use tokio_stream::wrappers::UnboundedReceiverStream;
-use tracing::*;
 
 pub(crate) type A2bStreamOpen = (Prio, Promises, Bandwidth, oneshot::Sender<Stream>);
 pub(crate) type S2bCreateChannel = (Cid, Sid, Protocols, oneshot::Sender<()>);
@@ -157,7 +156,7 @@ impl BParticipant {
             a2b_close_stream_s,
         });
         let run_channels = self.run_channels.take().unwrap();
-        trace!("start all managers");
+        log::trace!("start all managers");
         tokio::join!(
             self.send_mgr(
                 run_channels.a2b_open_stream_r,
@@ -169,8 +168,7 @@ impl BParticipant {
                 b2b_notify_send_of_recv_close_r,
                 b2s_prio_statistic_s,
                 run_channels.b2a_bandwidth_stats_s,
-            )
-            .instrument(tracing::info_span!("send")),
+            ),
             self.recv_mgr(
                 run_channels.b2a_stream_opened_s,
                 b2b_add_recv_protocol_r,
@@ -178,9 +176,8 @@ impl BParticipant {
                 b2b_close_send_protocol_s.clone(),
                 b2b_notify_send_of_recv_open_s,
                 b2b_notify_send_of_recv_close_s,
-            )
-            .instrument(tracing::info_span!("recv")),
-            self.create_channel_mgr(
+            ),
+             self.create_channel_mgr(
                 run_channels.s2b_create_channel_r,
                 b2b_add_send_protocol_s,
                 b2b_add_recv_protocol_s,
@@ -229,7 +226,8 @@ impl BParticipant {
         let mut last_instant = Instant::now();
         let mut stream_ids = self.offset_sid;
         let mut part_bandwidth = 0.0f32;
-        trace!("workaround, actively wait for first protocol");
+
+        log::trace!("workaround, actively wait for first protocol");
         if let Some((c, p)) = b2b_add_protocol_r.recv().await {
             sorted_send_protocols.insert(c, p)
         }
@@ -243,13 +241,13 @@ impl BParticipant {
             );
 
             if let Some((cid, p)) = addp {
-                debug!(?cid, "add protocol");
+                log::debug!("add protocol:{}",cid);
                 sorted_send_protocols.insert(cid, p);
             }
 
             //verify that we have at LEAST 1 channel before continuing
             if sorted_send_protocols.data.is_empty() {
-                warn!("no channel");
+                log::warn!("no channel");
                 tokio::time::sleep(Self::TICK_TIME * 1000).await; //TODO: failover
                 continue;
             }
@@ -263,7 +261,7 @@ impl BParticipant {
                     let sid = stream_ids;
                     stream_ids += Sid::from(1);
                     cid = Self::best_protocol(&sorted_send_protocols, promises).unwrap();
-                    trace!(?sid, ?cid, "open stream");
+                    log::trace!("open stream  {}  {}", sid, cid);
 
                     let stream = self
                         .create_stream(sid, prio, promises, guaranteed_bandwidth)
@@ -299,7 +297,7 @@ impl BParticipant {
                                 guaranteed_bandwidth,
                             });
                         },
-                        None => warn!(?cid, "couldn't notify create protocol, doesn't exist"),
+                        None => log::warn!("couldn't notify create protocol, doesn't exist  {}",cid),
                     };
                 }
 
@@ -321,12 +319,12 @@ impl BParticipant {
                             let _ = sorted_stream_protocols.delete(&sid);
                             p.notify_from_recv(ProtocolEvent::CloseStream { sid });
                         },
-                        None => warn!(?cid, "couldn't notify close protocol, doesn't exist"),
+                        None => log::warn!("couldn't notify close protocol, doesn't exist  {}", cid),
                     };
                 }
 
                 if let Some(sid) = close {
-                    trace!(?stream_ids, "delete stream");
+                    log::trace!("delete stream {:?}", stream_ids);
                     self.delete_stream(sid).await;
                     // Fire&Forget the protocol will take care to verify that this Frame is delayed
                     // till the last msg was received!
@@ -359,10 +357,10 @@ impl BParticipant {
             }
             .await;
             if let Err(e) = active_err {
-                info!(?cid, ?e, "protocol failed, shutting down channel");
+                log::info!("protocol failed, shutting down channel {:?} {:?}", cid, e);
                 // remote recv will now fail, which will trigger remote send which will trigger
                 // recv
-                trace!("TODO: for now decide to FAIL this participant and not wait for a failover");
+                log::trace!("TODO: for now decide to FAIL this participant and not wait for a failover");
                 sorted_send_protocols.delete(&cid).unwrap();
                 self.metrics.channels_disconnected(&self.remote_pid_string);
                 if sorted_send_protocols.data.is_empty() {
@@ -371,25 +369,25 @@ impl BParticipant {
             }
 
             if let Some(cid) = remp {
-                debug!(?cid, "remove protocol");
+                log:: debug!("remove protocol {:?}", cid);
                 match sorted_send_protocols.delete(&cid) {
                     Some(mut prot) => {
                         self.metrics.channels_disconnected(&self.remote_pid_string);
-                        trace!("blocking flush");
+                        log::trace!("blocking flush");
                         let _ = prot.flush(u64::MAX, Duration::from_secs(1)).await;
-                        trace!("shutdown prot");
+                        log::trace!("shutdown prot");
                         let _ = prot.send(ProtocolEvent::Shutdown).await;
                     },
-                    None => trace!("tried to remove protocol twice"),
+                    None => log::trace!("tried to remove protocol twice"),
                 };
                 if sorted_send_protocols.data.is_empty() {
                     break;
                 }
             }
         }
-        trace!("stop sending in api!");
+        log::trace!("stop sending in api!");
         self.open_stream_channels.lock().await.take();
-        trace!("Stop send_mgr");
+        log::trace!("Stop send_mgr");
         self.shutdown_barrier
             .fetch_sub(Self::BARR_SEND, Ordering::SeqCst);
     }
@@ -427,14 +425,14 @@ impl BParticipant {
             match recv_protocols.remove(cid) {
                 Some(h) => {
                     h.abort();
-                    debug!(?cid, "remove protocol");
+                    log::debug!("remove protocol  {}",cid);
                 },
-                None => trace!("tried to remove protocol twice"),
+                None => log::trace!("tried to remove protocol twice"),
             };
             recv_protocols.is_empty()
         };
 
-        let mut defered_orphan = DeferredTracer::new(tracing::Level::WARN);
+        let mut defered_orphan = DeferredTracer::new(log::Level::Warn);
 
         loop {
             let (event, addp, remp) = select!(
@@ -442,13 +440,13 @@ impl BParticipant {
                 Some(n) = b2b_add_protocol_r.recv().fuse() => (None, Some(n), None),
                 Ok(n) = b2b_force_close_recv_protocol_r.recv().fuse() => (None, None, Some(n)),
                 else => {
-                    error!("recv_mgr -> something is seriously wrong!, end recv_mgr");
+                    log::error!("recv_mgr -> something is seriously wrong!, end recv_mgr");
                     break;
                 }
             );
 
             if let Some((cid, p)) = addp {
-                debug!(?cid, "add protocol");
+                log::debug!( "add protocol {}", cid);
                 retrigger(cid, p, &mut recv_protocols);
             };
             if let Some(cid) = remp {
@@ -466,7 +464,7 @@ impl BParticipant {
                         promises,
                         guaranteed_bandwidth,
                     }) => {
-                        trace!(?sid, "open stream");
+                        log::trace!("open stream {}",sid);
                         let _ = b2b_notify_send_of_recv_open_r.send((
                             cid,
                             sid,
@@ -483,7 +481,7 @@ impl BParticipant {
                         retrigger(cid, p, &mut recv_protocols);
                     },
                     Ok(ProtocolEvent::CloseStream { sid }) => {
-                        trace!(?sid, "close stream");
+                        log::trace!("close stream : {}", sid);
                         let _ = b2b_notify_send_of_recv_close_s.send((cid, sid));
                         self.delete_stream(sid).await;
                         retrigger(cid, p, &mut recv_protocols);
@@ -499,18 +497,18 @@ impl BParticipant {
                         retrigger(cid, p, &mut recv_protocols);
                     },
                     Ok(ProtocolEvent::Shutdown) => {
-                        info!(?cid, "shutdown protocol");
+                        log::info!("shutdown protocol {}", cid);
                         if let Err(e) = b2b_close_send_protocol_s.send(cid).await {
-                            debug!(?e, ?cid, "send_mgr was already closed simultaneously");
+                            log::debug!( "{} {} send_mgr was already closed simultaneously", e, cid);
                         }
                         if remove_c(&mut recv_protocols, &cid) {
                             break;
                         }
                     },
                     Err(e) => {
-                        info!(?e, ?cid, "protocol failed, shutting down channel");
+                        log::info!("protocol failed, shutting down channel  {}  {}", e, cid);
                         if let Err(e) = b2b_close_send_protocol_s.send(cid).await {
-                            debug!(?e, ?cid, "send_mgr was already closed simultaneously");
+                            log:: debug!("send_mgr was already closed simultaneously  {}  {}", e, cid);
                         }
                         if remove_c(&mut recv_protocols, &cid) {
                             break;
@@ -521,16 +519,16 @@ impl BParticipant {
 
             if let Some(table) = defered_orphan.print() {
                 for (sid, cnt) in table.iter() {
-                    warn!(?sid, ?cnt, "recv messages with orphan stream");
+                    log::warn!( "{}  {}  recv messages with orphan stream", sid, cnt);
                 }
             }
         }
-        trace!("receiving no longer possible, closing all streams");
+        log::trace!("receiving no longer possible, closing all streams");
         for (_, si) in self.streams.write().await.drain() {
             si.send_closed.store(true, Ordering::SeqCst);
             self.metrics.streams_closed(&self.remote_pid_string);
         }
-        trace!("Stop recv_mgr");
+        log:: trace!("Stop recv_mgr");
         self.shutdown_barrier
             .fetch_sub(Self::BARR_RECV, Ordering::SeqCst);
     }
@@ -565,7 +563,7 @@ impl BParticipant {
                     b2b_add_recv_protocol_s.send((cid, recv)).unwrap();
                     b2s_create_channel_done_s.send(()).unwrap();
                     if channel_no > 5 {
-                        debug!(?channel_no, "metrics will overwrite channel #5");
+                        log::debug!( "metrics will overwrite channel #5  : {}", channel_no);
                         channel_no = 5;
                     }
                     self.metrics
@@ -573,7 +571,7 @@ impl BParticipant {
                 }
             })
             .await;
-        trace!("Stop create_channel_mgr");
+            log::trace!("Stop create_channel_mgr");
         self.shutdown_barrier
             .fetch_sub(Self::BARR_CHANNEL, Ordering::SeqCst);
     }
@@ -616,13 +614,13 @@ impl BParticipant {
                 sleep *= 1.4;
                 tokio::time::sleep(Duration::from_secs_f64(sleep)).await;
                 if sleep > 0.2 {
-                    trace!(?bytes, "wait for mgr to close");
+                    log::trace!("wait for mgr to close {}", bytes);
                 }
             }
         };
 
         let awaited = s2b_shutdown_bparticipant_r.await.ok();
-        debug!("participant_shutdown_mgr triggered. Closing all streams for send");
+        log::debug!("participant_shutdown_mgr triggered. Closing all streams for send");
         {
             let lock = self.streams.read().await;
             for si in lock.values() {
@@ -638,16 +636,16 @@ impl BParticipant {
         );
         for cid in lock.keys() {
             if let Err(e) = b2b_close_send_protocol_s.send(*cid).await {
-                debug!(
-                    ?e,
-                    ?cid,
-                    "closing send_mgr may fail if we got a recv error simultaneously"
+                log::debug!(
+                    "closing send_mgr may fail if we got a recv error simultaneously {} {}",
+                    e,
+                    cid,
                 );
             }
         }
         drop(lock);
 
-        trace!("wait for other managers");
+        log::trace!("wait for other managers");
         let timeout = tokio::time::sleep(
             awaited
                 .as_ref()
@@ -659,20 +657,20 @@ impl BParticipant {
             _ = timeout => true,
         };
         if timeout {
-            warn!("timeout triggered: for killing recv");
+            log::warn!("timeout triggered: for killing recv");
             let lock = self.channels.read().await;
             for cid in lock.keys() {
                 if let Err(e) = b2b_force_close_recv_protocol_s.send(*cid).await {
-                    debug!(
-                        ?e,
-                        ?cid,
-                        "closing recv_mgr may fail if we got a recv error simultaneously"
+                    log::debug!(
+                        "{}  {} closing recv_mgr may fail if we got a recv error simultaneously",
+                        e,
+                        cid,
                     );
                 }
             }
         }
 
-        trace!("wait again");
+        log::trace!("wait again");
         wait_for_manager().await;
 
         if let Some((_, sender)) = awaited {
@@ -684,7 +682,7 @@ impl BParticipant {
         #[cfg(feature = "metrics")]
         self.metrics.participants_disconnected_total.inc();
         self.metrics.cleanup_participant(&self.remote_pid_string);
-        trace!("Stop participant_shutdown_mgr");
+        log::trace!("Stop participant_shutdown_mgr");
     }
 
     /// Stopping API and participant usage
@@ -697,7 +695,7 @@ impl BParticipant {
                 si.b2a_msg_recv_s.lock().await.close();
             },
             None => {
-                trace!("Couldn't find the stream, might be simultaneous close from local/remote")
+                log::trace!("Couldn't find the stream, might be simultaneous close from local/remote")
             },
         }
         self.metrics.streams_closed(&self.remote_pid_string);
@@ -726,7 +724,7 @@ impl BParticipant {
                 Some(osi) => (osi.a2b_msg_s.clone(), osi.a2b_close_stream_s.clone()),
                 None => {
                     // This Stream will not be able to send. feed it some "Dummy" Channels.
-                    debug!(
+                    log::debug!(
                         "It seems that a stream was requested to open, while the send_mgr is \
                          already closed"
                     );

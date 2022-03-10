@@ -8,5 +8,8 @@ version = "0.10.0"
 [features]
 
 [dependencies]
-tracing = { version = "0.1", default-features = false }
 directories-next = "2.0"
+
+
+#log
+log = "0.4"

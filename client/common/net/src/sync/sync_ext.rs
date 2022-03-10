@@ -11,7 +11,6 @@ use specs::{
     world::Builder,
     WorldExt,
 };
-use tracing::error;
 
 pub trait WorldSyncExt {
     fn register_sync_marker(&mut self);
@@ -64,7 +63,7 @@ impl WorldSyncExt for specs::World {
         let maybe_entity = self.write_resource::<UidAllocator>().remove_entity(uid);
         if let Some(entity) = maybe_entity {
             if let Err(e) = self.delete_entity(entity) {
-                error!(?e, "Failed to delete entity");
+                log::error!("Failed to delete entity {}", &e);
             }
         }
     }

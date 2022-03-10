@@ -1,5 +1,4 @@
 use crate::comp::{Pos, Vel};
-use common_base::span;
 use hashbrown::{hash_map::DefaultHashBuilder, HashSet};
 use indexmap::IndexMap;
 use specs::{hibitset::BitSetLike, BitSet, Entities, Join, ReadStorage};
@@ -90,7 +89,7 @@ impl RegionMap {
     // TODO maintain within a system?
     // TODO special case large entities
     pub fn tick(&mut self, pos: ReadStorage<Pos>, vel: ReadStorage<Vel>, entities: Entities) {
-        span!(_guard, "tick", "Region::tick");
+        
         self.tick += 1;
         // Clear events within each region
         self.regions.values_mut().for_each(|region| {

@@ -10,10 +10,8 @@ use crate::{
 };
 use client::{self, Client};
 use common::{comp, resources::DeltaTime};
-use common_base::span;
 use specs::WorldExt;
 use std::{cell::RefCell, mem, rc::Rc};
-use tracing::error;
 use ui::CharSelectionUi;
 
 pub struct CharSelectionState {
@@ -77,7 +75,7 @@ impl PlayState for CharSelectionState {
     }
 
     fn tick(&mut self, global_state: &mut GlobalState, events: Vec<WinEvent>) -> PlayStateResult {
-        span!(_guard, "tick", "<CharSelectionState as PlayState>::tick");
+        
         let (client_presence, client_registered) = {
             let client = self.client.borrow();
             (client.presence(), client.registered())
@@ -227,7 +225,7 @@ impl PlayState for CharSelectionState {
                 Err(err) => {
                     global_state.info_message =
                         Some(localized_strings.get("common.connection_lost").to_owned());
-                    error!(?err, "[char_selection] Failed to tick the client");
+                        log::error!("{:?}  [char_selection] Failed to tick the client", err);
                     return PlayStateResult::Pop;
                 },
             }
@@ -241,7 +239,7 @@ impl PlayState for CharSelectionState {
 
             PlayStateResult::Continue
         } else {
-            error!("Client not in pending or registered state. Popping char selection play state, client_registered: {}",client_registered);
+            log::error!("Client not in pending or registered state. Popping char selection play state, client_registered: {}",client_registered);
             // TODO set global_state.info_message
             PlayStateResult::Pop
         }

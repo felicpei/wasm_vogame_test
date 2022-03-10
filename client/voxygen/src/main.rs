@@ -2,12 +2,6 @@
 #![feature(bool_to_option)]
 #![recursion_limit = "2048"]
 
-// Allow profiling allocations with Tracy
-#[cfg_attr(feature = "tracy-memory", global_allocator)]
-#[cfg(feature = "tracy-memory")]
-static GLOBAL: common_base::tracy_client::ProfiledAllocator<std::alloc::System> =
-    common_base::tracy_client::ProfiledAllocator::new(std::alloc::System, 128);
-
 use i18n::{self, LocalizationHandle};
 use veloren_voxygen::{
     audio::AudioFrontend,
@@ -19,26 +13,21 @@ use veloren_voxygen::{
     GlobalState,
 };
 
-use chrono::Utc;
 use common::clock::Clock;
 use std::{panic, path::PathBuf};
-use tracing::{error, info, warn};
 
 fn main() {
-    let userdata_dir = common_base::userdata_dir_workspace!();
 
-    // Determine where Voxygen's logs should go
-    // Choose a path to store the logs by the following order:
-    //  - The VOXYGEN_LOGS environment variable
-    //  - The <userdata>/voxygen/logs
-    let logs_dir = std::env::var_os("VOXYGEN_LOGS")
-        .map(PathBuf::from)
-        .unwrap_or_else(|| userdata_dir.join("voxygen").join("logs"));
+    let userdata_dir = common_base::userdata_dir_workspace!();
 
     // Re-run userdata selection so any warnings will be logged
     common_base::userdata_dir_workspace!();
 
-    info!("Using userdata dir at: {}", userdata_dir.display());
+    //init log
+    init_log ();
+
+
+    log::info!("Using userdata dir at: {}", userdata_dir.display());
 
     // Determine Voxygen's config directory either by env var or placed in veloren's
     // userdata folder
@@ -48,12 +37,12 @@ fn main() {
             if path.exists() {
                 Some(path)
             } else {
-                warn!(?path, "VOXYGEN_CONFIG points to invalid path.");
+                log::warn!("VOXYGEN_CONFIG points to invalid path. : {:?}", path);
                 None
             }
         })
         .unwrap_or_else(|| userdata_dir.join("voxygen"));
-    info!("Using config dir at: {}", config_dir.display());
+        log::info!("Using config dir at: {}", config_dir.display());
 
     // Load the settings
     // Note: This won't log anything due to it being called before
@@ -82,7 +71,7 @@ fn main() {
             },
         };
 
-        error!(
+        log::error!(
             "VOXYGEN HAS PANICKED\n\n{}\n\nBacktrace:\n{:?}",
             reason,
             backtrace::Backtrace::new(),
@@ -131,10 +120,10 @@ fn main() {
     let mut i18n =
         LocalizationHandle::load(&settings.language.selected_language).unwrap_or_else(|error| {
             let selected_language = &settings.language.selected_language;
-            warn!(
-                ?error,
-                ?selected_language,
-                "Impossible to load language: change to the default language (English) instead.",
+            log::warn!(
+                "Impossible to load language: change to the default language (English) instead. {:?} | {:?}",
+                error,
+                selected_language,
             );
             settings.language.selected_language = i18n::REFERENCE_LANG.to_owned();
             LocalizationHandle::load_expect(&settings.language.selected_language)
@@ -142,29 +131,9 @@ fn main() {
     i18n.read().log_missing_entries();
     i18n.set_english_fallback(settings.language.use_english_fallback);
 
-    // Create window
-    use veloren_voxygen::{error::Error, render::RenderError};
+    //创建运行窗体
     let (mut window, event_loop) = match Window::new(&settings, &tokio_runtime) {
         Ok(ok) => ok,
-        // Custom panic message when a graphics backend could not be found
-        Err(Error::RenderError(RenderError::CouldNotFindAdapter)) => {
-            #[cfg(target_os = "windows")]
-            const POTENTIAL_FIX: &str =
-                " Updating the graphics drivers on this system may resolve this issue.";
-            #[cfg(target_os = "macos")]
-            const POTENTIAL_FIX: &str = "";
-            #[cfg(not(any(target_os = "windows", target_os = "macos")))]
-            const POTENTIAL_FIX: &str =
-                " Installing or updating vulkan drivers may resolve this issue.";
-
-            panic!(
-                "Failed to select a rendering backend! No compatible backends were found. We \
-                 currently support vulkan, metal, dx12, and dx11.{} If the issue persists, please \
-                 include the operating system and GPU details in your bug report to help us \
-                 identify the cause.",
-                POTENTIAL_FIX
-            );
-        },
         Err(error) => panic!("Failed to create window!: {:?}", error),
     };
 
@@ -194,4 +163,19 @@ fn main() {
     };
 
     run::run(global_state, event_loop);
+}
+
+
+fn init_log () {
+
+    #[cfg(feature = "wasm")]
+    {
+        wasm_logger::init(wasm_logger::Config::default());
+    }
+    
+    env_logger::init();
+    log::set_max_level(log::LevelFilter::Debug);
+    if log::log_enabled!(log::Level::Debug) {
+        println!("LOG LEVEL DEBUG");
+    }
 }

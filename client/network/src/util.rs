@@ -1,10 +1,9 @@
 use core::hash::Hash;
 use std::{collections::HashMap, time::Instant};
-use tracing::Level;
 
 /// used to collect multiple traces and not spam the console
 pub(crate) struct DeferredTracer<T: Eq + Hash> {
-    _level: Level,
+    _level: log::Level,
     log_enabled: bool, // cache
     items: HashMap<T, u64>,
     last: Instant,
@@ -12,10 +11,10 @@ pub(crate) struct DeferredTracer<T: Eq + Hash> {
 }
 
 impl<T: Eq + Hash> DeferredTracer<T> {
-    pub(crate) fn new(level: Level) -> Self {
+    pub(crate) fn new(level: log::Level) -> Self {
         Self {
             _level: level,
-            log_enabled: tracing::level_enabled!(level),
+            log_enabled: true,
             items: HashMap::new(),
             last: Instant::now(),
             last_cnt: 0,
@@ -38,7 +37,7 @@ impl<T: Eq + Hash> DeferredTracer<T> {
             && (self.last_cnt > MAX_LOGS || self.last.elapsed().as_secs() >= MAX_SECS)
         {
             if self.last_cnt > MAX_LOGS {
-                tracing::debug!("this seems to be logged continuously");
+                log::debug!("this seems to be logged continuously");
             }
             self.last_cnt = 0;
             Some(std::mem::take(&mut self.items))

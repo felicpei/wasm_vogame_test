@@ -18,13 +18,11 @@ use client::{
 };
 use client_init::{ClientInit, Error as InitError, Msg as InitMsg};
 use common::comp;
-use common_base::span;
 use i18n::LocalizationHandle;
 use scene::Scene;
 use std::sync::Arc;
 use tokio::runtime;
 
-use tracing::error;
 use ui::{Event as MainMenuEvent, MainMenuUi};
 
 // TODO: show status messages for waiting on server creation, client init, and
@@ -87,8 +85,7 @@ impl PlayState for MainMenuState {
 
     #[allow(clippy::single_match)] // TODO: remove when event match has multiple arms
     fn tick(&mut self, global_state: &mut GlobalState, events: Vec<Event>) -> PlayStateResult {
-        span!(_guard, "tick", "<MainMenuState as PlayState>::tick");
-
+        
         // Pull in localizations
         let localized_strings = &global_state.i18n.read();
 
@@ -173,11 +170,11 @@ impl PlayState for MainMenuState {
             },
             Some(InitMsg::Done(Err(e))) => {
                 self.init = InitState::None;
-                error!(?e, "Client Init failed raw error");
+                log::error!("{:?} Client Init failed raw error", e);
                 let e = get_client_msg_error(e, &global_state.i18n);
                 // Log error for possible additional use later or in case that the error
                 // displayed is cut of.
-                error!(?e, "Client Init failed");
+                log::error!("{:?}  Client Init failed", e);
                 global_state.info_message = Some(
                     localized_strings
                         .get("main.login.client_init_failed")
@@ -220,7 +217,7 @@ impl PlayState for MainMenuState {
                 Err(err) => {
                     global_state.info_message =
                         Some(localized_strings.get("common.connection_lost").to_owned());
-                    error!(?err, "[main menu] Failed to tick the client");
+                    log::error!("{:?}    [main menu] Failed to tick the client", err);
                     self.init = InitState::None;
                 },
             }

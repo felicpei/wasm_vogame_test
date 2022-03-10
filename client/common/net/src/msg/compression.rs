@@ -12,7 +12,6 @@ use std::{
     io::{Read, Write},
     marker::PhantomData,
 };
-use tracing::warn;
 use vek::*;
 
 /// Wrapper for compressed, serialized data (for stuff that doesn't use the
@@ -790,7 +789,7 @@ pub fn write_image_terrain<
                 let is_border = x <= 1 || x >= dims.x - 2 || y <= 1 || y >= dims.y - 2;
                 let block = VIE::get_block(&ws, i, j, is_border);
                 if let Err(e) = vol.set(lo.as_() + Vec3::new(x, y, z).as_(), block) {
-                    warn!(
+                    log::warn!(
                         "Error placing a block into a volume at {:?}: {:?}",
                         (x, y, z),
                         e

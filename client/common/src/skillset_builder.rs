@@ -4,7 +4,6 @@ use crate::comp::skillset::{skills::Skill, SkillGroupKind, SkillSet};
 
 use crate::assets::{self, AssetExt};
 use serde::{Deserialize, Serialize};
-use tracing::warn;
 
 /// `SkillSetBuilder` preset. Consider using loading from assets, when possible.
 /// When you're adding new enum variant,

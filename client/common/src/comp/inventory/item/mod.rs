@@ -26,7 +26,6 @@ use specs::{Component, DerefFlaggedStorage};
 use specs_idvs::IdvStorage;
 use std::{collections::hash_map::DefaultHasher, fmt, sync::Arc};
 use strum_macros::IntoStaticStr;
-use tracing::error;
 use vek::Rgb;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -466,7 +465,7 @@ impl TryFrom<(&Item, &AbilityMap, &MaterialStatManifest)> for ItemConfig {
                 if let Some(set) = ability_map.get_ability_set(set_key) {
                     set.clone().modified_by_tool(tool, msm, &item.components)
                 } else {
-                    error!(
+                    log::error!(
                         "Custom ability set: {:?} references non-existent set, falling back to \
                          default ability set.",
                         set_key
@@ -476,7 +475,7 @@ impl TryFrom<(&Item, &AbilityMap, &MaterialStatManifest)> for ItemConfig {
             } else if let Some(set) = tool_default(tool.kind) {
                 set.clone().modified_by_tool(tool, msm, &item.components)
             } else {
-                error!(
+                log::error!(
                     "No ability set defined for tool: {:?}, falling back to default ability set.",
                     tool.kind
                 );

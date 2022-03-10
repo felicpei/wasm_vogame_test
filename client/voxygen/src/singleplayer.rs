@@ -13,7 +13,6 @@ use std::{
     time::Duration,
 };
 use tokio::runtime::Runtime;
-use tracing::{error, info, trace, warn};
 
 const TPS: u64 = 30;
 

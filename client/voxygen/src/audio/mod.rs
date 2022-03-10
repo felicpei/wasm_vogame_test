@@ -13,7 +13,6 @@ use music::MusicTransitionManifest;
 use sfx::{SfxEvent, SfxTriggerItem};
 use soundcache::load_ogg;
 use std::time::Duration;
-use tracing::{debug, error, warn};
 
 use common::assets::{AssetExt, AssetHandle};
 use rodio::{source::Source, OutputStream, OutputStreamHandle, StreamError};
@@ -71,7 +70,7 @@ impl AudioFrontend {
                     "failed to construct audio frontend. Is `pulseaudio-alsa` installed?"
                 );
                 #[cfg(not(unix))]
-                error!(?e, "failed to construct audio frontend.");
+                log::error!("failed to construct audio frontend.{:?}", e);
                 (None, None)
             },
         };
@@ -103,7 +102,7 @@ impl AudioFrontend {
     pub fn no_audio() -> Self {
         let audio_manifest = "voxygen.audio.music_transition_manifest";
         let mtm = MusicTransitionManifest::load_or_insert_with(audio_manifest, |err| {
-            warn!(
+            log::warn!(
                 "Error loading MusicTransitionManifest {:?}: {:?}",
                 audio_manifest, err
             );
@@ -199,7 +198,7 @@ impl AudioFrontend {
         if let Some((event, item)) = trigger_item {
             let sfx_file = match item.files.len() {
                 0 => {
-                    debug!("Sfx event {:?} is missing audio file.", event);
+                    log::debug!("Sfx event {:?} is missing audio file.", event);
                     "voxygen.audio.sfx.placeholder"
                 },
                 1 => item
@@ -216,10 +215,10 @@ impl AudioFrontend {
             // TODO: Should this take `underwater` into consideration?
             match self.play_sfx(sfx_file, self.listener.pos, None, false) {
                 Ok(_) => {},
-                Err(e) => warn!("Failed to play sfx '{:?}'. {}", sfx_file, e),
+                Err(e) => log::warn!("Failed to play sfx '{:?}'. {}", sfx_file, e),
             }
         } else {
-            debug!("Missing sfx trigger config for external sfx event.",);
+            log::debug!("Missing sfx trigger config for external sfx event.",);
         }
     }
 
@@ -235,7 +234,7 @@ impl AudioFrontend {
         if let Some((event, item)) = trigger_item {
             let sfx_file = match item.files.len() {
                 0 => {
-                    debug!("Sfx event {:?} is missing audio file.", event);
+                    log::debug!("Sfx event {:?} is missing audio file.", event);
                     "voxygen.audio.sfx.placeholder"
                 },
                 1 => item
@@ -251,10 +250,10 @@ impl AudioFrontend {
 
             match self.play_sfx(sfx_file, position, volume, underwater) {
                 Ok(_) => {},
-                Err(e) => warn!("Failed to play sfx '{:?}'. {}", sfx_file, e),
+                Err(e) => log::warn!("Failed to play sfx '{:?}'. {}", sfx_file, e),
             }
         } else {
-            debug!(
+            log::debug!(
                 "Missing sfx trigger config for sfx event at position: {:?}",
                 position
             );

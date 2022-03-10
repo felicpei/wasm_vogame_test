@@ -84,7 +84,6 @@ impl<'a> Widget for Popup<'a> {
     fn style(&self) -> Self::Style {}
 
     fn update(self, args: widget::UpdateArgs<Self>) -> Self::Event {
-        common_base::prof_span!("Popup::update");
         let widget::UpdateArgs { state, ui, .. } = args;
 
         const FADE_IN: f32 = 0.5;

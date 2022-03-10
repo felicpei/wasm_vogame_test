@@ -96,7 +96,6 @@ use common::{
     util::{srgba_to_linear, Dir},
     vol::RectRasterableVol,
 };
-use common_base::{prof_span, span};
 use common_net::{
     msg::{world_msg::SiteId, Notification, PresenceKind},
     sync::WorldSyncExt,
@@ -116,7 +115,6 @@ use std::{
     sync::Arc,
     time::{Duration, Instant},
 };
-use tracing::warn;
 use vek::*;
 
 const TEXT_COLOR: Color = Color::Rgba(1.0, 1.0, 1.0, 1.0);
@@ -1130,7 +1128,7 @@ impl Hud {
         camera: &Camera,
         interactable: Option<Interactable>,
     ) -> Vec<Event> {
-        span!(_guard, "update_layout", "Hud::update_layout");
+        
         let mut events = core::mem::take(&mut self.events);
         if global_state.settings.interface.map_show_voxel_map {
             self.voxel_minimap.maintain(client, &mut self.ui);
@@ -1146,8 +1144,6 @@ impl Hud {
         let key_layout = &global_state.window.key_layout;
 
         if self.show.ingame {
-            prof_span!("ingame elements");
-
             let ecs = client.state().ecs();
             let pos = ecs.read_storage::<comp::Pos>();
             let stats = ecs.read_storage::<comp::Stats>();
@@ -1198,7 +1194,7 @@ impl Hud {
                         let common_message = "Some of your skill points have been reset. You will \
                                               need to reassign them.";
 
-                        warn!("{}\n{}", persistence_error, common_message);
+                        log::warn!("{}\n{}", persistence_error, common_message);
                         let prompt_dialog = PromptDialogSettings::new(
                             format!("{}\n", common_message),
                             Event::AcknowledgePersistenceLoadError,
@@ -2257,7 +2253,6 @@ impl Hud {
             .get_binding(GameInput::ToggleCursor)
             .filter(|_| !show_intro)
         {
-            prof_span!("temporary example quest");
             match global_state.settings.interface.intro_show {
                 Intro::Show => {
                     if Button::image(self.imgs.button)
@@ -2310,7 +2305,6 @@ impl Hud {
         }
         // TODO: Add event/stat based tutorial system
         if self.show.intro && !self.show.esc_menu {
-            prof_span!("intro show");
             match global_state.settings.interface.intro_show {
                 Intro::Show => {
                     if self.show.intro {
@@ -2406,8 +2400,6 @@ impl Hud {
         // TODO:
         // Make it use i18n keys.
         if let Some(debug_info) = debug_info {
-            prof_span!("debug info");
-
             const V_PAD: f64 = 5.0;
             const H_PAD: f64 = 5.0;
 
@@ -4149,7 +4141,7 @@ impl Hud {
         info: HudInfo,
         interactable: Option<Interactable>,
     ) -> Vec<Event> {
-        span!(_guard, "maintain", "Hud::maintain");
+        
         // conrod eats tabs. Un-eat a tabstop so tab completion can work
         if self.ui.ui.global_input().events().any(|event| {
             use conrod_core::{event, input};
@@ -4220,7 +4212,7 @@ impl Hud {
     pub fn clear_cursor(&mut self) { self.slot_manager.idle(); }
 
     pub fn render<'a>(&'a self, drawer: &mut UiDrawer<'_, 'a>) {
-        span!(_guard, "render", "Hud::render");
+        
         // Don't show anything if the UI is toggled off.
         if self.show.ui {
             self.ui.render(drawer);

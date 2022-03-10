@@ -3,7 +3,6 @@ use crate::render::{
 };
 use common::util::srgba_to_linear;
 use hashbrown::{HashMap, HashSet};
-use tracing::warn;
 use vek::*;
 
 #[derive(Debug)]
@@ -190,7 +189,7 @@ impl Debug {
                 }]);
                 self.models.insert(id, (model, locals));
             } else {
-                warn!(
+                log::warn!(
                     "Failed to create model for debug shape {:?}: {:?}",
                     id, shape
                 );
@@ -206,7 +205,7 @@ impl Debug {
                 }];
                 renderer.update_consts(locals, &new_locals);
             } else {
-                warn!(
+                log::warn!(
                     "Tried to update locals for nonexistent debug shape {:?}",
                     id
                 );

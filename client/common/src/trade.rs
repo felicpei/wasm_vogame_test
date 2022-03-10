@@ -6,7 +6,6 @@ use crate::{
 use hashbrown::HashMap;
 use serde::{Deserialize, Serialize};
 use strum_macros::EnumIter;
-use tracing::{trace, warn};
 
 #[derive(Copy, Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum TradePhase {
@@ -207,7 +206,7 @@ impl Trades {
         action: TradeAction,
         get_inventory: F,
     ) {
-        trace!("for trade id {:?}, message {:?}", id, action);
+        log::trace!("for trade id {:?}, message {:?}", id, action);
         if let Some(trade) = self.trades.get_mut(&id) {
             if let Some(party) = trade.which_party(who) {
                 let mut inventories = Vec::new();
@@ -219,13 +218,13 @@ impl Trades {
                 }
                 trade.process_trade_action(party, action, &*inventories);
             } else {
-                warn!(
+                log::warn!(
                     "An entity who is not a party to trade {:?} tried to modify it",
                     id
                 );
             }
         } else {
-            warn!("Attempt to modify nonexistent trade id {:?}", id);
+            log::warn!("Attempt to modify nonexistent trade id {:?}", id);
         }
     }
 
@@ -240,7 +239,7 @@ impl Trades {
                     to_notify = Some(trade.parties[1 - i])
                 },
                 None => {
-                    warn!(
+                    log::warn!(
                         "An entity who is not a party to trade {:?} tried to decline it",
                         id
                     );
@@ -249,7 +248,7 @@ impl Trades {
                 },
             }
         } else {
-            warn!("Attempt to decline nonexistent trade id {:?}", id);
+            log::warn!("Attempt to decline nonexistent trade id {:?}", id);
         }
         to_notify
     }

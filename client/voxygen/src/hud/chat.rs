@@ -204,7 +204,6 @@ impl<'a> Widget for Chat<'a> {
     fn style(&self) -> Self::Style {}
 
     fn update(self, args: widget::UpdateArgs<Self>) -> Self::Event {
-        common_base::prof_span!("Chat::update");
 
         let widget::UpdateArgs { id, state, ui, .. } = args;
 
@@ -779,11 +778,11 @@ fn insert_killing_buff(buff: BuffKind, localized_strings: &Localization, templat
         | BuffKind::ProtectingWard
         | BuffKind::Frenzied
         | BuffKind::Hastened => {
-            tracing::error!("Player was killed by a positive buff!");
+            log::error!("Player was killed by a positive buff!");
             localized_strings.get("hud.outcome.mysterious")
         },
         BuffKind::Wet | BuffKind::Ensnared => {
-            tracing::error!("Player was killed by a debuff that doesn't do damage!");
+            log::error!("Player was killed by a debuff that doesn't do damage!");
             localized_strings.get("hud.outcome.mysterious")
         },
     };

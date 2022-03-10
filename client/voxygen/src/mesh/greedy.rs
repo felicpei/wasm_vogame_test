@@ -1,5 +1,4 @@
 use crate::render::{mesh::Quad, ColLightInfo, TerrainVertex, Vertex};
-use common_base::span;
 use vek::*;
 
 type TodoRect = (
@@ -103,7 +102,7 @@ impl<'a> GreedyMesh<'a> {
     /// most 30 bits total, meaning we are restricted to "only" at most 2^15
     /// × 2^15 atlases even if the hardware supports larger ones.
     pub fn new(max_size: guillotiere::Size) -> Self {
-        span!(_guard, "new", "GreedyMesh::new");
+        
         let min_max_dim = max_size.width.min(max_size.height);
         assert!(
             min_max_dim >= 4,
@@ -152,7 +151,7 @@ impl<'a> GreedyMesh<'a> {
         FP: FnMut(Vec2<u16>, Vec2<Vec2<u16>>, Vec3<f32>, Vec2<Vec3<f32>>, Vec3<f32>, &M),
         FT: for<'r> FnMut(&'r mut D, Vec3<i32>, u8, u8) -> [u8; 4] + 'a,
     {
-        span!(_guard, "push", "GreedyMesh::push");
+        
         let cont = greedy_mesh(
             &mut self.atlas,
             &mut self.col_lights_size,
@@ -172,7 +171,7 @@ impl<'a> GreedyMesh<'a> {
     ///
     /// Returns the ColLightsInfo corresponding to the constructed atlas.
     pub fn finalize(self) -> ColLightInfo {
-        span!(_guard, "finalize", "GreedyMesh::finalize");
+        
         let cur_size = self.col_lights_size;
         let col_lights = vec![
             TerrainVertex::make_col_light(254, 0, Rgb::broadcast(254));
@@ -213,7 +212,7 @@ where
     FP: FnMut(Vec2<u16>, Vec2<Vec2<u16>>, Vec3<f32>, Vec2<Vec3<f32>>, Vec3<f32>, &M),
     FT: for<'r> FnMut(&'r mut D, Vec3<i32>, u8, u8) -> [u8; 4] + 'a,
 {
-    span!(_guard, "greedy_mesh");
+    
     // TODO: Collect information to see if we can choose a good value here.
     let mut todo_rects = Vec::with_capacity(1024);
 
@@ -364,7 +363,7 @@ fn greedy_mesh_cross_section<M: PartialEq>(
     // Vertex, width and height, and meta information about the block.
     mut push_quads: impl FnMut(Vec3<usize>, Vec2<usize>, &M),
 ) {
-    span!(_guard, "greedy_mesh_cross_section");
+    
     // mask represents which faces are either set while the other is unset, or unset
     // while the other is set.
     let mut mask = (0..dims.y * dims.x).map(|_| None).collect::<Vec<_>>();

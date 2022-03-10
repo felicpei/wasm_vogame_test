@@ -146,7 +146,6 @@ impl<'a> Widget for Group<'a> {
     // client
     #[allow(clippy::blocks_in_if_conditions)] // TODO: Pending review in #587
     fn update(self, args: widget::UpdateArgs<Self>) -> Self::Event {
-        common_base::prof_span!("Group::update");
         let widget::UpdateArgs { state, ui, .. } = args;
         let mut events = Vec::new();
         let localized_strings = self.localized_strings;

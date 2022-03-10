@@ -16,7 +16,6 @@ use hashbrown::{HashMap, HashSet};
 use raw::{RawFragment, RawLanguage, RawManifest};
 use serde::{Deserialize, Serialize};
 use std::{io, path::PathBuf};
-use tracing::warn;
 
 /// The reference language, aka the more up-to-date localization data.
 /// Also the default language at first startup.
@@ -131,7 +130,7 @@ impl common_assets::Compound for Language {
                     fragments.insert(PathBuf::from(id), fragment.clone());
                 },
                 Err(e) => {
-                    warn!("Unable to load asset {}, error={:?}", id, e);
+                    log::warn!("Unable to load asset {}, error={:?}", id, e);
                 },
             }
         }
@@ -220,14 +219,14 @@ impl LocalizationGuard {
     pub fn log_missing_entries(&self) {
         let (missing_strings, missing_vectors) = self.list_missing_entries();
         for missing_key in missing_strings {
-            warn!(
+            log::warn!(
                 "[{:?}] Missing string key {:?}",
                 self.metadata().language_identifier,
                 missing_key
             );
         }
         for missing_key in missing_vectors {
-            warn!(
+            log::warn!(
                 "[{:?}] Missing vector key {:?}",
                 self.metadata().language_identifier,
                 missing_key

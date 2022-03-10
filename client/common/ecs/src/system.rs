@@ -206,7 +206,7 @@ pub fn gen_stats(
                     p.measures.push((relative_time, actual));
                 }
             } else {
-                tracing::warn!("Invariant violation: keys in both hashmaps should be the same.");
+                log::warn!("Invariant violation: keys in both hashmaps should be the same.");
             }
         }
     }
@@ -278,13 +278,12 @@ where
     type SystemData = (T::SystemData, ReadExpect<'a, SysMetrics>);
 
     fn run(&mut self, data: Self::SystemData) {
-        common_base::span!(_guard, "run", &format!("{}::Sys::run", T::NAME));
         self.cpu_stats.reset();
         T::run(self, data.0);
         let millis = self.cpu_stats.end().as_millis();
         let name = T::NAME;
         if millis > 500 {
-            tracing::warn!(?millis, ?name, "slow system execution");
+            log::warn!("slow system execution:{}{}", millis, name);
         }
         data.1
             .stats

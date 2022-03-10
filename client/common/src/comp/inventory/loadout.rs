@@ -8,7 +8,6 @@ use crate::comp::{
 };
 use serde::{Deserialize, Serialize};
 use std::ops::Range;
-use tracing::warn;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Loadout {
@@ -163,7 +162,7 @@ impl Loadout {
             // Currently all loadouts contain slots for all EquipSlots so this can never
             // happen, but if loadouts with alternate slot combinations are
             // introduced then it could.
-            warn!("Cannot swap slots for non-existent equip slot");
+            log::warn!("Cannot swap slots for non-existent equip slot");
             return;
         }
 

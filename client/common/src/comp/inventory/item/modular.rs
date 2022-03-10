@@ -325,6 +325,6 @@ pub(crate) fn append_modular_recipes(recipes: &mut RawRecipeBook) {
 ///   components
 pub(super) fn synthesize_modular_asset(specifier: &str) -> Option<RawItemDef> {
     let ret = ITEM_DEFS_AND_RECIPES.0.get(specifier).cloned();
-    tracing::trace!("synthesize_modular_asset({:?}) -> {:?}", specifier, ret);
+    log::trace!("synthesize_modular_asset({:?}) -> {:?}", specifier, ret);
     ret
 }

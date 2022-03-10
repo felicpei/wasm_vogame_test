@@ -15,9 +15,6 @@ impl ConnectionArgs {
 }
 
 #[cfg(feature = "client_tcp")]
-use tracing:: trace;
-
-#[cfg(feature = "client_tcp")]
 use tokio::net::lookup_host;
 
 /// Parse ip address or resolves hostname.
@@ -34,14 +31,14 @@ pub(crate) async fn resolve(
   
     match lookup_host(address).await {
         Ok(s) => {
-            trace!("Host lookup succeeded");
+            log::trace!("Host lookup succeeded");
             Ok(sort_ipv6(s, prefer_ipv6))
         },
         Err(e) => {
             // 2. Assume its a hostname without port
             match lookup_host((address, ConnectionArgs::DEFAULT_PORT)).await {
                 Ok(s) => {
-                    trace!("Host lookup without ports succeeded");
+                    log::trace!("Host lookup without ports succeeded");
                     Ok(sort_ipv6(s, prefer_ipv6))
                 },
                 Err(_) => Err(e), // Todo: evaluate returning both errors
@@ -84,7 +81,7 @@ where
     //websocket连接 todo
     #[cfg(not(feature = "client_tcp"))]
     {
-        dbg!("########## todo addr resolve and network connect");
+        log::warn!("########## todo addr resolve and network connect");
         Err(Error::Other("todo addr resolve and network connect".to_string()))
     }
 }

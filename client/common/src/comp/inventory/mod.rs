@@ -3,7 +3,6 @@ use serde::{Deserialize, Serialize};
 use specs::{Component, DerefFlaggedStorage};
 use specs_idvs::IdvStorage;
 use std::{convert::TryFrom, mem, ops::Range};
-use tracing::{debug, trace, warn};
 use vek::Vec3;
 
 use crate::{
@@ -392,7 +391,7 @@ impl Inventory {
     /// Swap the items inside of two slots
     pub fn swap_slots(&mut self, a: InvSlotId, b: InvSlotId) {
         if self.slot(a).is_none() || self.slot(b).is_none() {
-            warn!("swap_slots called with non-existent inventory slot(s)");
+            log::warn!("swap_slots called with non-existent inventory slot(s)");
             return;
         }
 
@@ -514,7 +513,7 @@ impl Inventory {
                 .count()
         } else {
             // TODO: return Option<usize> and evaluate to None here
-            warn!(
+            log::warn!(
                 "Attempted to fetch loadout index for non-existent EquipSlot: {:?}",
                 equip_slot
             );
@@ -760,12 +759,12 @@ impl Inventory {
         if !self.get(inv_slot_id).map_or(true, |item| {
             self.loadout.slot_can_hold(equip_slot, Some(item.kind()))
         }) {
-            trace!("can_swap = false, equip slot can't hold item");
+            log::trace!("can_swap = false, equip slot can't hold item");
             return false;
         }
 
         if self.slot(inv_slot_id).is_none() {
-            debug!(
+            log::debug!(
                 "can_swap = false, tried to swap into non-existent inventory slot: {:?}",
                 inv_slot_id
             );

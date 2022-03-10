@@ -1,4 +1,4 @@
-use common_base::span;
+
 use ordered_float::NotNan;
 use std::{
     collections::VecDeque,
@@ -85,7 +85,7 @@ impl Clock {
                 .map_or(self.last_dt.as_secs_f32(), |t| t.into_inner()),
         );
         if self.last_dts.len() >= NUMBER_OF_DELTAS_COMPARED && self.last_dt > 2 * stable_dt {
-            tracing::trace!(?self.last_dt, ?self.total_tick_time, "lag spike detected, unusually slow tick");
+            log::trace!( "lag spike detected, unusually slow tick");
             stable_dt
         } else {
             self.last_dt
@@ -94,15 +94,15 @@ impl Clock {
 
     /// Do not modify without asking @xMAC94x first!
     pub fn tick(&mut self) {
-        span!(_guard, "tick", "Clock::tick");
-        span!(guard, "clock work");
+        
+        
         let current_sys_time = Instant::now();
         let busy_delta = current_sys_time.duration_since(self.last_sys_time);
         // Maintain TPS
         self.last_dts_sorted = self.last_dts.iter().copied().collect();
         self.last_dts_sorted.sort_unstable();
         self.stats = ClockStats::new(&self.last_dts_sorted, &self.last_busy_dts);
-        drop(guard);
+        
         // Attempt to sleep to fill the gap.
         if let Some(sleep_dur) = self.target_dt.checked_sub(busy_delta) {
             spin_sleep::sleep(sleep_dur);

@@ -265,7 +265,7 @@ lazy_static! {
             }
         }
 
-        tracing::trace!("Possible asset locations paths={:?}", paths);
+        log::trace!("Possible asset locations paths={:?}", paths);
 
         for mut path in paths.clone() {
             if !path.ends_with("assets") {
@@ -273,7 +273,7 @@ lazy_static! {
             }
 
             if path.is_dir() {
-                tracing::info!("Assets found path={}", path.display());
+                log::info!("Assets found path={}", path.display());
                 return path;
             }
         }

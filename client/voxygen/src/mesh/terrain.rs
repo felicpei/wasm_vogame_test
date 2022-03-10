@@ -14,9 +14,7 @@ use common::{
     vol::{ReadVol, RectRasterableVol},
     volumes::vol_grid_2d::{CachedVolGrid2d, VolGrid2d},
 };
-use common_base::span;
 use std::{collections::VecDeque, fmt::Debug, sync::Arc};
-use tracing::error;
 use vek::*;
 
 #[derive(Clone, Copy, PartialEq)]
@@ -40,7 +38,7 @@ fn calc_light<V: RectRasterableVol<Vox = Block> + ReadVol + Debug>(
     vol: &VolGrid2d<V>,
     lit_blocks: impl Iterator<Item = (Vec3<i32>, u8)>,
 ) -> impl Fn(Vec3<i32>) -> f32 + 'static + Send + Sync {
-    span!(_guard, "calc_light");
+    
     const UNKNOWN: u8 = 255;
     const OPAQUE: u8 = 254;
 
@@ -239,11 +237,7 @@ pub fn generate_mesh<'a, V: RectRasterableVol<Vox = Block> + ReadVol + Debug + '
         Arc<dyn Fn(Vec3<i32>) -> f32 + Send + Sync>,
     ),
 > {
-    span!(
-        _guard,
-        "generate_mesh",
-        "<&VolGrid2d as Meshable<_, _>>::generate_mesh"
-    );
+   
 
     // Find blocks that should glow
     // TODO: Search neighbouring chunks too!
@@ -278,7 +272,7 @@ pub fn generate_mesh<'a, V: RectRasterableVol<Vox = Block> + ReadVol + Debug + '
     let mut fluid_limits = None::<Limits>;
     let mut air_limits = None::<Limits>;
     let flat_get = {
-        span!(_guard, "copy to flat array");
+        
         let (w, h, d) = range.size().into_tuple();
         // z can range from -1..range.size().d + 1
         let d = d + 2;
@@ -340,7 +334,7 @@ pub fn generate_mesh<'a, V: RectRasterableVol<Vox = Block> + ReadVol + Debug + '
         // No interfaces (Note: if there are multiple fluid types this could change)
         (Some(_), None, None) | (None, Some(_), None) | (None, None, Some(_)) => None,
         (None, None, None) => {
-            error!("Impossible unless given an input AABB that has a height of zero");
+            log::error!("Impossible unless given an input AABB that has a height of zero");
             None
         },
     }

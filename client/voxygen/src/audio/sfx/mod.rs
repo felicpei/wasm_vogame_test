@@ -106,7 +106,6 @@ use event_mapper::SfxEventMapper;
 use hashbrown::HashMap;
 use rand::prelude::*;
 use serde::Deserialize;
-use tracing::{debug, warn};
 use vek::*;
 
 /// We watch the states of nearby entities in order to emit SFX at their
@@ -559,7 +558,7 @@ impl SfxMgr {
                     if let Some(sfx_trigger_item) = sfx_trigger_item {
                         audio.emit_sfx(Some(sfx_trigger_item), *pos, Some(1.5), false);
                     } else {
-                        debug!(
+                        log::debug!(
                             "No utterance sound effect exists for ({:?}, {:?})",
                             kind, voice
                         );
@@ -574,7 +573,7 @@ impl SfxMgr {
 
     fn load_sfx_items() -> AssetHandle<SfxTriggers> {
         SfxTriggers::load_or_insert_with("voxygen.audio.sfx", |error| {
-            warn!(
+            log::warn!(
                 "Error reading sfx config file, sfx will not be available: {:#?}",
                 error
             );

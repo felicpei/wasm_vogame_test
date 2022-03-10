@@ -411,17 +411,15 @@ impl From<SerdeOri> for Ori {
     fn from(serde_quat: SerdeOri) -> Self {
         let quat: Quaternion<f32> = serde_quat.0;
         if quat.into_vec4().map(f32::is_nan).reduce_or() {
-            tracing::warn!(
-                ?quat,
-                "Deserialized rotation quaternion containing NaNs, replacing with default"
+            log::warn!(
+                "Deserialized rotation quaternion containing NaNs, replacing with default ", 
             );
             Default::default()
         } else if !Self(quat).is_normalized() {
-            tracing::warn!(
-                ?quat,
+            log::warn!(
                 "Deserialized unnormalized rotation quaternion (magnitude: {}), replacing with \
                  default",
-                quat.magnitude()
+                quat.magnitude(),
             );
             Default::default()
         } else {

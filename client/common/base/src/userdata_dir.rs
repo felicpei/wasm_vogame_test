@@ -1,5 +1,4 @@
 use std::path::PathBuf;
-use tracing::warn;
 
 const VELOREN_USERDATA_ENV: &str = "VELOREN_USERDATA";
 
@@ -42,7 +41,7 @@ pub fn userdata_dir(workspace: bool, strategy: Option<&str>, manifest_dir: &str)
                 Some(path)
             },
             Some(s) => {
-                warn!(
+                log::warn!(
                     "Compiled with an invalid VELOREN_USERDATA_STRATEGY: \"{}\". \
                     Valid values are unset, \"system\", and \"executable\". \
                     Falling back to unset case.",
@@ -73,7 +72,7 @@ pub fn userdata_dir(workspace: bool, strategy: Option<&str>, manifest_dir: &str)
                 let mut path = exe_path;
                 path.pop();
                 path.push("userdata");
-                warn!(
+                log::warn!(
                     "This binary is outside the project folder where it was compiled ({}) \
                     and was not compiled with VELOREN_USERDATA_STRATEGY set to \"system\" or \"executable\". \
                     Falling back the to the \"executable\" strategy (the userdata folder will be placed in the \

@@ -6,14 +6,12 @@ use crate::{
     settings::{ControlSettings, Settings},
     ui,
 };
-use common_base::span;
 use crossbeam_channel as channel;
 use gilrs::{EventType, Gilrs};
 use hashbrown::HashMap;
 use itertools::Itertools;
 use keyboard_keynames::key_layout::KeyLayout;
 use serde::{Deserialize, Serialize};
-use tracing::{error, warn};
 use vek::*;
 use winit::monitor::VideoMode;
 
@@ -416,15 +414,17 @@ impl Window {
             .with_inner_size(winit::dpi::LogicalSize::new(size[0] as f64, size[1] as f64))
             .with_maximized(true);
 
-        // Avoid cpal / winit OleInitialize conflict
-        // See: https://github.com/rust-windowing/winit/pull/1524
-        #[cfg(target_os = "windows")]
-        let win_builder = winit::platform::windows::WindowBuilderExtWindows::with_drag_and_drop(
-            win_builder,
-            false,
-        );
-
         let window = win_builder.build(&event_loop).unwrap();
+        
+        // // Avoid cpal / winit OleInitialize conflict
+        // // See: https://github.com/rust-windowing/winit/pull/1524
+        // #[cfg(target_os = "windows")]
+        // let win_builder = winit::platform::windows::WindowBuilderExtWindows::with_drag_and_drop(
+        //     win_builder,
+        //     false,
+        // );
+
+        // let window = win_builder.build(&event_loop).unwrap();
 
         let renderer = Renderer::new(&window, settings.graphics.render_mode.clone(), runtime)?;
 
@@ -433,20 +433,20 @@ impl Window {
         let gilrs = match Gilrs::new() {
             Ok(gilrs) => Some(gilrs),
             Err(gilrs::Error::NotImplemented(_dummy)) => {
-                warn!("Controller input is unsupported on this platform.");
+                log::warn!("Controller input is unsupported on this platform.");
                 None
             },
             Err(gilrs::Error::InvalidAxisToBtn) => {
-                error!(
+                log::error!(
                     "Invalid AxisToBtn controller mapping. Falling back to no controller support."
                 );
                 None
             },
             Err(gilrs::Error::Other(e)) => {
-                error!(
-                    ?e,
+                log::error!(
                     "Platform-specific error when creating a Gilrs instance. Falling back to no \
-                     controller support."
+                     controller support. | {:?}",
+                     e
                 );
                 None
             },
@@ -464,10 +464,10 @@ impl Window {
         let key_layout = match KeyLayout::new_from_window(&window) {
             Ok(kl) => Some(kl),
             Err(err) => {
-                warn!(
-                    ?err,
+                log::warn!(
                     "Failed to construct the scancode to keyname mapper, falling back to \
-                     displaying Unknown(<scancode>)."
+                     displaying Unknown(<scancode>). {:?}",
+                     err
                 );
                 None
             },
@@ -529,7 +529,7 @@ impl Window {
     }
 
     pub fn fetch_events(&mut self) -> Vec<Event> {
-        span!(_guard, "fetch_events", "Window::fetch_events");
+
         // Refresh ui size (used when changing playstates)
         if self.needs_refresh_resize {
             let logical_size = self.logical_size();
@@ -975,7 +975,7 @@ impl Window {
                 // Log this error once rather than every frame
                 static SPAM_GUARD: std::sync::Once = std::sync::Once::new();
                 SPAM_GUARD.call_once(|| {
-                    error!("Error setting cursor position: {:?}", err);
+                    log::error!("Error setting cursor position: {:?}", err);
                 })
             }
         }
@@ -1004,7 +1004,7 @@ impl Window {
             // Log this error once rather than every frame
             static SPAM_GUARD: std::sync::Once = std::sync::Once::new();
             SPAM_GUARD.call_once(|| {
-                error!("Error centering cursor position: {:?}", err);
+                log::error!("Error centering cursor position: {:?}", err);
             })
         }
     }
@@ -1081,7 +1081,7 @@ impl Window {
                             .cloned()
                             .or_else(|| {
                                 if correct_depth.is_none() && correct_rate.is_none() {
-                                    warn!(
+                                    log::warn!(
                                         "Bit depth and refresh rate specified in settings are \
                                          incompatible with the monitor. Choosing highest bit \
                                          depth and refresh rate possible instead."
@@ -1104,7 +1104,7 @@ impl Window {
                     None => match correct_depth {
                         Some(mode) => Some(mode),
                         None => {
-                            warn!(
+                            log::warn!(
                                 "Bit depth specified in settings is incompatible with the \
                                  monitor. Choosing highest bit depth possible instead."
                             );
@@ -1138,7 +1138,7 @@ impl Window {
                     match correct_rate {
                         Some(mode) => Some(mode),
                         None => {
-                            warn!(
+                            log::warn!(
                                 "Refresh rate specified in settings is incompatible with the \
                                  monitor. Choosing highest refresh rate possible instead."
                             );
@@ -1186,7 +1186,7 @@ impl Window {
             // if there is no video mode with the specified resolution,
             // fall back to the video mode with max resolution, bit depth and refresh rate
             None => {
-                warn!(
+                log::warn!(
                     "Resolution specified in settings is incompatible with the monitor. Choosing \
                      highest resolution possible instead."
                 );
@@ -1199,12 +1199,12 @@ impl Window {
                         .max_by_key(|mode| mode.size().width);
 
                     if mode.is_none() {
-                        warn!("Failed to select video mode, no video modes available!!")
+                        log::warn!("Failed to select video mode, no video modes available!!")
                     }
 
                     mode
                 } else {
-                    warn!("Failed to select video mode, can't get the current monitor!");
+                    log::warn!("Failed to select video mode, can't get the current monitor!");
                     None
                 }
             },
@@ -1223,7 +1223,7 @@ impl Window {
                 ) {
                     winit::window::Fullscreen::Exclusive(video_mode)
                 } else {
-                    warn!(
+                    log::warn!(
                         "Failed to select a video mode for exclusive fullscreen. Falling back to \
                          borderless fullscreen."
                     );
@@ -1267,7 +1267,7 @@ impl Window {
             let image = match image {
                 Ok(i) => i,
                 Err(e) => {
-                    warn!(?e, "Couldn't generate screenshot");
+                    log::warn!("Couldn't generate screenshot, {:?}", e);
                     let _result = sender.send(format!("Error when generating screenshot: {}", e));
                     return;
                 },
@@ -1276,7 +1276,7 @@ impl Window {
             // Check if folder exists and create it if it does not
             if !path.exists() {
                 if let Err(e) = std::fs::create_dir_all(&path) {
-                    warn!(?e, "Couldn't create folder for screenshot");
+                    log::warn!("Couldn't create folder for screenshot: {:?}", e);
                     let _result =
                         sender.send(String::from("Couldn't create folder for screenshot"));
                 }
@@ -1290,7 +1290,7 @@ impl Window {
             ));
             // Try to save the image
             if let Err(e) = image.into_rgba8().save(&path) {
-                warn!(?e, "Couldn't save screenshot");
+                log::warn!("Couldn't save screenshot {:?}", e);
                 let _result = sender.send(String::from("Couldn't save screenshot"));
             } else {
                 let _result =

@@ -5,9 +5,8 @@ use crate::{
     window::{Event, EventLoop},
     Direction, GlobalState, PlayState, PlayStateResult,
 };
-use common_base::{no_guard_span, span, GuardlessSpan};
+
 use std::{mem, time::Duration};
-use tracing::debug;
 
 pub fn run(mut global_state: GlobalState, event_loop: EventLoop) {
     // Set up the initial play state.
@@ -15,7 +14,7 @@ pub fn run(mut global_state: GlobalState, event_loop: EventLoop) {
     states.last_mut().map(|current_state| {
         current_state.enter(&mut global_state, Direction::Forwards);
         let current_state = current_state.name();
-        debug!(?current_state, "Started game with state");
+        log::debug!("{:?} Started game with state", current_state);
     });
 
     // Used to ignore every other `MainEventsCleared`
@@ -23,9 +22,6 @@ pub fn run(mut global_state: GlobalState, event_loop: EventLoop) {
     // reported every other cycle of the event loop
     // See: https://github.com/rust-windowing/winit/issues/1418
     let mut polled_twice = false;
-
-    let mut poll_span = None;
-    let mut event_span = None;
 
     event_loop.run(move |event, _, control_flow| {
         // Continuously run loop since we handle sleeping
@@ -57,20 +53,16 @@ pub fn run(mut global_state: GlobalState, event_loop: EventLoop) {
 
         match event {
             winit::event::Event::NewEvents(_) => {
-                event_span = Some(no_guard_span!("Process Events"));
+               
             },
             winit::event::Event::MainEventsCleared => {
-                event_span.take();
-                poll_span.take();
                 if polled_twice {
                     handle_main_events_cleared(&mut states, control_flow, &mut global_state);
                 }
-                poll_span = Some(no_guard_span!("Poll Winit"));
                 polled_twice = !polled_twice;
             },
             winit::event::Event::WindowEvent { event, .. } => {
-                span!(_guard, "Handle WindowEvent");
-
+                
                 if let winit::event::WindowEvent::Focused(focused) = event {
                     global_state.audio.set_master_volume(if focused {
                         global_state.settings.audio.master_volume
@@ -85,7 +77,6 @@ pub fn run(mut global_state: GlobalState, event_loop: EventLoop) {
                     .handle_window_event(event, &mut global_state.settings)
             },
             winit::event::Event::DeviceEvent { event, .. } => {
-                span!(_guard, "Handle DeviceEvent");
                 global_state.window.handle_device_event(event)
             },
             winit::event::Event::LoopDestroyed => {
@@ -107,22 +98,11 @@ fn handle_main_events_cleared(
     control_flow: &mut winit::event_loop::ControlFlow,
     global_state: &mut GlobalState,
 ) {
-    span!(guard, "Handle MainEventsCleared");
     // Screenshot / Fullscreen toggle
     global_state
         .window
         .resolve_deduplicated_events(&mut global_state.settings, &global_state.config_dir);
-    // Run tick here
-
-    // What's going on here?
-    // ---------------------
-    // The state system used by Voxygen allows for the easy development of
-    // stack-based menus. For example, you may want a "title" state
-    // that can push a "main menu" state on top of it, which can in
-    // turn push a "settings" state or a "game session" state on top of it.
-    // The code below manages the state transfer logic automatically so that we
-    // don't have to re-engineer it for each menu we decide to add
-    // to the game.
+    
     let mut exit = true;
     while let Some(state_result) = states.last_mut().map(|last| {
         let events = global_state.window.fetch_events();
@@ -135,17 +115,17 @@ fn handle_main_events_cleared(
                 break;
             },
             PlayStateResult::Shutdown => {
-                debug!("Shutting down all states...");
+                log::debug!("Shutting down all states...");
                 while states.last().is_some() {
                     states.pop().map(|old_state| {
-                        debug!("Popped state '{}'.", old_state.name());
+                        log::debug!("Popped state '{}'.", old_state.name());
                         global_state.on_play_state_changed();
                     });
                 }
             },
             PlayStateResult::Pop => {
                 states.pop().map(|old_state| {
-                    debug!("Popped state '{}'.", old_state.name());
+                    log::debug!("Popped state '{}'.", old_state.name());
                     global_state.on_play_state_changed();
                 });
                 states.last_mut().map(|new_state| {
@@ -154,14 +134,14 @@ fn handle_main_events_cleared(
             },
             PlayStateResult::Push(mut new_state) => {
                 new_state.enter(global_state, Direction::Forwards);
-                debug!("Pushed state '{}'.", new_state.name());
+                log::debug!("Pushed state '{}'.", new_state.name());
                 states.push(new_state);
                 global_state.on_play_state_changed();
             },
             PlayStateResult::Switch(mut new_state) => {
                 new_state.enter(global_state, Direction::Forwards);
                 states.last_mut().map(|old_state| {
-                    debug!(
+                    log::debug!(
                         "Switching to state '{}' from state '{}'.",
                         new_state.name(),
                         old_state.name()
@@ -179,13 +159,8 @@ fn handle_main_events_cleared(
 
     let mut capped_fps = false;
 
-    drop(guard);
-
     if let Some(last) = states.last_mut() {
         capped_fps = last.capped_fps();
-
-        span!(guard, "Render");
-
         // Render the screen using the global renderer
         if let Some(mut drawer) = global_state
             .window
@@ -202,13 +177,9 @@ fn handle_main_events_cleared(
         if global_state.clear_shadows_next_frame {
             global_state.clear_shadows_next_frame = false;
         }
-
-        drop(guard);
     }
 
     if !exit {
-        // Wait for the next tick.
-        span!(guard, "Main thread sleep");
 
         // Enforce an FPS cap for the non-game session play states to prevent them
         // running at hundreds/thousands of FPS resulting in high GPU usage for
@@ -228,7 +199,6 @@ fn handle_main_events_cleared(
             .clock
             .set_target_dt(Duration::from_secs_f64(1.0 / target_fps as f64));
         global_state.clock.tick();
-        drop(guard);
 
         // Maintain global state.
         global_state.maintain(global_state.clock.dt());

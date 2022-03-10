@@ -22,7 +22,6 @@ use common::{
     trade::Trades,
     vol::{ReadVol, WriteVol},
 };
-use common_base::span;
 use common_ecs::{PhysicsMetrics, SysMetrics};
 use common_net::sync::{interpolation as sync_interp, WorldSyncExt};
 use core::{convert::identity, time::Duration};
@@ -109,7 +108,7 @@ impl State {
 
         let thread_pool = Arc::new(
             ThreadPoolBuilder::new()
-                .num_threads(num_cpus::get().max(common::consts::MIN_RECOMMENDED_RAYON_THREADS))
+                .num_threads(common::consts::MIN_RECOMMENDED_RAYON_THREADS)
                 .thread_name(move |i| format!("rayon-{}-{}", thread_name_infix, i))
                 .build()
                 .unwrap(),
@@ -220,11 +219,9 @@ impl State {
         ecs.insert(common::CachedSpatialGrid::default());
         ecs.insert(EntitiesDiedLastTick::default());
 
-        let num_cpu = num_cpus::get() as u64;
-        let slow_limit = (num_cpu / 2 + num_cpu / 4).max(1);
-        tracing::trace!(?slow_limit, "Slow Thread limit");
+    
         ecs.insert(SlowJobPool::new(
-            slow_limit,
+            2,
             10_000,
             Arc::clone(thread_pool),
         ));
@@ -439,7 +436,7 @@ impl State {
 
     // Run RegionMap tick to update entity region occupancy
     pub fn update_region_map(&self) {
-        span!(_guard, "update_region_map", "State::update_region_map");
+        
         self.ecs.write_resource::<RegionMap>().tick(
             self.ecs.read_storage::<comp::Pos>(),
             self.ecs.read_storage::<comp::Vel>(),
@@ -459,11 +456,7 @@ impl State {
     /// handling terrain messages; currently, client sets it to true and
     /// server to false.
     fn apply_terrain_changes_internal(&self, during_tick: bool) {
-        span!(
-            _guard,
-            "apply_terrain_changes",
-            "State::apply_terrain_changes"
-        );
+        
         let mut terrain = self.ecs.write_resource::<TerrainGrid>();
         let mut modified_blocks =
             std::mem::take(&mut self.ecs.write_resource::<BlockChange>().blocks);
@@ -490,7 +483,7 @@ impl State {
         add_systems: impl Fn(&mut DispatcherBuilder),
         update_terrain_and_regions: bool,
     ) {
-        span!(_guard, "tick", "State::tick");
+        
         // Change the time accordingly.
         self.ecs.write_resource::<TimeOfDay>().0 += dt.as_secs_f64() * DAY_CYCLE_FACTOR;
         self.ecs.write_resource::<Time>().0 += dt.as_secs_f64();
@@ -504,7 +497,6 @@ impl State {
             self.update_region_map();
         }
 
-        span!(guard, "create dispatcher");
         // Run systems to update the world.
         // Create and run a dispatcher for ecs systems.
         let mut dispatch_builder =
@@ -513,22 +505,22 @@ impl State {
         add_systems(&mut dispatch_builder);
         // This dispatches all the systems in parallel.
         let mut dispatcher = dispatch_builder.build();
-        drop(guard);
+        
 
-        span!(guard, "run systems");
+        
         dispatcher.dispatch(&self.ecs);
-        drop(guard);
+        
 
-        span!(guard, "maintain ecs");
+        
         self.ecs.maintain();
-        drop(guard);
+        
 
         if update_terrain_and_regions {
             self.apply_terrain_changes_internal(true);
         }
 
         // Process local events
-        span!(guard, "process local events");
+        
         let events = self.ecs.read_resource::<EventBus<LocalEvent>>().recv_all();
         for event in events {
             let mut velocities = self.ecs.write_storage::<comp::Vel>();
@@ -557,12 +549,12 @@ impl State {
                 },
             }
         }
-        drop(guard);
+        
     }
 
     /// Clean up the state after a tick.
     pub fn cleanup(&mut self) {
-        span!(_guard, "cleanup", "State::cleanup");
+        
         // Clean up data structures from the last tick.
         self.ecs.write_resource::<TerrainChanges>().clear();
     }

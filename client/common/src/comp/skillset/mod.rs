@@ -12,7 +12,6 @@ use sha2::{Digest, Sha256};
 use specs::{Component, DerefFlaggedStorage};
 use specs_idvs::IdvStorage;
 use std::{collections::BTreeSet, hash::Hash};
-use tracing::{trace, warn};
 
 pub mod skills;
 
@@ -342,7 +341,7 @@ impl SkillSet {
             self.skill_groups
                 .insert(skill_group_kind, SkillGroup::new(skill_group_kind));
         } else {
-            warn!("Tried to unlock already known skill group");
+            log::warn!("Tried to unlock already known skill group");
         }
     }
 
@@ -375,7 +374,7 @@ impl SkillSet {
         if let Some(skill_group) = self.skill_group_mut(skill_group_kind) {
             skill_group.add_experience(amount)
         } else {
-            warn!("Tried to add experience to a skill group that player does not have");
+            log::warn!("Tried to add experience to a skill group that player does not have");
             None
         }
     }
@@ -489,24 +488,23 @@ impl SkillSet {
                             self.skills.insert(skill, next_level);
                             Ok(())
                         } else {
-                            trace!("Tried to unlock skill for skill group with insufficient SP");
+                            log::trace!("Tried to unlock skill for skill group with insufficient SP");
                             Err(SkillUnlockError::InsufficientSP)
                         }
                     } else {
-                        trace!("Tried to unlock skill without meeting prerequisite skills");
+                        log::trace!("Tried to unlock skill without meeting prerequisite skills");
                         Err(SkillUnlockError::MissingPrerequisites)
                     }
                 } else {
-                    trace!("Tried to unlock skill for a skill group that player does not have");
+                    log::trace!("Tried to unlock skill for a skill group that player does not have");
                     Err(SkillUnlockError::UnavailableSkillGroup)
                 }
             } else {
-                trace!("Tried to unlock skill the player already has");
+                log::trace!("Tried to unlock skill the player already has");
                 Err(SkillUnlockError::SkillAlreadyUnlocked)
             }
         } else {
-            warn!(
-                ?skill,
+            log::warn!(
                 "Tried to unlock skill that does not exist in any skill group!"
             );
             Err(SkillUnlockError::NoParentSkillTree)

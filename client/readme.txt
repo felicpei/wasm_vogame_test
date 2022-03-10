@@ -8,3 +8,5 @@ wasm-pack build --target web
 #run server
 cargo run --bin veloren-server-cli
 
+
+SET RUST_LOG=debug cargo run

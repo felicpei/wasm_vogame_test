@@ -38,7 +38,6 @@ use crate::{
 use ::image::GenericImageView;
 use cache::Cache;
 use common::{slowjob::SlowJobPool, util::srgba_to_linear};
-use common_base::span;
 use conrod_core::{
     event::Input,
     graph::{self, Graph},
@@ -53,7 +52,6 @@ use core::{convert::TryInto, f32, f64, ops::Range};
 use graphic::TexId;
 use hashbrown::hash_map::Entry;
 use std::time::Duration;
-use tracing::{error, warn};
 use vek::*;
 
 #[derive(Debug)]
@@ -238,7 +236,7 @@ impl Ui {
             self.image_map.replace(id, (graphic_id, Rotation::None));
             self.graphic_replaced = true;
         } else {
-            error!("Failed to replace graphic, the provided id is not in use.");
+            log::error!("Failed to replace graphic, the provided id is not in use.");
         };
     }
 
@@ -325,7 +323,7 @@ impl Ui {
         pool: Option<&SlowJobPool>,
         view_projection_mat: Option<Mat4<f32>>,
     ) {
-        span!(_guard, "maintain", "Ui::maintain");
+        
         // Maintain tooltip manager
         self.tooltip_manager
             .maintain(self.ui.global_input(), self.scale.scale_factor_logical());
@@ -399,7 +397,7 @@ impl Ui {
         retry: &mut bool,
         physical_resolution_changed: bool,
     ) {
-        span!(_guard, "internal", "Ui::maintain_internal");
+        
         let (graphic_cache, text_cache, glyph_cache, cache_tex) = self.cache.cache_mut_and_tex();
 
         // If the physical resolution changed draw commands need to be cleared since
@@ -594,7 +592,7 @@ impl Ui {
                 glyph_cache.clear();
                 glyph_cache.clear_queue();
                 self.ui.needs_redraw();
-                warn!("Could not recache queued glyphs, skipping frame.");
+                log::warn!("Could not recache queued glyphs, skipping frame.");
             } else {
                 // NOTE: If this is the first round after encountering a new glyph, we just
                 // refresh the whole glyph cache.  Technically this is not necessary since
@@ -605,7 +603,7 @@ impl Ui {
                 // happen to be rendered on the frame where the cache was
                 // refreshed.
                 text_cache.clear();
-                tracing::debug!("Updating glyphs and clearing text cache.");
+                log::debug!("Updating glyphs and clearing text cache.");
 
                 if let Err(err) = glyph_cache.cache_queued(|rect, data| {
                     let offset = [rect.min.x as u32, rect.min.y as u32];
@@ -624,7 +622,7 @@ impl Ui {
                     // third time with a fully clean queue; or we could try to
                     // increase the glyph texture size, etc.  But hopefully
                     // we will not actually encounter this error.
-                    warn!("Failed to cache queued glyphs: {:?}", err);
+                    log::warn!("Failed to cache queued glyphs: {:?}", err);
 
                     // Clear queued glyphs, so that (hopefully) next time we won't have the
                     // offending glyph or glyph set.  We then exit the loop and don't try to
@@ -1055,7 +1053,7 @@ impl Ui {
     }
 
     pub fn render<'pass, 'data: 'pass>(&'data self, drawer: &mut UiDrawer<'_, 'pass>) {
-        span!(_guard, "render", "Ui::render");
+        
         let mut drawer = drawer.prepare(&self.interface_locals, &self.model, self.window_scissor);
         for draw_command in self.draw_commands.iter() {
             match draw_command {

@@ -3,7 +3,6 @@ use crate::{
     terrain::Block,
     vol::{BaseVol, ReadVol},
 };
-use common_base::span;
 use hashbrown::hash_map::DefaultHashBuilder;
 #[cfg(rrt_pathfinding)] use hashbrown::HashMap;
 #[cfg(rrt_pathfinding)]
@@ -355,7 +354,7 @@ impl Chaser {
     where
         V: BaseVol<Vox = Block> + ReadVol,
     {
-        span!(_guard, "chase", "Chaser::chase");
+        
         let pos_to_tgt = pos.distance(tgt);
 
         // If we're already close to the target then there's nothing to do

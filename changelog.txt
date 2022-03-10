@@ -29,8 +29,9 @@
 10.删除plugin，仅给服务器使用（目前客户端没有使用)
 11.删除common-front_end，这个是用来写日志文件的。以后wasm不可用。
 12.删除native_dialog,这个是报错弹框，没用了。（统一用log看）
---
-替换所有trace，println ，dbg，debug等
+13.替换所有log为wasm_logger，不然wasm打不出日志。
+
+
 ----
 网络部分todo（会导致无法运行问题）：
 1. 目前网络部分使用了多线程，这个wasm会有问题，修改 tokio 的 rt-multi-thread 为 rt，wasm不支持 rt-multi-thread。

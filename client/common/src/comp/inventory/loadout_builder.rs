@@ -17,7 +17,6 @@ use hashbrown::HashMap;
 use rand::{self, distributions::WeightedError, seq::SliceRandom, Rng};
 use serde::{Deserialize, Serialize};
 use strum_macros::EnumIter;
-use tracing::warn;
 
 /// Builder for character Loadouts, containing weapon and armour items belonging
 /// to a character, along with some helper methods for loading `Item`-s and
@@ -146,7 +145,7 @@ pub fn make_potion_bag(quantity: u32) -> Item {
     if let Some(i) = bag.slots_mut().iter_mut().next() {
         let mut potions = Item::new_from_asset_expect("common.items.consumable.potion_big");
         if let Err(e) = potions.set_amount(quantity) {
-            warn!("Failed to set potion quantity: {:?}", e);
+            log::warn!("Failed to set potion quantity: {:?}", e);
         }
         *i = Some(potions);
     }
@@ -159,7 +158,7 @@ pub fn make_food_bag(quantity: u32) -> Item {
     if let Some(i) = bag.slots_mut().iter_mut().next() {
         let mut food = Item::new_from_asset_expect("common.items.food.apple_stick");
         if let Err(e) = food.set_amount(quantity) {
-            warn!("Failed to set food quantity: {:?}", e);
+            log::warn!("Failed to set food quantity: {:?}", e);
         }
         *i = Some(food);
     }

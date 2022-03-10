@@ -20,7 +20,6 @@ use crate::{
     window::Window,
 };
 use common::slowjob::SlowJobPool;
-use common_base::span;
 use iced::{mouse, Cache, Size, UserInterface};
 use iced_winit::Clipboard;
 use vek::*;
@@ -144,7 +143,7 @@ impl IcedUi {
         pool: Option<&SlowJobPool>,
         clipboard: &mut Clipboard,
     ) -> (Vec<M>, mouse::Interaction) {
-        span!(_guard, "maintain", "IcedUi::maintain");
+        
         // There could have been a series of resizes that put us back at the original
         // resolution.
         // Avoid resetting cache if window size didn't actually change.
@@ -178,17 +177,17 @@ impl IcedUi {
         // TODO: convert to f32 at source
         let window_size = self.scale.scaled_resolution().map(|e| e as f32);
 
-        span!(guard, "build user_interface");
+        
         let mut user_interface = UserInterface::build(
             root,
             Size::new(window_size.x, window_size.y),
             self.cache.take().unwrap(),
             &mut self.renderer,
         );
-        drop(guard);
+        
 
         let messages = {
-            span!(_guard, "update user_interface");
+            
             let mut messages = Vec::new();
             let _event_status_list = user_interface.update(
                 &self.events,
@@ -202,10 +201,10 @@ impl IcedUi {
         // Clear events
         self.events.clear();
 
-        span!(guard, "draw user_interface");
+        
         let (primitive, mouse_interaction) =
             user_interface.draw(&mut self.renderer, cursor_position);
-        drop(guard);
+        
 
         self.cache = Some(user_interface.into_cache());
 

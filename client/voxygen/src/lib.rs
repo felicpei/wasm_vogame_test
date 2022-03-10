@@ -45,7 +45,6 @@ use crate::{
     window::{Event, Window},
 };
 use common::clock::Clock;
-use common_base::span;
 use i18n::LocalizationHandle;
 use std::path::PathBuf;
 
@@ -87,7 +86,6 @@ impl GlobalState {
     }
 
     pub fn maintain(&mut self, dt: std::time::Duration) {
-        span!(_guard, "maintain", "GlobalState::maintain");
         self.audio.maintain(dt);
         self.window.renderer().maintain()
     }

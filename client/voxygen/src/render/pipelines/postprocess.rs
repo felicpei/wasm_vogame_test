@@ -149,7 +149,7 @@ impl PostProcessPipeline {
         global_layout: &GlobalsLayouts,
         layout: &PostProcessLayout,
     ) -> Self {
-        common_base::span!(_guard, "PostProcessPipeline::new");
+        
         let render_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Post process pipeline layout"),

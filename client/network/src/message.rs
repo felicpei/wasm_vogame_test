@@ -4,8 +4,6 @@ use bytes::Bytes;
 use network_protocol::Promises;
 use serde::{de::DeserializeOwned, Serialize};
 use std::io;
-#[cfg(all(feature = "compression", debug_assertions))]
-use tracing::warn;
 
 /// Support struct used for optimising sending the same Message to multiple
 /// [`Stream`]
@@ -132,9 +130,9 @@ impl Message {
         let _params = params;
         #[cfg(feature = "compression")]
         if self.compressed != params.promises.contains(Promises::COMPRESSED) {
-            warn!(
-                ?params,
-                "verify failed, msg is {} and it doesn't match with stream", self.compressed
+            log::warn!(
+                "verify failed, msg is {} and it doesn't match with stream    {:?}", self.compressed, 
+                params
             );
         }
     }

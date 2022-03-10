@@ -24,7 +24,6 @@ use tokio::{
     runtime::Runtime,
     sync::{mpsc, oneshot, watch, Mutex},
 };
-use tracing::*;
 
 type A2sDisconnect = Arc<Mutex<Option<mpsc::UnboundedSender<(Pid, S2bShutdownBparticipant)>>>>;
 
@@ -254,8 +253,6 @@ impl Network {
         #[cfg(feature = "metrics")] registry: Option<&Registry>,
     ) -> Self {
         let p = participant_id;
-        let span = tracing::info_span!("network", ?p);
-        span.in_scope(|| trace!("Starting Network"));
         let (scheduler, listen_sender, connect_sender, connected_receiver, shutdown_sender) =
             Scheduler::new(
                 participant_id,
@@ -273,11 +270,10 @@ impl Network {
         runtime.spawn(f);
         runtime.spawn(
             async move {
-                trace!("Starting scheduler in own thread");
+                log::info!("Starting scheduler in own thread");
                 scheduler.run().await;
-                trace!("Stopping scheduler and his own thread");
+                log::info!("Stopping scheduler and his own thread");
             }
-            .instrument(tracing::info_span!("network", ?p)),
         );
         Self {
             local_pid: participant_id,
@@ -320,10 +316,9 @@ impl Network {
     ///
     /// [`connected`]: Network::connected
     /// [`ListenAddr`]: crate::api::ListenAddr
-    #[instrument(name="network", skip(self, address), fields(p = %self.local_pid))]
     pub async fn listen(&self, address: ListenAddr) -> Result<(), NetworkError> {
         let (s2a_result_s, s2a_result_r) = oneshot::channel::<tokio::io::Result<()>>();
-        debug!(?address, "listening on address");
+        log::debug!("listening on address. {:?}", address);
         self.listen_sender
             .lock()
             .await
@@ -378,11 +373,11 @@ impl Network {
     ///
     /// [`Streams`]: crate::api::Stream
     /// [`ConnectAddr`]: crate::api::ConnectAddr
-    #[instrument(name="network", skip(self, address), fields(p = %self.local_pid))]
     pub async fn connect(&self, address: ConnectAddr) -> Result<Participant, NetworkError> {
         let (pid_sender, pid_receiver) =
             oneshot::channel::<Result<Participant, NetworkConnectError>>();
-        debug!(?address, "Connect to address");
+            log::debug!("Connect to address： {:?}", address);
+
         self.connect_sender
             .lock()
             .await
@@ -392,7 +387,7 @@ impl Network {
             Err(e) => return Err(NetworkError::ConnectFailed(e)),
         };
         let remote_pid = participant.remote_pid;
-        trace!(?remote_pid, "connected");
+        log::trace!("connected {}", remote_pid);
         self.participant_disconnect_sender
             .lock()
             .await
@@ -435,7 +430,6 @@ impl Network {
     /// [`Streams`]: crate::api::Stream
     /// [`listen`]: crate::api::Network::listen
     /// [`ListenAddr`]: crate::api::ListenAddr
-    #[instrument(name="network", skip(self), fields(p = %self.local_pid))]
     pub async fn connected(&self) -> Result<Participant, NetworkError> {
         let participant = self
             .connected_receiver
@@ -452,22 +446,21 @@ impl Network {
     }
 
     /// Use a mgr to handle shutdown smoothly and not in `Drop`
-    #[instrument(name="network", skip(participant_disconnect_sender, shutdown_scheduler_s), fields(p = %local_pid))]
     async fn shutdown_mgr(
         local_pid: Pid,
         shutdown_network_r: oneshot::Receiver<oneshot::Sender<()>>,
         participant_disconnect_sender: Arc<Mutex<HashMap<Pid, A2sDisconnect>>>,
         shutdown_scheduler_s: oneshot::Sender<()>,
     ) {
-        trace!("waiting for shutdown triggerNetwork");
+        log::trace!("waiting for shutdown triggerNetwork");
         let return_s = shutdown_network_r.await;
-        trace!("Shutting down Participants of Network");
+        log::trace!("Shutting down Participants of Network");
         let mut finished_receiver_list = vec![];
 
         for (remote_pid, a2s_disconnect_s) in participant_disconnect_sender.lock().await.drain() {
             match a2s_disconnect_s.lock().await.take() {
                 Some(a2s_disconnect_s) => {
-                    trace!(?remote_pid, "Participants will be closed");
+                    log::trace!("Participants will be closed {}", remote_pid);
                     let (finished_sender, finished_receiver) = oneshot::channel();
                     finished_receiver_list.push((remote_pid, finished_receiver));
                     // If the channel was already dropped, we can assume that the other side
@@ -475,33 +468,34 @@ impl Network {
                     let _ = a2s_disconnect_s
                         .send((remote_pid, (Duration::from_secs(10), finished_sender)));
                 },
-                None => trace!(?remote_pid, "Participant already disconnected gracefully"),
+                None => log::trace!("Participant already disconnected gracefully {}",remote_pid),
             }
         }
         //wait after close is requested for all
         for (remote_pid, finished_receiver) in finished_receiver_list.drain(..) {
             match finished_receiver.await {
-                Ok(Ok(())) => trace!(?remote_pid, "disconnect successful"),
-                Ok(Err(e)) => info!(?remote_pid, ?e, "unclean disconnect"),
-                Err(e) => warn!(
-                    ?remote_pid,
-                    ?e,
+                Ok(Ok(())) => log::trace!("disconnect successful {}",remote_pid),
+                Ok(Err(e)) => log::info!("{} {} unclean disconnect", remote_pid, e),
+                Err(e) => log::warn!(
+                   
                     "Failed to get a message back from the scheduler, seems like the network is \
-                     already closed"
+                     already closed. {:?} | {:?}", 
+                     remote_pid,
+                     e,
                 ),
             }
         }
 
-        trace!("Participants have shut down - next: Scheduler");
+        log::trace!("Participants have shut down - next: Scheduler");
         if let Err(()) = shutdown_scheduler_s.send(()) {
-            error!("Scheduler is closed, but nobody other should be able to close it")
+            log::error!("Scheduler is closed, but nobody other should be able to close it")
         };
         if let Ok(return_s) = return_s {
             if return_s.send(()).is_err() {
-                warn!("Network::drop stoped after a timeout and didn't wait for our shutdown");
+                log::warn!("Network::drop stoped after a timeout and didn't wait for our shutdown");
             };
         }
-        debug!("Network has shut down");
+        log::debug!("Network has shut down");
     }
 }
 
@@ -571,7 +565,6 @@ impl Participant {
     /// [`Bandwidth`]: network_protocol::Bandwidth
     /// [`Promises`]: network_protocol::Promises
     /// [`Streams`]: crate::api::Stream
-    #[instrument(name="network", skip(self, prio, promises, bandwidth), fields(p = %self.local_pid))]
     pub async fn open(
         &self,
         prio: u8,
@@ -586,17 +579,17 @@ impl Participant {
             bandwidth,
             p2a_return_stream_s,
         )) {
-            debug!(?e, "bParticipant is already closed, notifying");
+            log::debug!("bParticipant is already closed, notifying {:?}", e);
             return Err(ParticipantError::ParticipantDisconnected);
         }
         match p2a_return_stream_r.await {
             Ok(stream) => {
                 let sid = stream.sid;
-                trace!(?sid, "opened stream");
+                log::trace!("opened stream {}", sid);
                 Ok(stream)
             },
             Err(_) => {
-                debug!("p2a_return_stream_r failed, closing participant");
+                log::debug!("p2a_return_stream_r failed, closing participant");
                 Err(ParticipantError::ParticipantDisconnected)
             },
         }
@@ -636,16 +629,15 @@ impl Participant {
     /// [`Streams`]: crate::api::Stream
     /// [`connected`]: Network::connected
     /// [`open`]: Participant::open
-    #[instrument(name="network", skip(self), fields(p = %self.local_pid))]
     pub async fn opened(&self) -> Result<Stream, ParticipantError> {
         match self.b2a_stream_opened_r.lock().await.recv().await {
             Some(stream) => {
                 let sid = stream.sid;
-                debug!(?sid, "Receive opened stream");
+                log::debug!("Receive opened stream {:?}", sid);
                 Ok(stream)
             },
             None => {
-                debug!("stream_opened_receiver failed, closing participant");
+                log::debug!("stream_opened_receiver failed, closing participant");
                 Err(ParticipantError::ParticipantDisconnected)
             },
         }
@@ -696,10 +688,9 @@ impl Participant {
     /// ```
     ///
     /// [`Streams`]: crate::api::Stream
-    #[instrument(name="network", skip(self), fields(p = %self.local_pid))]
     pub async fn disconnect(self) -> Result<(), ParticipantError> {
         // Remove, Close and try_unwrap error when unwrap fails!
-        debug!("Closing participant from network");
+        log::debug!("Closing participant from network");
 
         //Streams will be closed by BParticipant
         match self.a2s_disconnect_s.lock().await.take() {
@@ -715,26 +706,25 @@ impl Participant {
                 match finished_receiver.await {
                     Ok(res) => {
                         match res {
-                            Ok(()) => trace!("Participant is now closed"),
+                            Ok(()) => log::trace!("Participant is now closed"),
                             Err(ref e) => {
-                                trace!(?e, "Error occurred during shutdown of participant")
+                                log::trace!("Error occurred during shutdown of participant. {:?}", e)
                             },
                         };
                         res
                     },
                     Err(e) => {
                         //this is a bug. but as i am Participant i can't destroy the network
-                        error!(
-                            ?e,
+                        log::error!(
                             "Failed to get a message back from the scheduler, seems like the \
-                             network is already closed"
+                             network is already closed.  {:?}", e
                         );
                         Err(ParticipantError::ProtocolFailedUnrecoverable)
                     },
                 }
             },
             None => {
-                warn!(
+                log::warn!(
                     "seems like you are trying to disconnecting a participant after the network \
                      was already dropped. It was already dropped with the network!"
                 );
@@ -1070,11 +1060,11 @@ where
     if let Ok(handle) = tokio::runtime::Handle::try_current() {
         // When in Async Context WE MUST NOT SYNC BLOCK (as a deadlock might occur as
         // other is queued behind). And we CANNOT join our Future_Handle
-        trace!("async context detected, defer shutdown");
+        log::trace!("async context detected, defer shutdown");
         handle.spawn(async move {
             match finished_receiver.await {
                 Ok(data) => f(data),
-                Err(e) => error!("{}{}: {}", name, CHANNEL_ERR, e),
+                Err(e) => log::error!("{}{}: {}", name, CHANNEL_ERR, e),
             }
         });
     } else {
@@ -1088,10 +1078,10 @@ where
                 },
                 Err(TryRecvError::Closed) => panic!("{}{}", name, CHANNEL_ERR),
                 Err(TryRecvError::Empty) => {
-                    trace!("activly sleeping");
+                    log::trace!("activly sleeping");
                     cnt += 1;
                     if cnt > 10 {
-                        error!("Timeout waiting for shutdown, dropping");
+                        log::error!("Timeout waiting for shutdown, dropping");
                         break;
                     }
                     std::thread::sleep(Duration::from_millis(100) * cnt);
@@ -1102,9 +1092,8 @@ where
 }
 
 impl Drop for Network {
-    #[instrument(name="network", skip(self), fields(p = %self.local_pid))]
     fn drop(&mut self) {
-        trace!("Dropping Network");
+        log::trace!("Dropping Network");
         let (finished_sender, finished_receiver) = oneshot::channel();
         match self
             .shutdown_network_s
@@ -1112,17 +1101,15 @@ impl Drop for Network {
             .unwrap()
             .send(finished_sender)
         {
-            Err(e) => warn!(?e, "Runtime seems to be dropped already"),
+            Err(e) => log::warn!("Runtime seems to be dropped already : {:?}", e),
             Ok(()) => actively_wait("network", finished_receiver, |()| {
-                info!("Network dropped gracefully")
+                log::info!("Network dropped gracefully")
             }),
         };
     }
 }
 
 impl Drop for Participant {
-    #[instrument(name="remote", skip(self), fields(p = %self.remote_pid))]
-    #[instrument(name="network", skip(self), fields(p = %self.local_pid))]
     fn drop(&mut self) {
         const SHUTDOWN_ERR: &str = "Error while dropping the participant, couldn't send all \
                                     outgoing messages, dropping remaining";
@@ -1130,23 +1117,23 @@ impl Drop for Participant {
             "Something is wrong in internal scheduler coding or you dropped the runtime to early";
         // ignore closed, as we need to send it even though we disconnected the
         // participant from network
-        debug!("Shutting down Participant");
+        log::debug!("Shutting down Participant");
 
         match self.a2s_disconnect_s.try_lock() {
-            Err(e) => debug!(?e, "Participant is beeing dropped by Network right now"),
+            Err(e) => log::debug!("Participant is beeing dropped by Network right now. {:?}", e),
             Ok(mut s) => match s.take() {
-                None => info!("Participant already has been shutdown gracefully"),
+                None => log::info!("Participant already has been shutdown gracefully"),
                 Some(a2s_disconnect_s) => {
-                    debug!("Disconnect from Scheduler");
+                    log::debug!("Disconnect from Scheduler");
                     let (finished_sender, finished_receiver) = oneshot::channel();
                     match a2s_disconnect_s
                         .send((self.remote_pid, (Duration::from_secs(10), finished_sender)))
                     {
-                        Err(e) => warn!(?e, SCHEDULER_ERR),
+                        Err(e) => log::warn!("{:?} | {:?}", SCHEDULER_ERR, e),
                         Ok(()) => {
                             actively_wait("participant", finished_receiver, |d| match d {
-                                Ok(()) => info!("Participant dropped gracefully"),
-                                Err(e) => error!(?e, SHUTDOWN_ERR),
+                                Ok(()) => log::info!("Participant dropped gracefully"),
+                                Err(e) => log::error!("{:?}  {:?}", SHUTDOWN_ERR, e),
                             });
                         },
                     }
@@ -1157,22 +1144,19 @@ impl Drop for Participant {
 }
 
 impl Drop for Stream {
-    #[instrument(name="remote", skip(self), fields(p = %self.remote_pid))]
-    #[instrument(name="network", skip(self), fields(p = %self.local_pid))]
 
     fn drop(&mut self) {
         // send if closed is unnecessary but doesn't hurt, we must not crash
         let sid = self.sid;
         if !self.send_closed.load(Ordering::Relaxed) {
-            debug!(?sid, "Shutting down Stream");
+            log::debug!("Shutting down Stream {:?}", sid);
             if let Err(e) = self.a2b_close_stream_s.take().unwrap().send(self.sid) {
-                debug!(
-                    ?e,
-                    "bparticipant part of a gracefully shutdown was already closed"
+                log::debug!(
+                    "bparticipant part of a gracefully shutdown was already closed {:?}", e
                 );
             }
         } else {
-            trace!(?sid, "Stream Drop not needed");
+            log::trace!("Stream Drop not needed {:?}", sid);
         }
     }
 }

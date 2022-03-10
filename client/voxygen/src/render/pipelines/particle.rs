@@ -188,7 +188,7 @@ impl ParticlePipeline {
         global_layout: &GlobalsLayouts,
         aa_mode: AaMode,
     ) -> Self {
-        common_base::span!(_guard, "ParticlePipeline::new");
+        
         let render_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Particle pipeline layout"),

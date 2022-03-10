@@ -11,7 +11,6 @@ use std::{
     io::Read,
     path::{Path, PathBuf},
 };
-use tracing::{error, info};
 
 use plugin_api::Event;
 

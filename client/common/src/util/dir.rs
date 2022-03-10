@@ -1,6 +1,5 @@
 use super::{Plane, Projection};
 use serde::{Deserialize, Serialize};
-use tracing::warn;
 use vek::*;
 
 /// Type representing a direction using Vec3 that is normalized and NaN free
@@ -21,15 +20,13 @@ impl From<SerdeDir> for Dir {
     fn from(dir: SerdeDir) -> Self {
         let dir = dir.0;
         if dir.map(f32::is_nan).reduce_or() {
-            warn!(
-                ?dir,
-                "Deserialized dir containing NaNs, replacing with default"
+            log::warn!(
+                "Deserialized dir containing NaNs, replacing with default {}", dir
             );
             Default::default()
         } else if !dir.is_normalized() {
-            warn!(
-                ?dir,
-                "Deserialized unnormalized dir, replacing with default"
+            log::warn!(
+                "Deserialized unnormalized dir, replacing with default {}", dir
             );
             Default::default()
         } else {

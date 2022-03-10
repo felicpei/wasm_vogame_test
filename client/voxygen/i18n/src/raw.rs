@@ -33,7 +33,7 @@ pub(crate) struct RawLanguage<T> {
 
 pub(crate) fn load_manifest(path: &LangPath) -> Result<RawManifest, common_assets::BoxedError> {
     let manifest_file = path.file(LANG_MANIFEST_FILE);
-    tracing::debug!(?manifest_file, "manifest loading");
+    
     let f = fs::File::open(&manifest_file)?;
     let manifest: RawManifest = from_reader(f)?;
     // verify that the folder name `de_DE` matches the value inside the metadata!

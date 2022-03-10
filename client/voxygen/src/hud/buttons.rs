@@ -124,7 +124,6 @@ impl<'a> Widget for Buttons<'a> {
     fn style(&self) -> Self::Style {}
 
     fn update(self, args: UpdateArgs<Self>) -> Self::Event {
-        common_base::prof_span!("Buttons::update");
         let UpdateArgs { state, ui, .. } = args;
         let localized_strings = self.localized_strings;
 

@@ -54,7 +54,6 @@ use hashbrown::HashMap;
 use rand::{prelude::SliceRandom, thread_rng, Rng};
 use serde::Deserialize;
 use std::time::Instant;
-use tracing::{debug, trace, warn};
 
 /// Collection of all the tracks
 #[derive(Debug, Deserialize)]
@@ -291,7 +290,7 @@ impl MusicMgr {
             if interrupt {
                 self.last_interrupt = Instant::now();
             }
-            trace!(
+            log::trace!(
                 "pre-play_random_track: {:?} {:?}",
                 self.last_activity,
                 music_state
@@ -398,7 +397,7 @@ impl MusicMgr {
                 .find(|b| b.0 == current_biome)
                 .map_or(1, |b| b.1)
         });
-        debug!(
+        log::debug!(
             "selecting new track for {:?}: {:?}",
             music_state, new_maybe_track
         );
@@ -484,7 +483,7 @@ impl assets::Compound for SoundtrackCollection<SoundtrackItem> {
         match inner() {
             Ok(soundtracks) => Ok(soundtracks),
             Err(e) => {
-                warn!("Error loading soundtracks: {:?}", e);
+                log::warn!("Error loading soundtracks: {:?}", e);
                 Ok(SoundtrackCollection::default())
             },
         }

@@ -32,7 +32,6 @@ use crate::{
 };
 use rand::prelude::*;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
-use tracing::warn;
 
 #[derive(Clone, Debug, PartialEq, Deserialize)]
 pub struct Lottery<T> {
@@ -93,7 +92,7 @@ impl<T: AsRef<str>> LootSpec<T> {
         match self {
             Self::Item(item) => Item::new_from_asset(item.as_ref()).map_or_else(
                 |e| {
-                    warn!(?e, "error while loading item: {}", item.as_ref());
+                    log::warn!("error while loading item: {} {}", item.as_ref(), &e);
                     None
                 },
                 Option::Some,
@@ -105,12 +104,12 @@ impl<T: AsRef<str>> LootSpec<T> {
                     Ok(mut item) => {
                         // TODO: Handle multiple of an item that is unstackable
                         if item.set_amount(quantity).is_err() {
-                            warn!("Tried to set quantity on non stackable item");
+                            log::warn!("Tried to set quantity on non stackable item");
                         }
                         Some(item)
                     },
                     Err(e) => {
-                        warn!(?e, "error while loading item: {}", item.as_ref());
+                        log::error!("error while loading item: {} {}", item.as_ref(), &e);
                         None
                     },
                 }

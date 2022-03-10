@@ -11,7 +11,6 @@ use common::{
 use common_state::State;
 use serde::Deserialize;
 use std::time::Instant;
-use tracing::warn;
 use vek::*;
 
 #[derive(Debug, Default, Deserialize)]
@@ -128,7 +127,7 @@ impl AmbientMgr {
 
     fn load_soundtrack_items() -> AssetHandle<AmbientCollection> {
         AmbientCollection::load_or_insert_with("voxygen.audio.ambient", |error| {
-            warn!(
+            log::warn!(
                 "Error reading ambience config file, ambience will not be available: {:#?}",
                 error
             );

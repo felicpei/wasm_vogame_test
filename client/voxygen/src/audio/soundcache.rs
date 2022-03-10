@@ -3,7 +3,6 @@
 use common::assets::{self, AssetExt, Loader};
 use rodio::{source::Buffered, Decoder, Source};
 use std::{borrow::Cow, io};
-use tracing::warn;
 
 // Implementation of sound taken from this github issue:
 // https://github.com/RustAudio/rodio/issues/141
@@ -38,7 +37,7 @@ impl OggSound {
 
 pub fn load_ogg(specifier: &str) -> impl Source + Iterator<Item = i16> {
     OggSound::load_or_insert_with(specifier, |error| {
-        warn!(?specifier, ?error, "Failed to load sound");
+        log::warn!("Failed to load sound: {:?} | {:?}", specifier, error);
         OggSound::empty()
     })
     .cloned()

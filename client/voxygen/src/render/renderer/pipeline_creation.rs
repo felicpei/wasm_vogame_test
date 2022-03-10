@@ -10,7 +10,6 @@ use super::{
     shaders::Shaders,
     ImmutableLayouts, Layouts,
 };
-use common_base::prof_span;
 use std::sync::Arc;
 
 /// All the pipelines
@@ -130,7 +129,7 @@ impl ShaderModules {
         pipeline_modes: &PipelineModes,
         has_shadow_views: bool,
     ) -> Result<Self, RenderError> {
-        prof_span!(_guard, "ShaderModules::new");
+        
         use shaderc::{CompileOptions, Compiler, OptimizationLevel, ResolvedInclude, ShaderKind};
 
         let constants = shaders.get("include.constants").unwrap();
@@ -330,7 +329,7 @@ fn create_shader_module(
     file_name: &str,
     options: &shaderc::CompileOptions,
 ) -> Result<wgpu::ShaderModule, RenderError> {
-    prof_span!(_guard, "create_shader_modules");
+    
     use std::borrow::Cow;
 
     let spv = compiler
@@ -362,7 +361,7 @@ fn create_interface_pipelines(
     pool: &rayon::ThreadPool,
     tasks: [Task; 2],
 ) -> InterfacePipelines {
-    prof_span!(_guard, "create_interface_pipelines");
+    
 
     let [ui_task, blit_task] = tasks;
     // Construct a pipeline for rendering UI elements
@@ -409,7 +408,7 @@ fn create_ingame_and_shadow_pipelines(
     pool: &rayon::ThreadPool,
     tasks: [Task; 14],
 ) -> IngameAndShadowPipelines {
-    prof_span!(_guard, "create_ingame_and_shadow_pipelines");
+    
 
     let PipelineNeeds {
         device,
@@ -760,7 +759,7 @@ pub(super) fn initial_create_pipelines(
     ),
     RenderError,
 > {
-    prof_span!(_guard, "initial_create_pipelines");
+    
 
     // Process shaders into modules
     let shader_modules = ShaderModules::new(&device, &shaders, &pipeline_modes, has_shadow_views)?;
@@ -835,7 +834,7 @@ pub(super) fn recreate_pipelines(
         RenderError,
     >,
 > {
-    prof_span!(_guard, "recreate_pipelines");
+    
 
     // Create threadpool for parallel portion
     let pool = rayon::ThreadPoolBuilder::new()
@@ -922,7 +921,6 @@ struct Task<'a> {
 /// Represents in-progress task, drop when complete
 // NOTE: fields are unused because they are only used for their Drop impls
 struct StartedTask<'a> {
-    _span: common_base::ProfSpan,
     _task: Task<'a>,
 }
 
@@ -954,10 +952,6 @@ impl<'a> Task<'a> {
     fn start(self, _name: &str) -> StartedTask<'a> {
         // _name only used when tracy feature is activated
         StartedTask {
-            _span: {
-                prof_span!(guard, _name);
-                guard
-            },
             _task: self,
         }
     }

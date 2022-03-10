@@ -11,8 +11,6 @@ use common::{
     util::find_dist::{Cylinder, FindDist},
     vol::ReadVol,
 };
-use common_base::span;
-
 #[derive(Clone, Copy, Debug)]
 pub struct Target<T> {
     pub kind: T,
@@ -57,7 +55,7 @@ pub(super) fn targets_under_cursor(
     Option<Target<Mine>>,
     Option<Target<Terrain>>,
 ) {
-    span!(_guard, "targets_under_cursor");
+    
     // Choose a spot above the player's head for item distance checks
     let player_entity = client.entity();
     let ecs = client.state().ecs();

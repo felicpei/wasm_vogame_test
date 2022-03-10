@@ -5,7 +5,6 @@ use common::{
 };
 use common_ecs::{Job, Origin, Phase, System};
 use specs::{Entities, Join, Read, ReadStorage, WriteStorage};
-use tracing::warn;
 use vek::*;
 
 /// This system will allow NPCs to modify their controller
@@ -62,7 +61,7 @@ impl<'a> System<'a> for Sys {
             interpolated
                 .insert(entity, Interpolated { pos, ori })
                 .err()
-                .map(|e| warn!(?e, "Error inserting Interpolated component"));
+                .map(|e| log::warn!("Error inserting Interpolated component {:?}", e));
         }
         // Remove Interpolated component from entities which don't have a position or an
         // orientation or a velocity

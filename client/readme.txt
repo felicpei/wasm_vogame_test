@@ -10,6 +10,7 @@ wasm-pack build --target web
 
 cargo run --bin veloren-server-cli
 
+$env:RUST_BACKTRACE=1
 
 cargo build -Z unstable-options --profile debuginfo
 cargo run -Z unstable-options --profile debuginfo

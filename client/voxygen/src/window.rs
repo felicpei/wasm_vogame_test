@@ -904,7 +904,7 @@ impl Window {
                             },
                             GameInput::Screenshot => {
                                 log::warn!("todo gameInput screenshot");
-				 Self::set_pressed(
+				                Self::set_pressed(
                                     &mut self.keypress_map,
                                     GameInput::Screenshot,
                                     input.state,

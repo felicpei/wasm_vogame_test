@@ -17,7 +17,7 @@ impl KeyLayout {
     }
 
     /// Convert a scancode to a String
-    pub fn get_key_as_string(&self, _scancode: u32) -> String {
+    pub fn get_key_as_string(&self, scancode: u32) -> String {
         panic!("Unimplemented")
     }
 }

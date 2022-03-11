@@ -219,7 +219,9 @@ impl Renderer {
         // have an invalid winit::Window then you have bigger issues
         #[allow(unsafe_code)]
         let surface = unsafe { instance.create_surface(window) };
+        log::info!("create surface:{:?}",surface);
 
+       
         let adapters =  instance
             .enumerate_adapters(backend_bit)
             .enumerate()
@@ -265,6 +267,7 @@ impl Renderer {
             info.device,
             info.device_type,
         );
+
         let graphics_backend = format!("{:?}", &info.backend);
 
         let limits = wgpu::Limits {
@@ -345,6 +348,8 @@ impl Renderer {
             present_mode: other_modes.present_mode.into(),
         };
 
+        //config surface
+        surface.configure(&device, &surface_cfg);
 
         let shadow_views = ShadowMap::create_shadow_views(
             &device,
@@ -1055,18 +1060,7 @@ impl Renderer {
         let tex = match self.surface.get_current_texture(){
             Ok(frame) => 
             {
-                let tex_view = frame.texture.create_view(&wgpu::TextureViewDescriptor {
-                    label: Some("tex view"),
-                    format: Some(self.surface_cfg.format),
-                    dimension: Some(wgpu::TextureViewDimension::D2),
-                    aspect: wgpu::TextureAspect::All,
-                    base_mip_level: 0,
-                    mip_level_count: None,
-                    base_array_layer: 0,
-                    array_layer_count: None,
-                });
-
-                tex_view
+                frame
             }
             // If lost recreate the swap chain
             Err(err @ wgpu::SurfaceError::Lost) => {

@@ -2,7 +2,7 @@
 name = "keyboard-keynames"
 version = "0.1.0"
 authors = ["Adam Blanchet <adamblanchet@free.fr>"]
-edition = "2021"
+edition = "2018"
 description = "A crate to query the os for key names for scancodes"
 readme = "README.md"
 repository = "https://gitlab.com/Frinksy/keyboard-keynames/"
@@ -13,4 +13,12 @@ categories = ["game-development", "os"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-winit = "0.26"
+winit = "0.26.0"
+
+[target.'cfg(windows)'.dependencies]
+winapi = "0.3.9"
+
+[target.'cfg(target_os = "linux")'.dependencies]
+xkbcommon = { version = "0.4.0", features = ["x11", "wayland"] }
+xcb = "0.8.0"
+wayland-client = "0.28.3"

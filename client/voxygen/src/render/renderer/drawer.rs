@@ -65,6 +65,7 @@ struct RendererBorrow<'frame> {
 pub struct Drawer<'frame> {
     encoder: Option<ManualOwningScope<'frame, wgpu::CommandEncoder>>,
     borrow: RendererBorrow<'frame>,
+    swap_tex: wgpu::SurfaceTexture,
     tex_view: wgpu::TextureView,
     globals: &'frame GlobalsBindGroup,
     // Texture and other info for taking a screenshot
@@ -76,7 +77,7 @@ impl<'frame> Drawer<'frame> {
     pub fn new(
         encoder: wgpu::CommandEncoder,
         renderer: &'frame mut Renderer,
-        tex_view: wgpu::TextureView,
+        swap_tex: wgpu::SurfaceTexture,
         globals: &'frame GlobalsBindGroup,
     ) -> Self {
         let taking_screenshot = renderer.take_screenshot.take().map(|screenshot_fn| {
@@ -112,9 +113,12 @@ impl<'frame> Drawer<'frame> {
         let encoder =
             ManualOwningScope::start("frame", &mut renderer.profiler, encoder, borrow.device);
 
+        let tex_view = swap_tex.texture.create_view(&wgpu::TextureViewDescriptor::default());
+
         Self {
             encoder: Some(encoder),
             borrow,
+            swap_tex,
             tex_view,
             globals,
             taking_screenshot,

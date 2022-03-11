@@ -50,7 +50,7 @@ keyboard-keynames = {package = "keyboard-keynames", path = "../dep/keyboard-keyn
 winit = "0.26"
 
 #wgpu
-wgpu = { version = "0.12", features = ["webgl", "spirv"] }
+wgpu = { version = "0.12", features = ["trace","webgl", "spirv"] }
 wgpu-profiler = "0.8"
 
 bytemuck = { version="1.4", features=["derive"] }

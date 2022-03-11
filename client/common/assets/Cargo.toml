@@ -5,7 +5,6 @@ name = "veloren-common-assets"
 description = "Crate for game loading assets for veloren."
 version = "0.10.0"
 
-
 [features]
 
 
@@ -13,11 +12,12 @@ version = "0.10.0"
 lazy_static = "1.4.0"
 assets_manager = {version = "0.7", features = ["bincode", "ron", "json"]}
 ron = { version = "0.7", default-features = false }
-dot_vox = "4.0"
-image = { version = "0.23.12", default-features = false, features = ["png"] }
 
-# asset tweak
-serde = {version = "1.0", features = ["derive"], optional = true}
+#解析.vox文件
+dot_vox = "4.0"
+
+#图片处理, 格式互转
+image = { version = "0.23.12", default-features = false, features = ["png"] }
 
 #log
 log = "0.4"

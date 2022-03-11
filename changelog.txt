@@ -48,9 +48,8 @@
   -  删除GlobalState中的 userdata_dir 和 config_dir(本地存储的路径信息)
   -  (目前保存在客户端修改的设置不会保存, 以后需要的话需要放到服务器)
   - 删除本地截图功能(Settings.screenshots_path, take_screenshot)(wasm不支持)
--  删除fullscreen功能(wasm不支持)
-
-
+-  删除各种build.rs 这个基本都是针对客户端打包的特殊处理，像图标，log目录什么的
+-  删除wgpu-profile相关（渲染本身有冲突，先剥离debug部分，需要以后再说）
 
 todo：
 1. 目前网络部分使用了多线程，这个wasm会有问题，修改 tokio 的 rt-multi-thread 为 rt，wasm不支持 rt-multi-thread。

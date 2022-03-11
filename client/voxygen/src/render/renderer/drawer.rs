@@ -65,7 +65,7 @@ struct RendererBorrow<'frame> {
 pub struct Drawer<'frame> {
     encoder: Option<ManualOwningScope<'frame, wgpu::CommandEncoder>>,
     borrow: RendererBorrow<'frame>,
-    swap_tex: wgpu::SwapChainTexture,
+    tex_view: wgpu::TextureView,
     globals: &'frame GlobalsBindGroup,
     // Texture and other info for taking a screenshot
     // Writes to this instead in the third pass if it is present
@@ -76,7 +76,7 @@ impl<'frame> Drawer<'frame> {
     pub fn new(
         encoder: wgpu::CommandEncoder,
         renderer: &'frame mut Renderer,
-        swap_tex: wgpu::SwapChainTexture,
+        tex_view: wgpu::TextureView,
         globals: &'frame GlobalsBindGroup,
     ) -> Self {
         let taking_screenshot = renderer.take_screenshot.take().map(|screenshot_fn| {
@@ -84,7 +84,7 @@ impl<'frame> Drawer<'frame> {
                 &renderer.device,
                 &renderer.layouts.blit,
                 &renderer.sampler,
-                &renderer.sc_desc,
+                &renderer.surface_cfg,
                 screenshot_fn,
             )
         });
@@ -115,7 +115,7 @@ impl<'frame> Drawer<'frame> {
         Self {
             encoder: Some(encoder),
             borrow,
-            swap_tex,
+            tex_view,
             globals,
             taking_screenshot,
         }
@@ -326,16 +326,19 @@ impl<'frame> Drawer<'frame> {
     pub fn third_pass(&mut self) -> ThirdPassDrawer {
         let encoder = self.encoder.as_mut().unwrap();
         let device = self.borrow.device;
+
+
         let mut render_pass =
             encoder.scoped_render_pass("third_pass", device, &wgpu::RenderPassDescriptor {
                 label: Some("third pass (postprocess + ui)"),
                 color_attachments: &[wgpu::RenderPassColorAttachment {
                     // If a screenshot was requested render to that as an intermediate texture
                     // instead
+                   
                     view: self
                         .taking_screenshot
                         .as_ref()
-                        .map_or(&self.swap_tex.view, |s| s.texture_view()),
+                        .map_or(&self.tex_view, |s| s.texture_view()),
                     resolve_target: None,
                     ops: wgpu::Operations {
                         load: wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),
@@ -413,7 +416,7 @@ impl<'frame> Drawer<'frame> {
 
                 (0../*20*/1).for_each(|point_light| {
                     render_pass.set_push_constants(
-                        wgpu::ShaderStage::all(),
+                        wgpu::ShaderStages::all(),
                         0,
                         &data[(6 * (point_light + 1) * STRIDE + face as usize * STRIDE)
                             ..(6 * (point_light + 1) * STRIDE + (face + 1) as usize * STRIDE)],
@@ -513,7 +516,7 @@ impl<'frame> Drop for Drawer<'frame> {
                     &wgpu::RenderPassDescriptor {
                         label: Some("Blit screenshot pass"),
                         color_attachments: &[wgpu::RenderPassColorAttachment {
-                            view: &self.swap_tex.view,
+                            view: &self.tex_view,
                             resolve_target: None,
                             ops: wgpu::Operations {
                                 load: wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),

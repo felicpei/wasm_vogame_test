@@ -30,7 +30,6 @@ strum = { version = "0.23", features = ["derive"] }
 strum_macros = "0.23"
 
 #[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-getrandom = { version = "0.2", features = ["js"] }
 approx = "0.4.0"
 clap = "2.33"
 crossbeam-utils = "0.8.1"
@@ -67,3 +66,7 @@ specs-idvs = { git = "https://gitlab.com/veloren/specs-idvs.git", rev = "8be2abc
 
 #log
 log = "0.4"
+
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+getrandom = { version = "0.2", features = ["js"] }

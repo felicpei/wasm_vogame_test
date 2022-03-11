@@ -86,7 +86,7 @@ pub(in super::super) fn create_verts_buffer(
     // TODO: type Buffer by wgpu::BufferUsage
     SpriteVerts(Buffer::new(
         device,
-        wgpu::BufferUsage::STORAGE,
+        wgpu::BufferUsages::STORAGE,
         mesh.vertices(),
     ))
 }
@@ -152,7 +152,7 @@ impl Instance {
         ];
         wgpu::VertexBufferLayout {
             array_stride: mem::size_of::<Self>() as wgpu::BufferAddress,
-            step_mode: wgpu::InputStepMode::Instance,
+            step_mode: wgpu::VertexStepMode::Instance,
             attributes: &ATTRIBUTES,
         }
     }
@@ -181,7 +181,7 @@ impl SpriteLayout {
             // sprite_verts
             wgpu::BindGroupLayoutEntry {
                 binding: 12,
-                visibility: wgpu::ShaderStage::VERTEX,
+                visibility: wgpu::ShaderStages::VERTEX,
                 ty: wgpu::BindingType::Buffer {
                     ty: wgpu::BufferBindingType::Storage { read_only: true },
                     has_dynamic_offset: false,
@@ -289,7 +289,7 @@ impl SpritePipeline {
                 strip_index_format: None,
                 front_face: wgpu::FrontFace::Ccw,
                 cull_mode: Some(wgpu::Face::Back),
-                clamp_depth: false,
+                unclipped_depth: false,
                 polygon_mode: wgpu::PolygonMode::Fill,
                 conservative: false,
             },
@@ -332,9 +332,10 @@ impl SpritePipeline {
                             operation: wgpu::BlendOperation::Add,
                         },
                     }),
-                    write_mask: wgpu::ColorWrite::ALL,
+                    write_mask: wgpu::ColorWrites::ALL,
                 }],
             }),
+            multiview: std::num::NonZeroU32::new(1),
         });
 
         Self {

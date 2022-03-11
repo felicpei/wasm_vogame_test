@@ -1,9 +1,3 @@
-#[cfg(feature = "plugins")]
-use crate::plugin::memory_manager::EcsWorld;
-#[cfg(feature = "plugins")]
-use crate::plugin::PluginMgr;
-#[cfg(feature = "plugins")]
-use common::uid::UidAllocator;
 use common::{
     calendar::Calendar,
     comp,
@@ -233,36 +227,6 @@ impl State {
         ecs.insert(PhysicsMetrics::default());
         ecs.insert(Trades::default());
         ecs.insert(PlayerPhysicsSettings::default());
-
-        // Load plugins from asset directory
-        #[cfg(feature = "plugins")]
-        ecs.insert(match PluginMgr::from_assets() {
-            Ok(plugin_mgr) => {
-                let ecs_world = EcsWorld {
-                    entities: &ecs.entities(),
-                    health: ecs.read_component().into(),
-                    uid: ecs.read_component().into(),
-                    uid_allocator: &ecs.read_resource::<UidAllocator>().into(),
-                    player: ecs.read_component().into(),
-                };
-                if let Err(e) = plugin_mgr
-                    .execute_event(&ecs_world, &plugin_api::event::PluginLoadEvent {
-                        game_mode,
-                    })
-                {
-                    tracing::debug!(?e, "Failed to run plugin init");
-                    tracing::info!("Plugins disabled, enable debug logging for more information.");
-                    PluginMgr::default()
-                } else {
-                    plugin_mgr
-                }
-            },
-            Err(e) => {
-                tracing::debug!(?e, "Failed to read plugins from assets");
-                tracing::info!("Plugins disabled, enable debug logging for more information.");
-                PluginMgr::default()
-            },
-        });
 
         ecs
     }

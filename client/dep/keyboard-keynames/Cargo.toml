@@ -1,0 +1,16 @@
+[package]
+name = "keyboard-keynames"
+version = "0.1.0"
+authors = ["Adam Blanchet <adamblanchet@free.fr>"]
+edition = "2021"
+description = "A crate to query the os for key names for scancodes"
+readme = "README.md"
+repository = "https://gitlab.com/Frinksy/keyboard-keynames/"
+license = "Apache-2.0"
+keywords = ["keyboard", "scancode", "keymap", "keylayout"]
+categories = ["game-development", "os"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+winit = "0.26"

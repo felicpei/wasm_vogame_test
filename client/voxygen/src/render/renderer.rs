@@ -130,8 +130,7 @@ pub struct Renderer {
     device: Arc<wgpu::Device>,
     queue: wgpu::Queue,
     surface: wgpu::Surface,
-    swap_chain: wgpu::SwapChain,
-    sc_desc: wgpu::SwapChainDescriptor,
+    surface_cfg : wgpu::SurfaceConfiguration,
 
     sampler: wgpu::Sampler,
     depth_sampler: wgpu::Sampler,
@@ -180,36 +179,14 @@ impl Renderer {
         window: &winit::window::Window,
         mode: RenderMode,
         runtime: &tokio::runtime::Runtime,
+        
     ) -> Result<Self, RenderError> {
         let (pipeline_modes, mut other_modes) = mode.split();
-        // Enable seamless cubemaps globally, where available--they are essentially a
-        // strict improvement on regular cube maps.
-        //
-        // Note that since we only have to enable this once globally, there is no point
-        // in doing this on rerender.
-        // Self::enable_seamless_cube_maps(&mut device);
 
-        // TODO: fix panic on wayland with opengl?
-        // TODO: fix backend defaulting to opengl on wayland.
-        let backend_bit = std::env::var("WGPU_BACKEND")
-            .ok()
-            .and_then(|backend| match backend.to_lowercase().as_str() {
-                "vulkan" => Some(wgpu::BackendBit::VULKAN),
-                "metal" => Some(wgpu::BackendBit::METAL),
-                "dx12" => Some(wgpu::BackendBit::DX12),
-                "primary" => Some(wgpu::BackendBit::PRIMARY),
-                "opengl" | "gl" => Some(wgpu::BackendBit::GL),
-                "dx11" => Some(wgpu::BackendBit::DX11),
-                "secondary" => Some(wgpu::BackendBit::SECONDARY),
-                "all" => Some(wgpu::BackendBit::all()),
-                _ => None,
-            })
-            .unwrap_or(
-                (wgpu::BackendBit::PRIMARY | wgpu::BackendBit::SECONDARY) & !wgpu::BackendBit::GL,
-            );
 
+        //## 定义渲染引擎
+        let backend_bit =  wgpu::Backends::BROWSER_WEBGPU;
         let instance = wgpu::Instance::new(backend_bit);
-
         let dims = window.inner_size();
 
         // This is unsafe because the window handle must be valid, if you find a way to
@@ -217,7 +194,7 @@ impl Renderer {
         #[allow(unsafe_code)]
         let surface = unsafe { instance.create_surface(window) };
 
-        let adapters = instance
+        let adapters =  instance
             .enumerate_adapters(backend_bit)
             .enumerate()
             .collect::<Vec<_>>();
@@ -246,6 +223,7 @@ impl Renderer {
             Some(_) | None => {
                 runtime.block_on(instance.request_adapter(&wgpu::RequestAdapterOptionsBase {
                     power_preference: wgpu::PowerPreference::HighPerformance,
+                    force_fallback_adapter : false,
                     compatible_surface: Some(&surface),
                 }))
             },
@@ -298,7 +276,7 @@ impl Renderer {
             &wgpu::DeviceDescriptor {
                 // TODO
                 label: None,
-                features: wgpu::Features::DEPTH_CLAMPING
+                features: wgpu::Features::DEPTH_CLIP_CONTROL
                     | wgpu::Features::ADDRESS_MODE_CLAMP_TO_BORDER
                     | wgpu::Features::PUSH_CONSTANTS
                     | (adapter.features() & wgpu_profiler::GpuProfiler::REQUIRED_WGPU_FEATURES),
@@ -328,20 +306,19 @@ impl Renderer {
             );
         }
 
-        let format = adapter
-            .get_swap_chain_preferred_format(&surface)
-            .expect("No supported swap chain format found");
-        log::info!("Using {:?} as the swapchain format", format);
-
-        let sc_desc = wgpu::SwapChainDescriptor {
-            usage: wgpu::TextureUsage::RENDER_ATTACHMENT,
-            format,
+        let texture_format = surface.get_preferred_format(&adapter)
+                .expect("No supported swap chain format found");
+            
+        log::info!("Using {:?} as the preferred_format format", &texture_format);
+       
+        let surface_cfg = wgpu::SurfaceConfiguration {
+            usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
+            format: texture_format,
             width: dims.width,
             height: dims.height,
             present_mode: other_modes.present_mode.into(),
         };
 
-        let swap_chain = device.create_swap_chain(&surface, &sc_desc);
 
         let shadow_views = ShadowMap::create_shadow_views(
             &device,
@@ -404,7 +381,7 @@ impl Renderer {
             },
             shaders.cloned(),
             pipeline_modes.clone(),
-            sc_desc.clone(), // Note: cheap clone
+            texture_format.clone(),
             shadow_views.is_some(),
         )?;
 
@@ -483,8 +460,7 @@ impl Renderer {
             device,
             queue,
             surface,
-            swap_chain,
-            sc_desc,
+            surface_cfg,
 
             state,
             recreation_pending: None,
@@ -551,7 +527,7 @@ impl Renderer {
             self.other_modes = other_modes;
 
             // Update present mode in swap chain descriptor
-            self.sc_desc.present_mode = self.other_modes.present_mode.into();
+            self.surface_cfg.present_mode = self.other_modes.present_mode.into();
 
             // Only enable profiling if the wgpu features are enabled
             self.other_modes.profiler_enabled &= self.profiler_features_enabled;
@@ -620,9 +596,9 @@ impl Renderer {
             self.is_minimized = false;
             // Resize swap chain
             self.resolution = dims;
-            self.sc_desc.width = dims.x;
-            self.sc_desc.height = dims.y;
-            self.swap_chain = self.device.create_swap_chain(&self.surface, &self.sc_desc);
+            self.surface_cfg.width = dims.x;
+            self.surface_cfg.height = dims.y;
+            //self.swap_chain = self.device.create_swap_chain(&self.surface, &self.sc_desc);
 
             // Resize other render targets
             let (views, bloom_sizes) = Self::create_rt_views(
@@ -750,7 +726,7 @@ impl Renderer {
                 sample_count,
                 dimension: wgpu::TextureDimension::D2,
                 format: wgpu::TextureFormat::Rgba16Float,
-                usage: wgpu::TextureUsage::SAMPLED | wgpu::TextureUsage::RENDER_ATTACHMENT,
+                usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::RENDER_ATTACHMENT,
             });
 
             tex.create_view(&wgpu::TextureViewDescriptor {
@@ -794,7 +770,7 @@ impl Renderer {
             sample_count,
             dimension: wgpu::TextureDimension::D2,
             format: wgpu::TextureFormat::Depth32Float,
-            usage: wgpu::TextureUsage::SAMPLED | wgpu::TextureUsage::RENDER_ATTACHMENT,
+            usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::RENDER_ATTACHMENT,
         });
         let tgt_depth_view = tgt_depth_tex.create_view(&wgpu::TextureViewDescriptor {
             label: None,
@@ -818,7 +794,7 @@ impl Renderer {
             sample_count,
             dimension: wgpu::TextureDimension::D2,
             format: wgpu::TextureFormat::Depth32Float,
-            usage: wgpu::TextureUsage::RENDER_ATTACHMENT,
+            usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
         });
         // TODO: Consider no depth buffer for the final draw to the window?
         let win_depth_view = win_depth_tex.create_view(&wgpu::TextureViewDescriptor {
@@ -1050,32 +1026,46 @@ impl Renderer {
             }
         }
 
-        let tex = match self.swap_chain.get_current_frame() {
-            Ok(frame) => frame.output,
+        let tex = match self.surface.get_current_texture(){
+            Ok(frame) => 
+            {
+                let tex_view = frame.texture.create_view(&wgpu::TextureViewDescriptor {
+                    label: Some("tex view"),
+                    format: Some(self.surface_cfg.format),
+                    dimension: Some(wgpu::TextureViewDimension::D2),
+                    aspect: wgpu::TextureAspect::All,
+                    base_mip_level: 0,
+                    mip_level_count: None,
+                    base_array_layer: 0,
+                    array_layer_count: None,
+                });
+
+                tex_view
+            }
             // If lost recreate the swap chain
-            Err(err @ wgpu::SwapChainError::Lost) => {
+            Err(err @ wgpu::SurfaceError::Lost) => {
                 log::warn!("{}. Recreating swap chain. A frame will be missed", err);
                 self.on_resize(self.resolution);
                 return Ok(None);
             },
-            Err(wgpu::SwapChainError::Timeout) => {
+            Err(wgpu::SurfaceError::Timeout) => {
                 // This will probably be resolved on the next frame
                 // NOTE: we don't log this because it happens very frequently with
                 // PresentMode::Fifo and unlimited FPS on certain machines
                 return Ok(None);
             },
-            Err(err @ wgpu::SwapChainError::Outdated) => {
+            Err(err @ wgpu::SurfaceError::Outdated) => {
                 log::warn!("{}. Recreating the swapchain", err);
-                self.swap_chain = self.device.create_swap_chain(&self.surface, &self.sc_desc);
                 return Ok(None);
             },
-            Err(err @ wgpu::SwapChainError::OutOfMemory) => return Err(err.into()),
+            Err(err @ wgpu::SurfaceError::OutOfMemory) => return Err(err.into()),
         };
+
         let encoder = self
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("A render encoder"),
-            });
+        .device
+        .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+            label: Some("A render encoder"),
+        });
 
         Ok(Some(drawer::Drawer::new(encoder, self, tex, globals)))
     }
@@ -1102,7 +1092,7 @@ impl Renderer {
                         // needs to become a part of the pipeline modes
                         // (note here since the present mode is accessible
                         // through the swap chain descriptor)
-                        self.sc_desc.clone(), // Note: cheap clone
+                        self.surface_cfg.format.clone(), 
                         shadow.map.is_enabled(),
                     ),
                 ));
@@ -1421,7 +1411,7 @@ fn create_quad_index_buffer_u16(device: &wgpu::Device, vert_length: usize) -> Bu
         .map(|(i, b)| (i / 6 * 4 + b) as u16)
         .collect::<Vec<_>>();
 
-    Buffer::new(device, wgpu::BufferUsage::INDEX, &indices)
+    Buffer::new(device, wgpu::BufferUsages::INDEX, &indices)
 }
 
 fn create_quad_index_buffer_u32(device: &wgpu::Device, vert_length: usize) -> Buffer<u32> {
@@ -1435,5 +1425,5 @@ fn create_quad_index_buffer_u32(device: &wgpu::Device, vert_length: usize) -> Bu
         .map(|(i, b)| (i / 6 * 4 + b) as u32)
         .collect::<Vec<_>>();
 
-    Buffer::new(device, wgpu::BufferUsage::INDEX, &indices)
+    Buffer::new(device, wgpu::BufferUsages::INDEX, &indices)
 }

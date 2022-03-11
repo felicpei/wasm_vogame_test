@@ -1,6 +1,7 @@
 cargo-features = ["named-profiles","profile-overrides"]
 
 [workspace]
+resolver = "2"
 members = [
     "common",
     "common/assets",
@@ -95,3 +96,4 @@ debug = 1
 
 [patch.crates-io]
 vek = { git = "https://gitlab.com/veloren/vek.git", branch = "fix_intrinsics2" }
+#iced = { path = './dep/iced' }

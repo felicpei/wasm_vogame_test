@@ -191,7 +191,7 @@ impl ShadowFigurePipeline {
                 alpha_to_coverage_enabled: false,
             },
             fragment: None,
-            multiview: std::num::NonZeroU32::new(1),
+            multiview: None,
         });
 
         Self {
@@ -265,7 +265,7 @@ impl ShadowPipeline {
                 alpha_to_coverage_enabled: false,
             },
             fragment: None,
-            multiview: std::num::NonZeroU32::new(1),
+            multiview: None,
         });
 
         Self {
@@ -341,7 +341,7 @@ impl PointShadowPipeline {
                 alpha_to_coverage_enabled: false,
             },
             fragment: None,
-            multiview: std::num::NonZeroU32::new(1),
+            multiview: None,
         });
 
         Self {

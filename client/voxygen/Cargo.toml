@@ -61,8 +61,9 @@ cmake = "=0.1.45"
 conrod_core = {git = "https://gitlab.com/veloren/conrod.git", branch="copypasta_0.7"}
 conrod_winit = {git = "https://gitlab.com/veloren/conrod.git", branch="copypasta_0.7"}
 euc = "0.5.0"
-iced = {package = "iced_native", git = "https://github.com/Imberflur/iced", tag = "winit-0.25"}
-iced_winit = {git = "https://github.com/Imberflur/iced", tag = "winit-0.25"}
+iced = {package = "iced_native", path = "../dep/iced-winit-0.25/native"}
+iced_winit = {path = "../dep/iced-winit-0.25/winit"}
+
 glyph_brush = "0.7.0"
 
 # ECS

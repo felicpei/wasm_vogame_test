@@ -215,7 +215,7 @@ impl LodTerrainPipeline {
                     write_mask: wgpu::ColorWrites::ALL,
                 }],
             }),
-            multiview: std::num::NonZeroU32::new(1),
+            multiview: None,
         });
 
         Self {

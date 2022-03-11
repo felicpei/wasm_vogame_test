@@ -184,8 +184,34 @@ impl Renderer {
         let (pipeline_modes, mut other_modes) = mode.split();
 
 
+        // Enable seamless cubemaps globally, where available--they are essentially a
+        // strict improvement on regular cube maps.
+        //
+        // Note that since we only have to enable this once globally, there is no point
+        // in doing this on rerender.
+        // Self::enable_seamless_cube_maps(&mut device);
+
+        // TODO: fix panic on wayland with opengl?
+        // TODO: fix backend defaulting to opengl on wayland.
+        let backend_bit = std::env::var("WGPU_BACKEND")
+            .ok()
+            .and_then(|backend| match backend.to_lowercase().as_str() {
+                "vulkan" => Some(wgpu::Backends::VULKAN),
+                "metal" => Some(wgpu::Backends::METAL),
+                "dx12" => Some(wgpu::Backends::DX12),
+                "primary" => Some(wgpu::Backends::PRIMARY),
+                "opengl" | "gl" => Some(wgpu::Backends::GL),
+                "dx11" => Some(wgpu::Backends::DX11),
+                "secondary" => Some(wgpu::Backends::SECONDARY),
+                "all" => Some(wgpu::Backends::all()),
+                _ => None,
+            })
+            .unwrap_or(
+                (wgpu::Backends::PRIMARY | wgpu::Backends::SECONDARY) & !wgpu::Backends::GL,
+            );
+
         //## 定义渲染引擎
-        let backend_bit =  wgpu::Backends::BROWSER_WEBGPU;
+        //let backend_bit =  wgpu::Backends::BROWSER_WEBGPU;
         let instance = wgpu::Instance::new(backend_bit);
         let dims = window.inner_size();
 

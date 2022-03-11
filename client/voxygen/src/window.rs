@@ -97,7 +97,7 @@ pub type MouseButton = winit::event::MouseButton;
 pub type PressState = winit::event::ElementState;
 pub type EventLoop = winit::event_loop::EventLoop<()>;
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Deserialize, Serialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum KeyMouse {
     Key(winit::event::VirtualKeyCode),
     Mouse(winit::event::MouseButton),
@@ -501,7 +501,7 @@ impl Window {
             key_layout,
         };
 
-        this.set_fullscreen_mode(settings.graphics.fullscreen);
+        //this.set_fullscreen_mode(settings.graphics.fullscreen);
 
         Ok((this, event_loop))
     }

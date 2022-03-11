@@ -1,12 +1,10 @@
 use crate::{game_input::GameInput, window::KeyMouse};
 use hashbrown::{HashMap, HashSet};
-use serde::{Deserialize, Serialize};
 use strum::IntoEnumIterator;
 use winit::event::{MouseButton, VirtualKeyCode};
 
 // ControlSetting-like struct used by Serde, to handle not serializing/building
 // post-deserializing the inverse_keybindings hashmap
-#[derive(Serialize, Deserialize)]
 struct ControlSettingsSerde {
     keybindings: HashMap<GameInput, Option<KeyMouse>>,
 }
@@ -29,8 +27,7 @@ impl From<ControlSettings> for ControlSettingsSerde {
 }
 
 /// `ControlSettings` contains keybindings.
-#[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(from = "ControlSettingsSerde", into = "ControlSettingsSerde")]
+#[derive(Clone, Debug)]
 pub struct ControlSettings {
     pub keybindings: HashMap<GameInput, Option<KeyMouse>>,
     pub inverse_keybindings: HashMap<KeyMouse, HashSet<GameInput>>, // used in event loop

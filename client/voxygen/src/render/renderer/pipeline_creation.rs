@@ -145,15 +145,15 @@ impl ShaderModules {
         // We dynamically add extra configuration settings to the constants file.
         let mut constants = format!(
             r#"
-{}
+            {}
 
-#define VOXYGEN_COMPUTATION_PREFERENCE {}
-#define FLUID_MODE {}
-#define CLOUD_MODE {}
-#define LIGHTING_ALGORITHM {}
-#define SHADOW_MODE {}
+            #define VOXYGEN_COMPUTATION_PREFERENCE {}
+            #define FLUID_MODE {}
+            #define CLOUD_MODE {}
+            #define LIGHTING_ALGORITHM {}
+            #define SHADOW_MODE {}
 
-"#,
+            "#,
             &constants.0,
             // TODO: Configurable vertex/fragment shader preference.
             "VOXYGEN_COMPUTATION_PREFERENCE_FRAGMENT",
@@ -332,6 +332,8 @@ fn create_shader_module(
     
     use std::borrow::Cow;
 
+    log::info!("create shader module {}", file_name);
+    
     let spv = compiler
         .compile_into_spirv(source, kind, file_name, "main", Some(options))
         .map_err(|e| (file_name, e))?;

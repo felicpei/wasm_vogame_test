@@ -31,12 +31,8 @@ pub mod run;
 pub mod scene;
 pub mod session;
 pub mod settings;
-#[cfg(feature = "singleplayer")]
-pub mod singleplayer;
 pub mod window;
 
-#[cfg(feature = "singleplayer")]
-use crate::singleplayer::Singleplayer;
 use crate::{
     audio::AudioFrontend,
     profile::Profile,
@@ -46,16 +42,11 @@ use crate::{
 };
 use common::clock::Clock;
 use i18n::LocalizationHandle;
-use std::path::PathBuf;
-
 use std::sync::Arc;
-
 use tokio::runtime::Runtime;
 
 /// A type used to store state that is shared between all play states.
 pub struct GlobalState {
-    pub userdata_dir: PathBuf,
-    pub config_dir: PathBuf,
     pub settings: Settings,
     pub profile: Profile,
     pub window: Window,
@@ -64,8 +55,6 @@ pub struct GlobalState {
     pub audio: AudioFrontend,
     pub info_message: Option<String>,
     pub clock: Clock,
-    #[cfg(feature = "singleplayer")]
-    pub singleplayer: Option<Singleplayer>,
     // TODO: redo this so that the watcher doesn't have to exist for reloading to occur
     pub i18n: LocalizationHandle,
     pub clipboard: iced_winit::Clipboard,
@@ -90,21 +79,7 @@ impl GlobalState {
         self.window.renderer().maintain()
     }
 
-    #[cfg(feature = "singleplayer")]
-    pub fn paused(&self) -> bool {
-        self.singleplayer
-            .as_ref()
-            .map_or(false, Singleplayer::is_paused)
-    }
-
-    #[cfg(not(feature = "singleplayer"))]
     pub fn paused(&self) -> bool { false }
-
-    #[cfg(feature = "singleplayer")]
-    pub fn unpause(&self) { self.singleplayer.as_ref().map(|s| s.pause(false)); }
-
-    #[cfg(feature = "singleplayer")]
-    pub fn pause(&self) { self.singleplayer.as_ref().map(|s| s.pause(true)); }
 }
 
 // TODO: appears to be currently unused by playstates

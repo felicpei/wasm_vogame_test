@@ -574,6 +574,6 @@ impl SettingsChange {
             },
             SettingsChange::Networking(networking_change) => match networking_change {},
         }
-        settings.save_to_file_warn(&global_state.config_dir);
+        settings.save();
     }
 }

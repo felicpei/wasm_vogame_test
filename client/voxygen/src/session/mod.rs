@@ -251,9 +251,7 @@ impl SessionState {
                 },
                 client::Event::SetViewDistance(vd) => {
                     global_state.settings.graphics.view_distance = vd;
-                    global_state
-                        .settings
-                        .save_to_file_warn(&global_state.config_dir);
+                    global_state.settings.save();
                 },
                 client::Event::Outcome(outcome) => outcomes.push(outcome),
                 client::Event::CharacterCreated(_) => {},
@@ -966,7 +964,6 @@ impl PlayState for SessionState {
 
             let mut outcomes = Vec::new();
 
-            // Runs if either in a multiplayer server or the singleplayer server is unpaused
             if !global_state.paused() {
                 // Perform an in-game tick.
                 match self.tick(
@@ -1310,10 +1307,7 @@ impl PlayState for SessionState {
                             state.slots,
                         );
 
-                        global_state
-                            .profile
-                            .save_to_file_warn(&global_state.config_dir);
-
+                        global_state.profile.save();
                         log::info!("Event! -> ChangedHotbarState")
                     },
                     HudEvent::TradeAction(action) => {
@@ -1417,7 +1411,6 @@ impl PlayState for SessionState {
                     is_aiming,
                 };
 
-                // Runs if either in a multiplayer server or the singleplayer server is unpaused
                 if !global_state.paused() {
                     self.scene.maintain(
                         global_state.window.renderer_mut(),

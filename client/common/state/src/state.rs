@@ -103,7 +103,6 @@ impl State {
         let thread_name_infix = match game_mode {
             GameMode::Server => "s",
             GameMode::Client => "c",
-            GameMode::Singleplayer => "sp",
         };
 
         let thread_pool = Arc::new(

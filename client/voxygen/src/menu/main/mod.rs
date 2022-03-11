@@ -3,8 +3,6 @@ mod scene;
 mod ui;
 
 use super::char_selection::CharSelectionState;
-#[cfg(feature = "singleplayer")]
-use crate::singleplayer::Singleplayer;
 use crate::{
     render::{Drawer, GlobalsBindGroup},
     settings::Settings,
@@ -69,12 +67,6 @@ impl PlayState for MainMenuState {
             global_state.audio.play_title_music();
         }
 
-        // Reset singleplayer server if it was running already
-        #[cfg(feature = "singleplayer")]
-        {
-            global_state.singleplayer = None;
-        }
-
         // Updated localization in case the selected language was changed
         self.main_menu_ui
             .update_language(global_state.i18n, &global_state.settings);
@@ -88,66 +80,7 @@ impl PlayState for MainMenuState {
         
         // Pull in localizations
         let localized_strings = &global_state.i18n.read();
-
-        // Poll server creation
-        #[cfg(feature = "singleplayer")]
-        {
-            if let Some(singleplayer) = &global_state.singleplayer {
-                match singleplayer.receiver.try_recv() {
-                    Ok(Ok(())) => {
-                        // Attempt login after the server is finished initializing
-                        attempt_login(
-                            &mut global_state.info_message,
-                            "singleplayer".to_owned(),
-                            "".to_owned(),
-                            ConnectionArgs::Mpsc(14004),
-                            &mut self.init,
-                            &global_state.tokio_runtime,
-                            &global_state.i18n,
-                        );
-                    },
-                    Ok(Err(e)) => {
-                        error!(?e, "Could not start server");
-                        global_state.singleplayer = None;
-                        self.init = InitState::None;
-                        self.main_menu_ui.cancel_connection();
-                        let server_err = match e {
-                            server::Error::NetworkErr(e) => localized_strings
-                                .get("main.servers.network_error")
-                                .to_owned()
-                                .replace("{raw_error}", e.to_string().as_str()),
-                            server::Error::ParticipantErr(e) => localized_strings
-                                .get("main.servers.participant_error")
-                                .to_owned()
-                                .replace("{raw_error}", e.to_string().as_str()),
-                            server::Error::StreamErr(e) => localized_strings
-                                .get("main.servers.stream_error")
-                                .to_owned()
-                                .replace("{raw_error}", e.to_string().as_str()),
-                            server::Error::DatabaseErr(e) => localized_strings
-                                .get("main.servers.database_error")
-                                .to_owned()
-                                .replace("{raw_error}", e.to_string().as_str()),
-                            server::Error::PersistenceErr(e) => localized_strings
-                                .get("main.servers.persistence_error")
-                                .to_owned()
-                                .replace("{raw_error}", e.to_string().as_str()),
-                            server::Error::Other(e) => localized_strings
-                                .get("main.servers.other_error")
-                                .to_owned()
-                                .replace("{raw_error}", e.as_str()),
-                        };
-                        global_state.info_message = Some(
-                            localized_strings
-                                .get("main.servers.singleplayer_error")
-                                .to_owned()
-                                .replace("{sp_error}", server_err.as_str()),
-                        );
-                    },
-                    Err(_) => (),
-                }
-            }
-        }
+       
         // Handle window events.
         for event in events {
             // Pass all events to the ui first.
@@ -198,9 +131,7 @@ impl PlayState for MainMenuState {
                         match event {
                             client::Event::SetViewDistance(vd) => {
                                 global_state.settings.graphics.view_distance = vd;
-                                global_state
-                                    .settings
-                                    .save_to_file_warn(&global_state.config_dir);
+                                global_state.settings.save();
                             },
                             client::Event::Disconnect => {
                                 global_state.info_message = Some(
@@ -264,9 +195,8 @@ impl PlayState for MainMenuState {
                     if !net_settings.servers.contains(&server_address) {
                         net_settings.servers.push(server_address.clone());
                     }
-                    global_state
-                        .settings
-                        .save_to_file_warn(&global_state.config_dir);
+
+                    global_state.settings.save();
 
                     //初始化网络
                     let connection_args = ConnectionArgs::Tcp {
@@ -287,13 +217,6 @@ impl PlayState for MainMenuState {
                 },
 
                 MainMenuEvent::CancelLoginAttempt => {
-                    // init contains InitState::Client(ClientInit), which spawns a thread which
-                    // contains a TcpStream::connect() call This call is
-                    // blocking TODO fix when the network rework happens
-                    #[cfg(feature = "singleplayer")]
-                    {
-                        global_state.singleplayer = None;
-                    }
                     self.init = InitState::None;
                     self.main_menu_ui.cancel_connection();
                 },
@@ -310,12 +233,7 @@ impl PlayState for MainMenuState {
                     self.main_menu_ui
                         .update_language(global_state.i18n, &global_state.settings);
                 },
-                #[cfg(feature = "singleplayer")]
-                MainMenuEvent::StartSingleplayer => {
-                    let singleplayer = Singleplayer::new(&global_state.tokio_runtime);
-
-                    global_state.singleplayer = Some(singleplayer);
-                },
+                
                 MainMenuEvent::Quit => return PlayStateResult::Shutdown,
                 // Note: Keeping in case we re-add the disclaimer
                 /*MainMenuEvent::DisclaimerAccepted => {
@@ -326,9 +244,7 @@ impl PlayState for MainMenuState {
                     let net_settings = &mut global_state.settings.networking;
                     net_settings.servers.remove(server_index);
 
-                    global_state
-                        .settings
-                        .save_to_file_warn(&global_state.config_dir);
+                    global_state.settings.save();
                 },
             }
         }

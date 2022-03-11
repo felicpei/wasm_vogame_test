@@ -19,15 +19,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a13739d7177fbd22bb0ed28badfff9f372f8bef46c863db4e1c6248f6b223b6e"
 
 [[package]]
-name = "addr2line"
-version = "0.17.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b9ecd88a8c8378ca913a680cd98f0f13ac67383d35993f86c90a70e3f137816b"
-dependencies = [
- "gimli",
-]
-
-[[package]]
 name = "adler"
 version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -214,21 +205,6 @@ name = "autocfg"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d468802bab17cbc0cc575e9b053f41e72aa36bfa6b7f55e3529ffa43161b97fa"
-
-[[package]]
-name = "backtrace"
-version = "0.3.64"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5e121dee8023ce33ab248d9ce1493df03c3b38a659b240096fcbd7048ff9c31f"
-dependencies = [
- "addr2line",
- "cc",
- "cfg-if 1.0.0",
- "libc",
- "miniz_oxide 0.4.4",
- "object",
- "rustc-demangle",
-]
 
 [[package]]
 name = "base-x"
@@ -1586,12 +1562,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "gimli"
-version = "0.26.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "78cc372d058dcf6d5ecd98510e7fbc9e5aec4d21de70f65fea8fecebcd881bd4"
-
-[[package]]
 name = "git2"
 version = "0.13.25"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1878,15 +1848,6 @@ dependencies = [
  "autocfg",
  "hashbrown 0.11.2",
  "rayon",
-]
-
-[[package]]
-name = "inline_tweak"
-version = "1.0.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7033e97b20277cc0d043226d1940fa7719ff08d2305d1fc7421e53066d00eb4b"
-dependencies = [
- "lazy_static",
 ]
 
 [[package]]
@@ -2733,15 +2694,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "object"
-version = "0.27.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "67ac1d3f9a1d3616fd9a60c8d74296f22406a238b6a72f5cc1e6f314df4ffbf9"
-dependencies = [
- "memchr",
-]
-
-[[package]]
 name = "oboe"
 version = "0.4.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3225,12 +3177,6 @@ name = "roots"
 version = "0.0.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "84348444bd7ad45729d0c49a4240d7cdc11c9d512c06c5ad1835c1ad4acda6db"
-
-[[package]]
-name = "rustc-demangle"
-version = "0.1.21"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7ef03e0a2b150c7a90d01faf6254c9c48a41e95fb2a8c2ac1c6f0d2b9aefc342"
 
 [[package]]
 name = "rustc-hash"
@@ -4134,7 +4080,6 @@ dependencies = [
 name = "veloren-common-base"
 version = "0.10.0"
 dependencies = [
- "directories-next",
  "log",
 ]
 
@@ -4242,7 +4187,6 @@ name = "veloren-voxygen"
 version = "0.12.0"
 dependencies = [
  "assets_manager",
- "backtrace",
  "bincode",
  "bytemuck",
  "chrono",
@@ -4264,7 +4208,6 @@ dependencies = [
  "iced_native",
  "iced_winit",
  "image",
- "inline_tweak",
  "itertools",
  "keyboard-keynames",
  "lazy_static",
@@ -4300,7 +4243,6 @@ dependencies = [
  "web-sys",
  "wgpu",
  "wgpu-profiler",
- "window_clipboard",
  "winit",
 ]
 

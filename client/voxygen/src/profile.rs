@@ -2,11 +2,6 @@ use crate::hud;
 use common::character::CharacterId;
 use hashbrown::HashMap;
 use serde::{Deserialize, Serialize};
-use std::{
-    fs,
-    io::Write,
-    path::{Path, PathBuf},
-};
 
 /// Represents a character in the profile.
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -64,41 +59,15 @@ pub struct Profile {
 
 impl Profile {
     /// Load the profile.ron file from the standard path or create it.
-    pub fn load(config_dir: &Path) -> Self {
-        let path = Profile::get_path(config_dir);
+    pub fn load() -> Self {
 
-        if let Ok(file) = fs::File::open(&path) {
-            match ron::de::from_reader(file) {
-                Ok(profile) => return profile,
-                Err(e) => {
-                    log::warn!(
-                        "{:?}   {:?}   Failed to parse profile file! Falling back to default.",
-                        e,
-                        path
-                    );
-                    // Rename the corrupted profile file.
-                    let new_path = path.with_extension("invalid.ron");
-                    if let Err(e) = std::fs::rename(path.clone(), new_path.clone()) {
-                        log::warn!("{:?}  {:?}  {:?} Failed to rename profile file.", e, path, new_path);
-                    }
-                },
-            }
-        }
-        // This is reached if either:
-        // - The file can't be opened (presumably it doesn't exist)
-        // - Or there was an error parsing the file
+        log::warn!("todo load Profile data, 目前仅使用默认");
+
         let default_profile = Self::default();
-        default_profile.save_to_file_warn(config_dir);
         default_profile
     }
 
-    /// Save the current profile to disk, warn on failure.
-    pub fn save_to_file_warn(&self, config_dir: &Path) {
-        if let Err(e) = self.save_to_file(config_dir) {
-            log::warn!("{:?}  Failed to save profile", e);
-        }
-    }
-
+    
     /// Get the hotbar_slots for the requested character_id.
     ///
     /// If the server or character does not exist then the default hotbar_slots
@@ -191,19 +160,9 @@ impl Profile {
     }
 
     /// Save the current profile to disk.
-    fn save_to_file(&self, config_dir: &Path) -> std::io::Result<()> {
-        let path = Profile::get_path(config_dir);
-        if let Some(dir) = path.parent() {
-            fs::create_dir_all(dir)?;
-        }
-        let mut config_file = fs::File::create(path)?;
-
-        let s: &str = &ron::ser::to_string_pretty(self, ron::ser::PrettyConfig::default()).unwrap();
-        config_file.write_all(s.as_bytes()).unwrap();
-        Ok(())
+    pub fn save(&self) {
+        log::warn!("todo save profile data");
     }
-
-    fn get_path(config_dir: &Path) -> PathBuf { config_dir.join("profile.ron") }
 }
 
 #[cfg(test)]

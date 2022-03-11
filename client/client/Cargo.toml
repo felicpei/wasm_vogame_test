@@ -5,9 +5,6 @@ authors = ["Joshua Barretto <joshua.s.barretto@gmail.com>"]
 edition = "2021"
 
 [features]
-#del plugin 这个看上去是可以加载外部插件用的
-#plugins = ["common-state/plugins"]
-
 simd = ["vek/platform_intrinsics"]
 tick_network = []
 

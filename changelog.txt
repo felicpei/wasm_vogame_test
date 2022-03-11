@@ -1,42 +1,57 @@
+- 去掉登录验证，保证客户端and服务器分开运行，且可以跑。
+  - 分离客户端服务器目录
+  - 去掉了authc账号验证
+  - 去掉了client bot相关代码
+- 客户端分为 game、bot、chat 3个，可以自行更改启动不同的客户端。
+  - game（保留）
+  - bot（删除）
+  - chat（删除）
+- 网络部分：
+  - Tcp （保留）
+  - Udp（未使用，删除）
+  - quic（默认未使用，删除）
+  - mpsc（一种c2c的网络，可选使用，删除后不影响）
 
-1. 去掉登录验证，保证客户端and服务器分开运行，且可以跑。
-	分离客户端服务器目录
-	去掉了authc账号验证
-	去掉了client bot相关代码
+- 屏蔽使用socket2的地方，用client_tcp feature 区分。
+  - 用cargo跑的话，打开client_tcp feature
+- 删除dyn相关，dyn是支持动态更新资源的，web应该不需要。
+  - 解除notify，net2的引用
+- 删除feature tracy相关，profile用的，wasm不可用了。
+- 删除有问题的dev引用，一些单元测试test代码，test以后wasm也没法用了。
+- 删掉了egui相关，看了只有debug按钮用到，先删掉。删掉后进游戏跑还是正常的。
+- 删掉了plugin相关的feature，这个看上去是可以加载外部插件用的。
+  - 删掉后，游戏无影响
+- 删除plugin，提供mod的相关制作接口的，用了本地IO相关，客户端删了
+  - 不影响游戏运行
+- 删除了 num_cpus
+  - 这个通过获取cpu核心数量，来定义场景同时渲染数量或线程数量，修改为2.
+  - todo：多线程可能要改成单线程
+-  删除copy_dir
+  - 没用删了
+-  删除Mumble-link
+  - 不太确定干嘛的，似乎是影响位置音频的，删了没啥影响
+  - 代码在：client/voxygen/src/session/mod.rs
+-  删除common-front_end
+  - 这个是用来写日志文件的。以后wasm不可用。
+-  删除native_dialog
+  - 这个是报错弹框，没用了。（统一用log看）
+- 替换所有log为wasm_logger，不然wasm打不出日志。
+  - 统一删除trace，替换为log，log支持在wasm使用
+-  删除singleplayer标签的相关代码
+  - 影响其他代码修改了（目前没法用，无法在wasm本地开服务器）
+  -  GameMode 删除 Singleplayer
+-  删除对本地IO的操作逻辑:
+  -  删除本地的userdata存储: （作用为存储用户的一系列设置相关数据，目前全部用默认）
+    -  common/base/userdata_dir.rs (管理本地存储路径)
+    -  Setting.Load (加载用户设置信息)
+    -  Profile.Load (存服务器列表相关的, 仅用默认)
+  -  删除GlobalState中的 userdata_dir 和 config_dir(本地存储的路径信息)
+  -  (目前保存在客户端修改的设置不会保存, 以后需要的话需要放到服务器)
+  - 删除本地截图功能(Settings.screenshots_path, take_screenshot)(wasm不支持)
+-  删除fullscreen功能(wasm不支持)
 
-2. 客户端分为 game、bot、chat 3个，可以自行更改启动不同的客户端。
-	game（保留）
-	bot（删除）
-	chat（删除）
-	
-3. 网络部分, 分为：
-	Tcp （保留）
-	Udp（未使用，删除）
-	quic（默认未使用，删除）
-	mpsc（一种c2c的网络，可选使用，删除后不影响）
-
--------------------------------------
-
-1. 屏蔽使用socket2的地方，用client_tcp feature 区分。（用cargo跑的话，打开client_tcp feature)
-2. 删除dyn相关，dyn是支持动态更新资源的，web应该不需要。（解除notify，net2的引用）
-3. 删除feature tracy相关，profile用的，wasm不可用了。
-4. 删除有问题的dev引用，一些单元测试test代码，test以后wasm也没法用了。
-5. 删掉了egui相关，看了只有debug按钮用到，先删掉。删掉后进游戏跑还是正常的。
-6. 删掉了plugin相关的feature，这个看上去是可以加载外部插件用的。（删掉后，游戏无影响）
-7. 删除了 num_cpus（这个通过获取cpu核心数量，来定义场景同时渲染数量，修改为1）
-8. copy_dir (没用删了), 
-9. mumble-link(不太确定干嘛的，似乎是影响位置音频的，删了没啥影响，代码在：client/voxygen/src/session/mod.rs）
-10.删除plugin，仅给服务器使用（目前客户端没有使用)
-11.删除common-front_end，这个是用来写日志文件的。以后wasm不可用。
-12.删除native_dialog,这个是报错弹框，没用了。（统一用log看）
-13.替换所有log为wasm_logger，不然wasm打不出日志。
 
 
-----
-网络部分todo（会导致无法运行问题）：
+todo：
 1. 目前网络部分使用了多线程，这个wasm会有问题，修改 tokio 的 rt-multi-thread 为 rt，wasm不支持 rt-multi-thread。
 2. 网络部分暂时屏蔽了tcpsocket，以后换。
-
-
-
-	

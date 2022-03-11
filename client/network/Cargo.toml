@@ -57,7 +57,7 @@ async-trait = "0.1.42"
 bytes = "^1"
 
 # faster HashMaps
-hashbrown = { version = ">=0.9, <0.12" }
+hashbrown = { version = "0.11" }
 
 
 #log

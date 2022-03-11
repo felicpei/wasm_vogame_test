@@ -12,10 +12,9 @@ default = ["simd"]
 
 [dependencies]
 common-base = { package = "veloren-common-base", path = "base" }
-# inline_tweak = "1.0.8"
 
 # Serde
-serde = { version = "1.0.110", features = ["derive", "rc"] }
+serde = { version = "1.0", features = ["derive", "rc"] }
 
 # Util
 enum-iterator = "0.7"

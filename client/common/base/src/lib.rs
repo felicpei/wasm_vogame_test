@@ -1,9 +1,5 @@
 #![feature(fundamental)]
 
-pub mod userdata_dir;
-
-pub use userdata_dir::userdata_dir;
-
 /// Allows downstream crates to conditionally do things based on whether tracy
 /// is enabled without having to expose a cargo feature themselves.
 

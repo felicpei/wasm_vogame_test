@@ -508,7 +508,6 @@ impl Renderer {
             resolution: Vec2::new(dims.width, dims.height),
 
             take_screenshot: None,
-
             profiler,
             profile_times: Vec::new(),
             profiler_features_enabled,

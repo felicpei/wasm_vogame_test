@@ -395,7 +395,6 @@ pub struct Window {
     message_sender: channel::Sender<String>,
     message_receiver: channel::Receiver<String>,
     // Used for screenshots & fullscreen toggle to deduplicate/postpone to after event handler
-    take_screenshot: bool,
     toggle_fullscreen: bool,
     pub key_layout: Option<KeyLayout>,
 }
@@ -498,7 +497,6 @@ impl Window {
             // Currently used to send and receive screenshot result messages
             message_sender,
             message_receiver,
-            take_screenshot: false,
             toggle_fullscreen: false,
             key_layout,
         };
@@ -515,16 +513,11 @@ impl Window {
     pub fn resolve_deduplicated_events(
         &mut self,
         settings: &mut Settings,
-        config_dir: &std::path::Path,
     ) {
-        // Handle screenshots and toggling fullscreen
-        if self.take_screenshot {
-            self.take_screenshot = false;
-            self.take_screenshot(settings);
-        }
+       
         if self.toggle_fullscreen {
             self.toggle_fullscreen = false;
-            self.toggle_fullscreen(settings, config_dir);
+            self.toggle_fullscreen(settings);
         }
     }
 
@@ -910,17 +903,12 @@ impl Window {
                                 );
                             },
                             GameInput::Screenshot => {
-                                self.take_screenshot = input.state
-                                    == winit::event::ElementState::Pressed
-                                    && !Self::is_pressed(
-                                        &mut self.keypress_map,
-                                        GameInput::Screenshot,
-                                    );
-                                Self::set_pressed(
+                                log::warn!("todo gameInput screenshot");
+				 Self::set_pressed(
                                     &mut self.keypress_map,
                                     GameInput::Screenshot,
                                     input.state,
-                                );
+                                );	
                             },
                             _ => self.events.push(Event::InputUpdate(
                                 *game_input,
@@ -1009,7 +997,7 @@ impl Window {
         }
     }
 
-    pub fn toggle_fullscreen(&mut self, settings: &mut Settings, config_dir: &std::path::Path) {
+    pub fn toggle_fullscreen(&mut self, settings: &mut Settings) {
         let fullscreen = FullScreenSettings {
             enabled: !self.is_fullscreen(),
             ..settings.graphics.fullscreen
@@ -1017,7 +1005,7 @@ impl Window {
 
         self.set_fullscreen_mode(fullscreen);
         settings.graphics.fullscreen = fullscreen;
-        settings.save_to_file_warn(config_dir);
+        settings.save();
     }
 
     pub fn is_fullscreen(&self) -> bool { self.fullscreen.enabled }
@@ -1256,48 +1244,6 @@ impl Window {
     }
 
     pub fn send_event(&mut self, event: Event) { self.events.push(event) }
-
-    pub fn take_screenshot(&mut self, settings: &Settings) {
-        let sender = self.message_sender.clone();
-        let mut path = settings.screenshots_path.clone();
-        self.renderer.create_screenshot(move |image| {
-            use std::time::SystemTime;
-
-            // Handle any error if there was one when generating the image.
-            let image = match image {
-                Ok(i) => i,
-                Err(e) => {
-                    log::warn!("Couldn't generate screenshot, {:?}", e);
-                    let _result = sender.send(format!("Error when generating screenshot: {}", e));
-                    return;
-                },
-            };
-
-            // Check if folder exists and create it if it does not
-            if !path.exists() {
-                if let Err(e) = std::fs::create_dir_all(&path) {
-                    log::warn!("Couldn't create folder for screenshot: {:?}", e);
-                    let _result =
-                        sender.send(String::from("Couldn't create folder for screenshot"));
-                }
-            }
-            path.push(format!(
-                "screenshot_{}.png",
-                SystemTime::now()
-                    .duration_since(SystemTime::UNIX_EPOCH)
-                    .map(|d| d.as_millis())
-                    .unwrap_or(0)
-            ));
-            // Try to save the image
-            if let Err(e) = image.into_rgba8().save(&path) {
-                log::warn!("Couldn't save screenshot {:?}", e);
-                let _result = sender.send(String::from("Couldn't save screenshot"));
-            } else {
-                let _result =
-                    sender.send(format!("Screenshot saved to {}", path.to_string_lossy()));
-            }
-        });
-    }
 
     fn is_pressed(
         map: &mut HashMap<GameInput, winit::event::ElementState>,

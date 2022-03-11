@@ -8,8 +8,6 @@ version = "0.10.0"
 [features]
 
 [dependencies]
-directories-next = "2.0"
-
 
 #log
 log = "0.4"

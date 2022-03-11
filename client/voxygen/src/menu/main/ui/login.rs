@@ -328,8 +328,6 @@ pub struct LoginBanner {
     pub server: text_input::State,
 
     multiplayer_button: button::State,
-    #[cfg(feature = "singleplayer")]
-    singleplayer_button: button::State,
 }
 
 impl LoginBanner {
@@ -338,10 +336,7 @@ impl LoginBanner {
             username: Default::default(),
             password: Default::default(),
             server: Default::default(),
-
             multiplayer_button: Default::default(),
-            #[cfg(feature = "singleplayer")]
-            singleplayer_button: Default::default(),
         }
     }
 
@@ -414,14 +409,6 @@ impl LoginBanner {
                     FILL_FRAC_TWO,
                     button_style,
                     Some(Message::Multiplayer),
-                ),
-                #[cfg(feature = "singleplayer")]
-                neat_button(
-                    &mut self.singleplayer_button,
-                    i18n.get("common.singleplayer"),
-                    FILL_FRAC_TWO,
-                    button_style,
-                    Some(Message::Singleplayer),
                 ),
             ])
             .max_width(170)

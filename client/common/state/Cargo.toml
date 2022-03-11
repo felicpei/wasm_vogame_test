@@ -23,6 +23,5 @@ hashbrown = { version = "0.11", features = ["rayon", "serde", "nightly"] }
 # ECS
 specs = { git = "https://github.com/amethyst/specs.git", features = ["serde", "storage-event-control", "derive"], rev = "f985bec5d456f7b0dd8aae99848f9473c2cd9d46" }
 
-
 #log
 log = "0.4"

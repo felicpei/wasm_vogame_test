@@ -29,10 +29,6 @@ pub enum GameMode {
     /// The game is being played in client mode (i.e: the code is running
     /// client-side)
     Client,
-    /// The game is being played in singleplayer mode (i.e: both client and
-    /// server at once)
-    // To be used later when we no longer start up an entirely new server for singleplayer
-    Singleplayer,
 }
 
 /// A resource that stores the player's entity (on the client), and None on the

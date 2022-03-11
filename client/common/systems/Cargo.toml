@@ -28,9 +28,5 @@ slab = "0.4.2"
 # ECS
 specs = { git = "https://github.com/amethyst/specs.git", features = ["serde", "storage-event-control", "derive"], rev = "f985bec5d456f7b0dd8aae99848f9473c2cd9d46" }
 
-# Tweak running code
-# inline_tweak = { version = "1.0.8", features = ["release_tweak"] }
-
-
 #log
 log = "0.4"

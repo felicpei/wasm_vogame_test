@@ -81,8 +81,6 @@ pub enum Event {
     },
     CancelLoginAttempt,
     ChangeLanguage(LanguageMetadata),
-    #[cfg(feature = "singleplayer")]
-    StartSingleplayer,
     Quit,
     DeleteServer {
         server_index: usize,
@@ -149,8 +147,6 @@ enum Message {
     Back,
     ShowServers,
     ShowCredits,
-    #[cfg(feature = "singleplayer")]
-    Singleplayer,
     Multiplayer,
     LanguageChanged(usize),
     OpenLanguageMenu,
@@ -358,14 +354,6 @@ impl Controls {
                 self.screen = Screen::Credits {
                     screen: credits::Screen::new(),
                 };
-            },
-            #[cfg(feature = "singleplayer")]
-            Message::Singleplayer => {
-                self.screen = Screen::Connecting {
-                    screen: connecting::Screen::new(ui),
-                    connection_state: ConnectionState::InProgress,
-                };
-                events.push(Event::StartSingleplayer);
             },
             Message::Multiplayer => {
                 self.screen = Screen::Connecting {

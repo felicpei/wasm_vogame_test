@@ -1,9 +1,4 @@
-use directories_next::UserDirs;
 use serde::{Deserialize, Serialize};
-use std::{
-    fs,
-    path::{Path, PathBuf},
-};
 
 pub mod audio;
 pub mod chat;
@@ -42,30 +37,12 @@ pub struct Settings {
     // TODO: Remove at a later date, for dev testing
     pub logon_commands: Vec<String>,
     pub language: LanguageSettings,
-    pub screenshots_path: PathBuf,
     pub controller: GamepadSettings,
 }
 
 impl Default for Settings {
     fn default() -> Self {
-        let user_dirs = UserDirs::new().expect("System's $HOME directory path not found!");
-
-        // Chooses a path to store the screenshots by the following order:
-        //  - The VOXYGEN_SCREENSHOT environment variable
-        //  - The user's picture directory
-        //  - The executable's directory
-        // This only selects if there isn't already an entry in the settings file
-        let screenshots_path = std::env::var_os("VOXYGEN_SCREENSHOT")
-            .map(PathBuf::from)
-            .or_else(|| user_dirs.picture_dir().map(|dir| dir.join("veloren")))
-            .or_else(|| {
-                std::env::current_exe()
-                    .ok()
-                    .and_then(|dir| dir.parent().map(PathBuf::from))
-            })
-            .expect("Couldn't choose a place to store the screenshots");
-
-        Settings {
+        let settings = Settings {
             chat: ChatSettings::default(),
             controls: ControlSettings::default(),
             interface: InterfaceSettings::default(),
@@ -77,56 +54,26 @@ impl Default for Settings {
             send_logon_commands: false,
             logon_commands: Vec::new(),
             language: LanguageSettings::default(),
-            screenshots_path,
             controller: GamepadSettings::default(),
-        }
+        };
+        settings.save();
+        settings
     }
 }
 
 impl Settings {
-    pub fn load(config_dir: &Path) -> Self {
-        let path = Self::get_path(config_dir);
+    pub fn load() -> Self {
+     
+        log::warn!("todo load setting data, 目前仅使用默认");
 
-        if let Ok(file) = fs::File::open(&path) {
-            match ron::de::from_reader::<_, Self>(file) {
-                Ok(s) => return s,
-                Err(e) => {
-                    log::warn!("Failed to parse setting file! Fallback to default. {:?}", e);
-                    // Rename the corrupted settings file
-                    let mut new_path = path.to_owned();
-                    new_path.pop();
-                    new_path.push("settings.invalid.ron");
-                    if let Err(e) = std::fs::rename(&path, &new_path) {
-                        log::warn!("Failed to rename settings file. {:?} | {:?} | {:?}",e, path, new_path);
-                    }
-                },
-            }
-        }
-        // This is reached if either:
-        // - The file can't be opened (presumably it doesn't exist)
-        // - Or there was an error parsing the file
+        //wasm 仅用默认
         let default_settings = Self::default();
-        default_settings.save_to_file_warn(config_dir);
         default_settings
     }
 
-    pub fn save_to_file_warn(&self, config_dir: &Path) {
-        if let Err(e) = self.save_to_file(config_dir) {
-            log::warn!("Failed to save settings : {:?}", e);
-        }
+    pub fn save(&self) {
+        log::warn!("todo save setting data");
     }
-
-    pub fn save_to_file(&self, config_dir: &Path) -> std::io::Result<()> {
-        let path = Self::get_path(config_dir);
-        if let Some(dir) = path.parent() {
-            fs::create_dir_all(dir)?;
-        }
-
-        let ron = ron::ser::to_string_pretty(self, ron::ser::PrettyConfig::default()).unwrap();
-        fs::write(path, ron.as_bytes())
-    }
-
-    fn get_path(config_dir: &Path) -> PathBuf { config_dir.join("settings.ron") }
 
     pub fn display_warnings(&self) {
         if !self.graphics.render_mode.experimental_shaders.is_empty() {

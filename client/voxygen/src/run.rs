@@ -80,13 +80,10 @@ pub fn run(mut global_state: GlobalState, event_loop: EventLoop) {
                 global_state.window.handle_device_event(event)
             },
             winit::event::Event::LoopDestroyed => {
-                // Save any unsaved changes to settings and profile
-                global_state
-                    .settings
-                    .save_to_file_warn(&global_state.config_dir);
-                global_state
-                    .profile
-                    .save_to_file_warn(&global_state.config_dir);
+               
+                //save
+                global_state.settings.save();
+                global_state.profile.save();
             },
             _ => {},
         }
@@ -101,7 +98,7 @@ fn handle_main_events_cleared(
     // Screenshot / Fullscreen toggle
     global_state
         .window
-        .resolve_deduplicated_events(&mut global_state.settings, &global_state.config_dir);
+        .resolve_deduplicated_events(&mut global_state.settings);
     
     let mut exit = true;
     while let Some(state_result) = states.last_mut().map(|last| {

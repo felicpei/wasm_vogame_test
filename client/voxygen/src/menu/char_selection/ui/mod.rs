@@ -1633,13 +1633,6 @@ impl CharSelectionUi {
 
         let fonts = Fonts::load(i18n.fonts(), &mut ui).expect("Impossible to load fonts");
 
-        #[cfg(feature = "singleplayer")]
-        let default_name = match global_state.singleplayer {
-            Some(_) => String::new(),
-            None => global_state.settings.networking.username.clone(),
-        };
-
-        #[cfg(not(feature = "singleplayer"))]
         let default_name = global_state.settings.networking.username.clone();
 
         let controls = Controls::new(

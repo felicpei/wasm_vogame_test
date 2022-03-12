@@ -48,9 +48,8 @@
   -  删除GlobalState中的 userdata_dir 和 config_dir(本地存储的路径信息)
   -  (目前保存在客户端修改的设置不会保存, 以后需要的话需要放到服务器)
   - 删除本地截图功能(Settings.screenshots_path, take_screenshot)(wasm不支持)
--  删除各种build.rs 这个基本都是针对客户端打包的特殊处理，像图标，log目录什么的
--  升级WGPU, keyboard-keynames放本地，去掉win，linux模块
--  工程里存在的ICED是经过特殊处理的，先把代码放本地，升级对应的wgpu, winit, 之后再进行下一步修改。
+-  删除fullscreen功能(wasm不支持)
+
 
 
 todo：

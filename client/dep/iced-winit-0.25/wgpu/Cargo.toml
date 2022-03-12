@@ -26,8 +26,8 @@ qr_code = ["iced_graphics/qr_code"]
 default_system_font = ["iced_graphics/font-source"]
 
 [dependencies]
-wgpu = { version = "0.12", features = ["webgl", "spirv"] }
-wgpu_glyph = "0.16"
+wgpu = { version = "=0.8.0", features = ["webgl", "spirv"] }
+wgpu_glyph = "0.12"
 glyph_brush = "0.7"
 raw-window-handle = "0.3"
 log = "0.4"

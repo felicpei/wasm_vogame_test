@@ -20,7 +20,7 @@ impl Vertex {
         const ATTRIBUTES: [wgpu::VertexAttribute; 1] = wgpu::vertex_attr_array![0 => Float32x2];
         wgpu::VertexBufferLayout {
             array_stride: Self::STRIDE,
-            step_mode: wgpu::VertexStepMode::Vertex,
+            step_mode: wgpu::InputStepMode::Vertex,
             attributes: &ATTRIBUTES,
         }
     }
@@ -78,7 +78,7 @@ impl LodData {
                 sample_count: 1,
                 dimension: wgpu::TextureDimension::D2,
                 format,
-                usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
+                usage: wgpu::TextureUsage::SAMPLED | wgpu::TextureUsage::COPY_DST,
             };
 
             let sampler_info = wgpu::SamplerDescriptor {
@@ -181,7 +181,7 @@ impl LodTerrainPipeline {
                 strip_index_format: None,
                 front_face: wgpu::FrontFace::Ccw,
                 cull_mode: Some(wgpu::Face::Back),
-                unclipped_depth: false,
+                clamp_depth: false,
                 polygon_mode: wgpu::PolygonMode::Fill,
                 conservative: false,
             },
@@ -212,10 +212,9 @@ impl LodTerrainPipeline {
                 targets: &[wgpu::ColorTargetState {
                     format: wgpu::TextureFormat::Rgba16Float,
                     blend: None,
-                    write_mask: wgpu::ColorWrites::ALL,
+                    write_mask: wgpu::ColorWrite::ALL,
                 }],
             }),
-            multiview: None,
         });
 
         Self {

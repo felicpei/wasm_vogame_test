@@ -591,7 +591,7 @@ impl<V: RectRasterableVol> Terrain<V> {
                 sample_count: 1,
                 dimension: wgpu::TextureDimension::D2,
                 format: wgpu::TextureFormat::Rgba8Unorm,
-                usage: wgpu::TextureUsages::COPY_DST | wgpu::TextureUsages::TEXTURE_BINDING,
+                usage: wgpu::TextureUsage::COPY_DST | wgpu::TextureUsage::SAMPLED,
             },
             &wgpu::TextureViewDescriptor {
                 label: Some("Atlas texture view"),

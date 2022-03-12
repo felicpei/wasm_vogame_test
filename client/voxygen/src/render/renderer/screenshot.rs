@@ -22,31 +22,30 @@ impl TakeScreenshot {
         blit_layout: &blit::BlitLayout,
         sampler: &wgpu::Sampler,
         // Used to determine the resolution and texture format
-        surface_cfg: &wgpu::SurfaceConfiguration,
+        sc_desc: &wgpu::SwapChainDescriptor,
         // Function that is given the image after downloading it from the GPU
         // This is executed in a background thread
         screenshot_fn: ScreenshotFn,
-        
     ) -> Self {
         let texture = device.create_texture(&wgpu::TextureDescriptor {
             label: Some("screenshot tex"),
             size: wgpu::Extent3d {
-                width: surface_cfg.width,
-                height: surface_cfg.height,
+                width: sc_desc.width,
+                height: sc_desc.height,
                 depth_or_array_layers: 1,
             },
             mip_level_count: 1,
             sample_count: 1,
             dimension: wgpu::TextureDimension::D2,
-            format: surface_cfg.format,
-            usage: wgpu::TextureUsages::COPY_SRC
-                | wgpu::TextureUsages::TEXTURE_BINDING
-                | wgpu::TextureUsages::RENDER_ATTACHMENT,
+            format: sc_desc.format,
+            usage: wgpu::TextureUsage::COPY_SRC
+                | wgpu::TextureUsage::SAMPLED
+                | wgpu::TextureUsage::RENDER_ATTACHMENT,
         });
 
         let view = texture.create_view(&wgpu::TextureViewDescriptor {
             label: Some("screenshot tex view"),
-            format: Some(surface_cfg.format),
+            format: Some(sc_desc.format),
             dimension: Some(wgpu::TextureViewDimension::D2),
             aspect: wgpu::TextureAspect::All,
             base_mip_level: 0,
@@ -57,13 +56,13 @@ impl TakeScreenshot {
 
         let bind_group = blit_layout.bind(device, &view, sampler);
 
-        let bytes_per_pixel = surface_cfg.format.describe().block_size;
-        let padded_bytes_per_row = padded_bytes_per_row(surface_cfg.width, bytes_per_pixel);
+        let bytes_per_pixel = sc_desc.format.describe().block_size;
+        let padded_bytes_per_row = padded_bytes_per_row(sc_desc.width, bytes_per_pixel);
 
         let buffer = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("screenshot download buffer"),
-            size: (padded_bytes_per_row * surface_cfg.height) as u64,
-            usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
+            size: (padded_bytes_per_row * sc_desc.height) as u64,
+            usage: wgpu::BufferUsage::COPY_DST | wgpu::BufferUsage::MAP_READ,
             mapped_at_creation: false,
         });
 
@@ -73,10 +72,10 @@ impl TakeScreenshot {
             view,
             buffer,
             screenshot_fn,
-            width: surface_cfg.width,
-            height: surface_cfg.height,
+            width: sc_desc.width,
+            height: sc_desc.height,
             bytes_per_pixel,
-            tex_format: surface_cfg.format,
+            tex_format: sc_desc.format,
         }
     }
 
@@ -103,7 +102,6 @@ impl TakeScreenshot {
                 texture: &self.texture,
                 mip_level: 0,
                 origin: wgpu::Origin3d::ZERO,
-                aspect: wgpu::TextureAspect::All,
             },
             wgpu::ImageCopyBuffer {
                 buffer: &self.buffer,

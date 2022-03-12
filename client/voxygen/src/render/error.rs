@@ -1,10 +1,9 @@
 /// Used to represent one of many possible errors that may be omitted by the
 /// rendering subsystem.
-/// 
 pub enum RenderError {
     RequestDeviceError(wgpu::RequestDeviceError),
     MappingError(wgpu::BufferAsyncError),
-    SurfaceError(wgpu::SurfaceError),
+    SwapChainError(wgpu::SwapChainError),
     CustomError(String),
     CouldNotFindAdapter,
     ErrorInitializingCompiler,
@@ -19,8 +18,8 @@ impl fmt::Debug for RenderError {
                 f.debug_tuple("RequestDeviceError").field(err).finish()
             },
             Self::MappingError(err) => f.debug_tuple("MappingError").field(err).finish(),
-            Self::SurfaceError(err) => f
-                .debug_tuple("SurfaceError")
+            Self::SwapChainError(err) => f
+                .debug_tuple("SwapChainError")
                 // Use Display formatting for this error since they have nice descriptions
                 .field(&format!("{}", err))
                 .finish(),
@@ -44,8 +43,8 @@ impl From<wgpu::BufferAsyncError> for RenderError {
     fn from(err: wgpu::BufferAsyncError) -> Self { Self::MappingError(err) }
 }
 
-impl From<wgpu::SurfaceError> for RenderError {
-    fn from(err: wgpu::SurfaceError) -> Self { Self::SurfaceError(err) }
+impl From<wgpu::SwapChainError> for RenderError {
+    fn from(err: wgpu::SwapChainError) -> Self { Self::SwapChainError(err) }
 }
 
 impl From<(&str, shaderc::Error)> for RenderError {

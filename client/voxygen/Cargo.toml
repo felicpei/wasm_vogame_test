@@ -47,11 +47,12 @@ keyboard-keynames = {package = "keyboard-keynames", path = "../dep/keyboard-keyn
 # Graphics
 
 #窗体，支持wasm，参考 https://github.com/rust-windowing/winit/blob/HEAD/examples/web.rs
-winit = "0.26"
+winit = {version = "0.25.0", features = ["serde", "web-sys"]}
 
 #wgpu
-wgpu = { version = "0.12", features = ["trace","webgl", "spirv"] }
-wgpu-profiler = "0.8"
+wgpu = { version = "=0.8.0", features = ["trace", "webgl"] }
+wgpu-profiler = { git = "https://github.com/Imberflur/wgpu-profiler", tag = "wgpu-0.8" }
+
 
 bytemuck = { version="1.4", features=["derive"] }
 shaderc = "0.7.4"

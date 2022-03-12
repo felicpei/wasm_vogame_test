@@ -1,3 +1,5 @@
+use serde::{Deserialize, Serialize};
+
 pub mod audio;
 pub mod chat;
 pub mod control;
@@ -20,7 +22,8 @@ pub use networking::NetworkingSettings;
 
 /// `Settings` contains everything that can be configured in the settings.ron
 /// file.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(default)]
 pub struct Settings {
     pub chat: ChatSettings,
     pub controls: ControlSettings,

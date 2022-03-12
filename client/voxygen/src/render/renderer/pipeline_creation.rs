@@ -145,15 +145,15 @@ impl ShaderModules {
         // We dynamically add extra configuration settings to the constants file.
         let mut constants = format!(
             r#"
-            {}
+{}
 
-            #define VOXYGEN_COMPUTATION_PREFERENCE {}
-            #define FLUID_MODE {}
-            #define CLOUD_MODE {}
-            #define LIGHTING_ALGORITHM {}
-            #define SHADOW_MODE {}
+#define VOXYGEN_COMPUTATION_PREFERENCE {}
+#define FLUID_MODE {}
+#define CLOUD_MODE {}
+#define LIGHTING_ALGORITHM {}
+#define SHADOW_MODE {}
 
-            "#,
+"#,
             &constants.0,
             // TODO: Configurable vertex/fragment shader preference.
             "VOXYGEN_COMPUTATION_PREFERENCE_FRAGMENT",
@@ -332,8 +332,6 @@ fn create_shader_module(
     
     use std::borrow::Cow;
 
-    log::info!("create shader module {}", file_name);
-    
     let spv = compiler
         .compile_into_spirv(source, kind, file_name, "main", Some(options))
         .map_err(|e| (file_name, e))?;
@@ -342,6 +340,8 @@ fn create_shader_module(
     Ok(device.create_shader_module(&wgpu::ShaderModuleDescriptor {
         label: Some(&label),
         source: wgpu::ShaderSource::SpirV(Cow::Borrowed(spv.as_binary())),
+        flags: wgpu::ShaderFlags::empty(),
+        // TODO: renable // flags: wgpu::ShaderFlags::VALIDATION,
     }))
 }
 
@@ -352,7 +352,7 @@ struct PipelineNeeds<'a> {
     layouts: &'a Layouts,
     shaders: &'a ShaderModules,
     pipeline_modes: &'a PipelineModes,
-    texture_format: wgpu::TextureFormat,
+    sc_desc: &'a wgpu::SwapChainDescriptor,
 }
 
 /// Creates InterfacePipelines in parallel
@@ -372,7 +372,7 @@ fn create_interface_pipelines(
                     needs.device,
                     &needs.shaders.ui_vert,
                     &needs.shaders.ui_frag,
-                    needs.texture_format,
+                    needs.sc_desc,
                     &needs.layouts.global,
                     &needs.layouts.ui,
                 )
@@ -389,7 +389,7 @@ fn create_interface_pipelines(
                     needs.device,
                     &needs.shaders.blit_vert,
                     &needs.shaders.blit_frag,
-                    needs.texture_format,
+                    needs.sc_desc,
                     &needs.layouts.blit,
                 )
             },
@@ -415,7 +415,7 @@ fn create_ingame_and_shadow_pipelines(
         layouts,
         shaders,
         pipeline_modes,
-        texture_format,
+        sc_desc,
     } = needs;
 
     let [
@@ -614,7 +614,7 @@ fn create_ingame_and_shadow_pipelines(
                     device,
                     &shaders.postprocess_vert,
                     &shaders.postprocess_frag,
-                    texture_format,
+                    sc_desc,
                     &layouts.global,
                     &layouts.postprocess,
                 )
@@ -750,7 +750,7 @@ pub(super) fn initial_create_pipelines(
     layouts: Layouts,
     shaders: Shaders,
     pipeline_modes: PipelineModes,
-    texture_format: wgpu::TextureFormat,
+    sc_desc: wgpu::SwapChainDescriptor,
     has_shadow_views: bool,
 ) -> Result<
     (
@@ -775,7 +775,7 @@ pub(super) fn initial_create_pipelines(
         layouts: &layouts,
         shaders: &shader_modules,
         pipeline_modes: &pipeline_modes,
-        texture_format: texture_format,
+        sc_desc: &sc_desc,
     };
 
     // Create interface pipelines while blocking the main thread
@@ -802,7 +802,7 @@ pub(super) fn initial_create_pipelines(
             layouts: &layouts,
             shaders: &shader_modules,
             pipeline_modes: &pipeline_modes,
-            texture_format: texture_format,
+            sc_desc: &sc_desc,
         };
 
         let pipelines = create_ingame_and_shadow_pipelines(needs, pool, progress.create_tasks());
@@ -822,7 +822,7 @@ pub(super) fn recreate_pipelines(
     immutable_layouts: Arc<ImmutableLayouts>,
     shaders: Shaders,
     pipeline_modes: PipelineModes,
-    texture_format: wgpu::TextureFormat,
+    sc_desc: wgpu::SwapChainDescriptor,
     has_shadow_views: bool,
 ) -> PipelineCreation<
     Result<
@@ -887,7 +887,7 @@ pub(super) fn recreate_pipelines(
             layouts: &layouts,
             shaders: &shader_modules,
             pipeline_modes: &pipeline_modes,
-            texture_format: texture_format,
+            sc_desc: &sc_desc,
         };
 
         // Create interface pipelines

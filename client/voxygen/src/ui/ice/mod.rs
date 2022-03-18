@@ -6,8 +6,8 @@ pub mod widget;
 
 pub use cache::{load_font, Font, FontId, RawFont};
 pub use graphic::{Id, Rotation};
-pub use iced::Event;
-pub use iced_winit::conversion::window_event;
+pub use iced::{Event, Cache};
+pub use iced::conversion::window_event;
 pub use renderer::{style, IcedRenderer};
 
 use super::{
@@ -20,8 +20,8 @@ use crate::{
     window::Window,
 };
 use common::slowjob::SlowJobPool;
-use iced::{mouse, Cache, Size, UserInterface};
-use iced_winit::Clipboard;
+use iced::{mouse, Size, UserInterface};
+use iced::Clipboard;
 use vek::*;
 
 pub type Element<'a, M> = iced::Element<'a, M, IcedRenderer>;
@@ -192,7 +192,7 @@ impl IcedUi {
             let _event_status_list = user_interface.update(
                 &self.events,
                 cursor_position,
-                &self.renderer,
+                &mut self.renderer,
                 clipboard,
                 &mut messages,
             );

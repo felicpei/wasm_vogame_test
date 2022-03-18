@@ -109,7 +109,7 @@ fn main() {
         Err(error) => panic!("Failed to create window!: {:?}", error),
     };
 
-    let clipboard = iced_winit::Clipboard::connect(window.window());
+    let clipboard = iced::Clipboard::connect(window.window());
 
     let lazy_init = SpriteRenderContext::new(window.renderer_mut());
 

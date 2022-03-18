@@ -1,6 +1,5 @@
 // TODO: unused (I think?) consider slating for removal
-use iced::{layout, Element, Hasher, Layout, Length, Point, Rectangle, Size, Widget};
-use std::hash::Hash;
+use iced::{layout, Element, Layout, Length, Point, Rectangle, Size, Widget};
 
 /// Stack up some widgets
 pub struct Stack<'a, M, R> {
@@ -55,20 +54,20 @@ where
         renderer.draw(defaults, &self.children, layout, cursor_position, viewport)
     }
 
-    fn hash_layout(&self, state: &mut Hasher) {
-        struct Marker;
-        std::any::TypeId::of::<Marker>().hash(state);
+    // fn hash_layout(&self, state: &mut Hasher) {
+    //     struct Marker;
+    //     std::any::TypeId::of::<Marker>().hash(state);
 
-        self.children
-            .iter()
-            .for_each(|child| child.hash_layout(state));
-    }
+    //     self.children
+    //         .iter()
+    //         .for_each(|child| child.hash_layout(state));
+    // }
 
-    fn overlay(&mut self, layout: Layout<'_>) -> Option<iced::overlay::Element<'_, M, R>> {
+    fn overlay(&mut self, layout: Layout<'_>, renderer: &R) -> Option<iced::overlay::Element<'_, M, R>> {
         self.children
             .iter_mut()
             .zip(layout.children())
-            .filter_map(|(child, layout)| child.overlay(layout))
+            .filter_map(|(child, layout)| child.overlay(layout, renderer))
             .next()
     }
 }

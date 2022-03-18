@@ -122,7 +122,7 @@ impl Vertex {
             wgpu::vertex_attr_array![0 => Uint32,1 => Uint32];
         wgpu::VertexBufferLayout {
             array_stride: Self::STRIDE,
-            step_mode: wgpu::InputStepMode::Vertex,
+            step_mode: wgpu::VertexStepMode::Vertex,
             attributes: &ATTRIBUTES,
         }
     }
@@ -177,7 +177,7 @@ impl TerrainLayout {
                     // locals
                     wgpu::BindGroupLayoutEntry {
                         binding: 0,
-                        visibility: wgpu::ShaderStage::VERTEX | wgpu::ShaderStage::FRAGMENT,
+                        visibility: wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT,
                         ty: wgpu::BindingType::Buffer {
                             ty: wgpu::BufferBindingType::Uniform,
                             has_dynamic_offset: false,
@@ -253,7 +253,7 @@ impl TerrainPipeline {
                 strip_index_format: None,
                 front_face: wgpu::FrontFace::Ccw,
                 cull_mode: Some(wgpu::Face::Back),
-                clamp_depth: false,
+                unclipped_depth: false,
                 polygon_mode: wgpu::PolygonMode::Fill,
                 conservative: false,
             },
@@ -284,9 +284,10 @@ impl TerrainPipeline {
                 targets: &[wgpu::ColorTargetState {
                     format: wgpu::TextureFormat::Rgba16Float,
                     blend: None,
-                    write_mask: wgpu::ColorWrite::ALL,
+                    write_mask: wgpu::ColorWrites::ALL,
                 }],
             }),
+            multiview: None,
         });
 
         Self {

@@ -25,15 +25,16 @@ use common::{
     comp::{self, humanoid, inventory::slot::EquipSlot, Inventory, Item},
     LoadoutBuilder,
 };
+
 use i18n::{Localization, LocalizationHandle};
-//ImageFrame, Tooltip,
 use crate::settings::Settings;
-//use std::time::Duration;
-//use ui::ice::widget;
 use iced::{
-    button, scrollable, slider, text_input, Align, Button, Column, Container, HorizontalAlignment,
-    Length, Row, Scrollable, Slider, Space, Text, TextInput,
+    Length, Horizontal, Alignment
 };
+
+use iced::widget::{button, scrollable, slider, text_input, Button, Column, Container,
+    Row, Scrollable, Slider, Space, Text, TextInput};
+
 use vek::Rgba;
 
 pub const TEXT_COLOR: iced::Color = iced::Color::from_rgb(1.0, 1.0, 1.0);
@@ -372,15 +373,15 @@ impl Controls {
             padding: 10,
         };
 
-        let version = iced::Text::new(&self.version)
+        let version = Text::new(&self.version)
             .size(self.fonts.cyri.scale(15))
             .width(Length::Fill)
-            .horizontal_alignment(HorizontalAlignment::Right);
+            .horizontal_alignment(Horizontal::Right);
 
-        let alpha = iced::Text::new(&self.alpha)
+        let alpha = Text::new(&self.alpha)
             .size(self.fonts.cyri.scale(12))
             .width(Length::Fill)
-            .horizontal_alignment(HorizontalAlignment::Center);
+            .horizontal_alignment(Horizontal::Center);
 
         let top_text = Row::with_children(vec![
             Space::new(Length::Fill, Length::Shrink).into(),
@@ -450,7 +451,7 @@ impl Controls {
                         Space::new(Length::Fill, Length::Units(25)).into(),
                     ])
                     .spacing(5)
-                    .align_items(Align::Center),
+                    .align_items(Alignment::Center),
                 )
                 .style(style::container::Style::color(Rgba::new(0, 0, 0, 217)))
                 .padding(12)
@@ -567,8 +568,8 @@ impl Controls {
                                     .ratio_of_image(imgs.char_selection),
                                 )
                                 .padding(0)
-                                .align_x(Align::End)
-                                .align_y(Align::End)
+                                .align_x(Alignment::End)
+                                .align_y(Alignment::End)
                                 .into()
                             },
                         )
@@ -690,7 +691,7 @@ impl Controls {
                         .into(),
                     Space::new(Length::Fill, Length::Shrink).into(),
                 ])
-                .align_items(Align::End);
+                .align_items(Alignment::End);
 
                 let content = Column::with_children(vec![top.into(), bottom.into()])
                     .width(Length::Fill)
@@ -724,7 +725,7 @@ impl Controls {
                             .spacing(30)
                             .into(),
                         ])
-                        .align_items(Align::Center)
+                        .align_items(Alignment::Center)
                         .spacing(10)
                         .into(),
                         InfoContent::LoadingCharacters => {
@@ -759,7 +760,7 @@ impl Controls {
                             .height(Length::Units(28))
                             .into(),
                         ])
-                        .align_items(Align::Center)
+                        .align_items(Alignment::Center)
                         .spacing(10)
                         .into(),
                     };
@@ -1055,7 +1056,7 @@ impl Controls {
                             ))
                             .into(),
                     ])
-                    .align_items(Align::Center)
+                    .align_items(Alignment::Center)
                     .into()
                 }
                 fn char_slider_greyable<'a>(
@@ -1091,7 +1092,7 @@ impl Controls {
                                 })
                                 .into(),
                         ])
-                        .align_items(Align::Center)
+                        .align_items(Alignment::Center)
                         .into()
                     }
                 }
@@ -1186,13 +1187,13 @@ impl Controls {
                     Scrollable::new(scroll)
                         .push(
                             Column::with_children(column_content)
-                                .align_items(Align::Center)
+                                .align_items(Alignment::Center)
                                 .width(Length::Fill)
                                 .spacing(5),
                         )
                         .padding(5)
                         .width(Length::Fill)
-                        .align_items(Align::Center)
+                        .align_items(Alignment::Center)
                         .style(style::scrollable::Style {
                             track: None,
                             scroller: style::scrollable::Scroller::Color(UI_MAIN),
@@ -1279,7 +1280,7 @@ impl Controls {
                         Space::new(Length::Units(NAME_DICE_SIZE), Length::Units(NAME_DICE_SIZE))
                             .into(),
                     ])
-                    .align_items(Align::Center)
+                    .align_items(Alignment::Center)
                     .spacing(5)
                     .padding(16),
                 )
@@ -1322,10 +1323,10 @@ impl Controls {
                     Container::new(create)
                         .width(Length::Fill)
                         .height(Length::Units(SMALL_BUTTON_HEIGHT))
-                        .align_x(Align::End)
+                        .align_x(Alignment::End)
                         .into(),
                 ])
-                .align_items(Align::End);
+                .align_items(Alignment::End);
 
                 Column::with_children(vec![top.into(), bottom.into()])
                     .width(Length::Fill)
@@ -1338,7 +1339,7 @@ impl Controls {
         // TODO: There is probably a better way to conditionally add in the warning box
         // here
         if let Some(mismatched_version) = &self.server_mismatched_version {
-            let warning = iced::Text::<IcedRenderer>::new(format!(
+            let warning = Text::<IcedRenderer>::new(format!(
                 "{}\n{}: {} {}: {}",
                 i18n.get("char_selection.version_mismatch"),
                 i18n.get("main.login.server_version"),
@@ -1349,7 +1350,7 @@ impl Controls {
             .size(self.fonts.cyri.scale(18))
             .color(iced::Color::from_rgb(1.0, 0.0, 0.0))
             .width(Length::Fill)
-            .horizontal_alignment(HorizontalAlignment::Center);
+            .horizontal_alignment(Horizontal::Center);
             let warning_container =
                 Container::new(Row::with_children(vec![warning.into()]).width(Length::Fill))
                     .style(style::container::Style::color(Rgba::new(0, 0, 0, 217)))

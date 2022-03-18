@@ -7,7 +7,8 @@ use crate::{
     },
 };
 use i18n::Localization;
-use iced::{button, scrollable, Column, Container, HorizontalAlignment, Length, Scrollable, Space};
+use iced::{Length, Horizontal};
+use iced::widget::{button, Text, scrollable, Column, Container, Scrollable, Space};
 
 /// Connecting screen for the main menu
 pub struct Screen {
@@ -79,21 +80,21 @@ impl Screen {
         ) -> Element<'a, Message> {
             Column::with_children(
                 core::iter::once(
-                    iced::Text::new(i18n.get(header_i18n_key))
+                    Text::new(i18n.get(header_i18n_key))
                         .font(fonts.cyri.id)
                         .size(fonts.cyri.scale(30))
                         .color(header_color)
                         .width(Length::Fill)
-                        .horizontal_alignment(HorizontalAlignment::Center)
+                        .horizontal_alignment(Horizontal::Center)
                         .into(),
                 )
                 .chain(credit_iter.map(|credit| {
                     let text = format_credit(credit).expect("Formatting failed!!!");
-                    iced::Text::new(text)
+                    Text::new(text)
                         .font(fonts.cyri.id)
                         .size(fonts.cyri.scale(23))
                         .width(Length::Fill)
-                        .horizontal_alignment(HorizontalAlignment::Center)
+                        .horizontal_alignment(Horizontal::Center)
                         .into()
                 }))
                 .chain(core::iter::once(
@@ -119,11 +120,11 @@ impl Screen {
         Container::new(
             Container::new(
                 Column::with_children(vec![
-                    iced::Text::new(i18n.get("main.credits"))
+                    Text::new(i18n.get("main.credits"))
                         .font(fonts.alkhemi.id)
                         .size(fonts.alkhemi.scale(35))
                         .width(Length::Fill)
-                        .horizontal_alignment(HorizontalAlignment::Center)
+                        .horizontal_alignment(Horizontal::Center)
                         .into(),
                     Space::new(Length::Fill, Length::Units(25)).into(),
                     Scrollable::new(&mut self.scroll)

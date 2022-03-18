@@ -2,9 +2,9 @@ use super::super::{super::FontId, IcedRenderer, Primitive};
 use glyph_brush::GlyphCruncher;
 use iced::{
     mouse,
-    text_input::{self, cursor},
     Color, Point, Rectangle,
 };
+use iced::widget::text_input::{self, cursor};
 
 const CURSOR_WIDTH: f32 = 2.0;
 // Extra scroll offset past the cursor
@@ -221,8 +221,8 @@ impl text_input::Renderer for IcedRenderer {
                 width: 1000.0, // hacky
                 ..bounds
             },
-            iced::HorizontalAlignment::Left,
-            iced::VerticalAlignment::Center,
+            iced::Horizontal::Left,
+            iced::Vertical::Center,
             display_text,
             size,
             font,
@@ -273,7 +273,7 @@ fn measure_cursor_and_scroll_offset(
     cursor_index: usize,
     font: FontId,
 ) -> (f32, f32) {
-    use text_input::Renderer;
+    //use text_input::Renderer;
 
     // TODO: so much allocation (fyi .until() allocates)
     let text_before_cursor = value.until(cursor_index).to_string();

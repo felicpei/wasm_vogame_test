@@ -340,7 +340,7 @@ fn create_shader_module(
     Ok(device.create_shader_module(&wgpu::ShaderModuleDescriptor {
         label: Some(&label),
         source: wgpu::ShaderSource::SpirV(Cow::Borrowed(spv.as_binary())),
-        flags: wgpu::ShaderFlags::empty(),
+        //flags: wgpu::ShaderFlags::empty(),
         // TODO: renable // flags: wgpu::ShaderFlags::VALIDATION,
     }))
 }
@@ -352,7 +352,7 @@ struct PipelineNeeds<'a> {
     layouts: &'a Layouts,
     shaders: &'a ShaderModules,
     pipeline_modes: &'a PipelineModes,
-    sc_desc: &'a wgpu::SwapChainDescriptor,
+    sc_desc: &'a wgpu::SurfaceConfiguration,
 }
 
 /// Creates InterfacePipelines in parallel
@@ -750,7 +750,7 @@ pub(super) fn initial_create_pipelines(
     layouts: Layouts,
     shaders: Shaders,
     pipeline_modes: PipelineModes,
-    sc_desc: wgpu::SwapChainDescriptor,
+    sc_desc: wgpu::SurfaceConfiguration,
     has_shadow_views: bool,
 ) -> Result<
     (
@@ -822,7 +822,7 @@ pub(super) fn recreate_pipelines(
     immutable_layouts: Arc<ImmutableLayouts>,
     shaders: Shaders,
     pipeline_modes: PipelineModes,
-    sc_desc: wgpu::SwapChainDescriptor,
+    sc_desc: wgpu::SurfaceConfiguration,
     has_shadow_views: bool,
 ) -> PipelineCreation<
     Result<

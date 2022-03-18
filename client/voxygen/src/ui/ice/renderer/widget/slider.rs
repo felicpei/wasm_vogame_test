@@ -1,7 +1,7 @@
 use super::super::{super::Rotation, style, IcedRenderer, Primitive};
 use common::util::srgba_to_linear;
 use core::ops::RangeInclusive;
-use iced::{mouse, slider, Point, Rectangle};
+use iced::{mouse, widget::slider, Point, Rectangle};
 use style::slider::{Bar, Cursor, Style};
 
 const CURSOR_DRAG_SHIFT: f32 = 0.7;

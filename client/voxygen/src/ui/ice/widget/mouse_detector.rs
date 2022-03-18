@@ -1,8 +1,7 @@
 use iced::{
-    layout, mouse, Clipboard, Element, Event, Hasher, Layout, Length, Point, Rectangle, Size,
+    layout, mouse, Element, Event, Layout, Length, Point, Rectangle, Size,
     Widget,
 };
-use std::hash::Hash;
 
 #[derive(Debug, Default)]
 pub struct State {
@@ -54,13 +53,13 @@ where
         renderer.draw(layout.bounds())
     }
 
-    fn hash_layout(&self, state: &mut Hasher) {
-        struct Marker;
-        std::any::TypeId::of::<Marker>().hash(state);
+    // fn hash_layout(&self, state: &mut Hasher) {
+    //     struct Marker;
+    //     std::any::TypeId::of::<Marker>().hash(state);
 
-        self.width.hash(state);
-        self.height.hash(state);
-    }
+    //     self.width.hash(state);
+    //     self.height.hash(state);
+    // }
 
     fn on_event(
         &mut self,
@@ -68,7 +67,7 @@ where
         layout: Layout<'_>,
         _cursor_position: Point,
         _renderer: &R,
-        _clipboard: &mut dyn Clipboard,
+        _clipboard: &mut dyn iced::native::Clipboard,
         _messages: &mut Vec<M>,
     ) -> iced::event::Status {
         if let Event::Mouse(mouse::Event::CursorMoved {

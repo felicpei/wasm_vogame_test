@@ -12,8 +12,9 @@ use crate::ui::{
     },
 };
 use i18n::{LanguageMetadata, Localization};
-use iced::{
-    button, scrollable, text_input, Align, Button, Column, Container, Length, Row, Scrollable,
+use iced::{Length, Alignment};
+use iced::widget::{
+    button, scrollable, text_input, Button, Column, Container, Row, Scrollable,
     Space, Text, TextInput,
 };
 use vek::*;
@@ -108,7 +109,7 @@ impl Screen {
         let buttons = Container::new(buttons)
             .width(Length::Fill)
             .height(Length::Fill)
-            .align_y(Align::End);
+            .align_y(Alignment::End);
 
         let intro_text = i18n.get("main.login_process");
 
@@ -187,14 +188,14 @@ impl Screen {
             .padding(3)
             .width(Length::Units(230));
 
-        let version = iced::Text::new(version).size(fonts.cyri.scale(15));
+        let version = Text::new(version).size(fonts.cyri.scale(15));
 
         let right_column = Container::new(
-            Column::with_children(vec![v_logo.into(), version.into()]).align_items(Align::Center),
+            Column::with_children(vec![v_logo.into(), version.into()]).align_items(Alignment::Center),
         )
         .width(Length::Fill)
         .height(Length::Fill)
-        .align_x(Align::End);
+        .align_x(Alignment::End);
 
         Row::with_children(vec![
             left_column,
@@ -240,12 +241,12 @@ impl LanguageSelectBanner {
 
         let title = Text::new(i18n.get("main.login.select_language"))
             .size(fonts.cyri.scale(35))
-            .horizontal_alignment(iced::HorizontalAlignment::Center);
+            .horizontal_alignment(iced::Horizontal::Center);
 
         let mut list = Scrollable::new(&mut self.selection_list)
             .spacing(8)
             .height(Length::Fill)
-            .align_items(Align::Start);
+            .align_items(Alignment::Start);
 
         let list_items = self
             .language_buttons
@@ -265,7 +266,7 @@ impl LanguageSelectBanner {
                         Text::new(lang.language_name.clone())
                             .width(Length::FillPortion(95))
                             .size(fonts.cyri.scale(25))
-                            .vertical_alignment(iced::VerticalAlignment::Center)
+                            .vertical_alignment(iced::Vertical::Center)
                             .into(),
                     ]),
                 )
@@ -302,7 +303,7 @@ impl LanguageSelectBanner {
             .spacing(8)
             .width(Length::Fill)
             .height(Length::FillPortion(38))
-            .align_items(Align::Center);
+            .align_items(Alignment::Center);
 
         let selection_menu = BackgroundContainer::new(
             CompoundGraphic::from_graphics(vec![
@@ -417,7 +418,7 @@ impl LoginBanner {
             .into(),
         ])
         .width(Length::Fill)
-        .align_items(Align::Center);
+        .align_items(Alignment::Center);
 
         Container::new(banner_content)
             .height(Length::Fill)

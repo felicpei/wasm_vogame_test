@@ -1,5 +1,6 @@
 use super::super::{super::Rotation, style, Defaults, IcedRenderer, Primitive};
-use iced::{button, mouse, Element, Layout, Point, Rectangle};
+use iced::{mouse, Element, Layout, Point, Rectangle};
+use iced::widget::{button};
 
 impl button::Renderer for IcedRenderer {
     // TODO: what if this gets large enough to not be copied around?

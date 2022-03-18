@@ -1,6 +1,5 @@
 use super::super::graphic;
-use iced::{layout, Element, Hasher, Layout, Length, Point, Rectangle, Widget};
-use std::hash::Hash;
+use iced::{layout, Element, Layout, Length, Point, Rectangle, Widget};
 use vek::Rgba;
 
 // TODO: consider iced's approach to images and caching image data
@@ -95,15 +94,15 @@ where
         renderer.draw(self.handle, self.color, layout)
     }
 
-    fn hash_layout(&self, state: &mut Hasher) {
-        struct Marker;
-        std::any::TypeId::of::<Marker>().hash(state);
+    // fn hash_layout(&self, state: &mut Hasher) {
+    //     struct Marker;
+    //     std::any::TypeId::of::<Marker>().hash(state);
 
-        self.width.hash(state);
-        self.height.hash(state);
-        self.fix_aspect_ratio.hash(state);
-        // TODO: also depends on dims but we have no way to access
-    }
+    //     self.width.hash(state);
+    //     self.height.hash(state);
+    //     self.fix_aspect_ratio.hash(state);
+    //     // TODO: also depends on dims but we have no way to access
+    // }
 }
 
 pub trait Renderer: iced::Renderer {

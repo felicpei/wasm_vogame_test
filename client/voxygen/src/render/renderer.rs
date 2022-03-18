@@ -130,8 +130,8 @@ pub struct Renderer {
     device: Arc<wgpu::Device>,
     queue: wgpu::Queue,
     surface: wgpu::Surface,
-    swap_chain: wgpu::SwapChain,
-    sc_desc: wgpu::SwapChainDescriptor,
+    //swap_chain: wgpu::SwapChain,
+    sc_desc: wgpu::SurfaceConfiguration,
 
     sampler: wgpu::Sampler,
     depth_sampler: wgpu::Sampler,
@@ -194,18 +194,18 @@ impl Renderer {
         let backend_bit = std::env::var("WGPU_BACKEND")
             .ok()
             .and_then(|backend| match backend.to_lowercase().as_str() {
-                "vulkan" => Some(wgpu::BackendBit::VULKAN),
-                "metal" => Some(wgpu::BackendBit::METAL),
-                "dx12" => Some(wgpu::BackendBit::DX12),
-                "primary" => Some(wgpu::BackendBit::PRIMARY),
-                "opengl" | "gl" => Some(wgpu::BackendBit::GL),
-                "dx11" => Some(wgpu::BackendBit::DX11),
-                "secondary" => Some(wgpu::BackendBit::SECONDARY),
-                "all" => Some(wgpu::BackendBit::all()),
+                "vulkan" => Some(wgpu::Backends::VULKAN),
+                "metal" => Some(wgpu::Backends::METAL),
+                "dx12" => Some(wgpu::Backends::DX12),
+                "primary" => Some(wgpu::Backends::PRIMARY),
+                "opengl" | "gl" => Some(wgpu::Backends::GL),
+                "dx11" => Some(wgpu::Backends::DX11),
+                "secondary" => Some(wgpu::Backends::SECONDARY),
+                "all" => Some(wgpu::Backends::all()),
                 _ => None,
             })
             .unwrap_or(
-                (wgpu::BackendBit::PRIMARY | wgpu::BackendBit::SECONDARY) & !wgpu::BackendBit::GL,
+                (wgpu::Backends::PRIMARY | wgpu::Backends::SECONDARY) & !wgpu::Backends::GL,
             );
 
         let instance = wgpu::Instance::new(backend_bit);
@@ -247,6 +247,7 @@ impl Renderer {
                 runtime.block_on(instance.request_adapter(&wgpu::RequestAdapterOptionsBase {
                     power_preference: wgpu::PowerPreference::HighPerformance,
                     compatible_surface: Some(&surface),
+                    force_fallback_adapter: false,
                 }))
             },
         }
@@ -298,7 +299,7 @@ impl Renderer {
             &wgpu::DeviceDescriptor {
                 // TODO
                 label: None,
-                features: wgpu::Features::DEPTH_CLAMPING
+                features: wgpu::Features::DEPTH_CLIP_CONTROL
                     | wgpu::Features::ADDRESS_MODE_CLAMP_TO_BORDER
                     | wgpu::Features::PUSH_CONSTANTS
                     | (adapter.features() & wgpu_profiler::GpuProfiler::REQUIRED_WGPU_FEATURES),
@@ -328,20 +329,21 @@ impl Renderer {
             );
         }
 
-        let format = adapter
-            .get_swap_chain_preferred_format(&surface)
+        let format = surface.get_preferred_format(&adapter)
             .expect("No supported swap chain format found");
         log::info!("Using {:?} as the swapchain format", format);
 
-        let sc_desc = wgpu::SwapChainDescriptor {
-            usage: wgpu::TextureUsage::RENDER_ATTACHMENT,
+        let sc_desc = wgpu::SurfaceConfiguration {
+            usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
             format,
             width: dims.width,
             height: dims.height,
             present_mode: other_modes.present_mode.into(),
         };
 
-        let swap_chain = device.create_swap_chain(&surface, &sc_desc);
+        surface.configure(&device, &sc_desc);
+
+        //let swap_chain = device.create_swap_chain(&surface, &sc_desc);
 
         let shadow_views = ShadowMap::create_shadow_views(
             &device,
@@ -483,7 +485,7 @@ impl Renderer {
             device,
             queue,
             surface,
-            swap_chain,
+            //swap_chain,
             sc_desc,
 
             state,
@@ -622,7 +624,9 @@ impl Renderer {
             self.resolution = dims;
             self.sc_desc.width = dims.x;
             self.sc_desc.height = dims.y;
-            self.swap_chain = self.device.create_swap_chain(&self.surface, &self.sc_desc);
+
+            self.surface.configure(&self.device, &self.sc_desc);
+            //self.swap_chain = self.device.create_swap_chain(&self.surface, &self.sc_desc);
 
             // Resize other render targets
             let (views, bloom_sizes) = Self::create_rt_views(
@@ -750,7 +754,7 @@ impl Renderer {
                 sample_count,
                 dimension: wgpu::TextureDimension::D2,
                 format: wgpu::TextureFormat::Rgba16Float,
-                usage: wgpu::TextureUsage::SAMPLED | wgpu::TextureUsage::RENDER_ATTACHMENT,
+                usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::RENDER_ATTACHMENT,
             });
 
             tex.create_view(&wgpu::TextureViewDescriptor {
@@ -794,7 +798,7 @@ impl Renderer {
             sample_count,
             dimension: wgpu::TextureDimension::D2,
             format: wgpu::TextureFormat::Depth32Float,
-            usage: wgpu::TextureUsage::SAMPLED | wgpu::TextureUsage::RENDER_ATTACHMENT,
+            usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::RENDER_ATTACHMENT,
         });
         let tgt_depth_view = tgt_depth_tex.create_view(&wgpu::TextureViewDescriptor {
             label: None,
@@ -818,7 +822,7 @@ impl Renderer {
             sample_count,
             dimension: wgpu::TextureDimension::D2,
             format: wgpu::TextureFormat::Depth32Float,
-            usage: wgpu::TextureUsage::RENDER_ATTACHMENT,
+            usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
         });
         // TODO: Consider no depth buffer for the final draw to the window?
         let win_depth_view = win_depth_tex.create_view(&wgpu::TextureViewDescriptor {
@@ -1050,26 +1054,30 @@ impl Renderer {
             }
         }
 
-        let tex = match self.swap_chain.get_current_frame() {
-            Ok(frame) => frame.output,
+        let tex = match self.surface.get_current_texture() {
+            Ok(frame) => {
+                let view = frame.texture.create_view(&wgpu::TextureViewDescriptor::default());
+                view
+            }
             // If lost recreate the swap chain
-            Err(err @ wgpu::SwapChainError::Lost) => {
+            Err(err @ wgpu::SurfaceError::Lost) => {
                 log::warn!("{}. Recreating swap chain. A frame will be missed", err);
                 self.on_resize(self.resolution);
                 return Ok(None);
             },
-            Err(wgpu::SwapChainError::Timeout) => {
+            Err(wgpu::SurfaceError::Timeout) => {
                 // This will probably be resolved on the next frame
                 // NOTE: we don't log this because it happens very frequently with
                 // PresentMode::Fifo and unlimited FPS on certain machines
                 return Ok(None);
             },
-            Err(err @ wgpu::SwapChainError::Outdated) => {
+            Err(err @ wgpu::SurfaceError::Outdated) => {
                 log::warn!("{}. Recreating the swapchain", err);
-                self.swap_chain = self.device.create_swap_chain(&self.surface, &self.sc_desc);
+                //self.swap_chain = self.device.create_swap_chain(&self.surface, &self.sc_desc);
+                self.surface.configure(&self.device, &self.sc_desc);
                 return Ok(None);
             },
-            Err(err @ wgpu::SwapChainError::OutOfMemory) => return Err(err.into()),
+            Err(err @ wgpu::SurfaceError::OutOfMemory) => return Err(err.into()),
         };
         let encoder = self
             .device
@@ -1421,7 +1429,7 @@ fn create_quad_index_buffer_u16(device: &wgpu::Device, vert_length: usize) -> Bu
         .map(|(i, b)| (i / 6 * 4 + b) as u16)
         .collect::<Vec<_>>();
 
-    Buffer::new(device, wgpu::BufferUsage::INDEX, &indices)
+    Buffer::new(device, wgpu::BufferUsages::INDEX, &indices)
 }
 
 fn create_quad_index_buffer_u32(device: &wgpu::Device, vert_length: usize) -> Buffer<u32> {
@@ -1435,5 +1443,5 @@ fn create_quad_index_buffer_u32(device: &wgpu::Device, vert_length: usize) -> Bu
         .map(|(i, b)| (i / 6 * 4 + b) as u32)
         .collect::<Vec<_>>();
 
-    Buffer::new(device, wgpu::BufferUsage::INDEX, &indices)
+    Buffer::new(device, wgpu::BufferUsages::INDEX, &indices)
 }

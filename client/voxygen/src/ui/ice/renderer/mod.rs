@@ -361,8 +361,8 @@ impl IcedRenderer {
     fn position_glyphs(
         &mut self,
         bounds: iced::Rectangle,
-        horizontal_alignment: iced::HorizontalAlignment,
-        vertical_alignment: iced::VerticalAlignment,
+        horizontal_alignment: iced::Alignment,
+        vertical_alignment: iced::Alignment,
         text: &str,
         size: u16,
         font: FontId,
@@ -371,15 +371,15 @@ impl IcedRenderer {
         // TODO: add option to align based on the geometry of the rendered glyphs
         // instead of all possible glyphs
         let (x, h_align) = match horizontal_alignment {
-            iced::HorizontalAlignment::Left => (bounds.x, HorizontalAlign::Left),
-            iced::HorizontalAlignment::Center => (bounds.center_x(), HorizontalAlign::Center),
-            iced::HorizontalAlignment::Right => (bounds.x + bounds.width, HorizontalAlign::Right),
+            iced::Alignment::Left => (bounds.x, HorizontalAlign::Left),
+            iced::Alignment::Center => (bounds.center_x(), HorizontalAlign::Center),
+            iced::Alignment::Right => (bounds.x + bounds.width, HorizontalAlign::Right),
         };
 
         let (y, v_align) = match vertical_alignment {
-            iced::VerticalAlignment::Top => (bounds.y, VerticalAlign::Top),
-            iced::VerticalAlignment::Center => (bounds.center_y(), VerticalAlign::Center),
-            iced::VerticalAlignment::Bottom => (bounds.y + bounds.height, VerticalAlign::Bottom),
+            iced::Alignment::Top => (bounds.y, VerticalAlign::Top),
+            iced::Alignment::Center => (bounds.center_y(), VerticalAlign::Center),
+            iced::Alignment::Bottom => (bounds.y + bounds.height, VerticalAlign::Bottom),
         };
 
         let p_scale = self.p_scale;
@@ -822,9 +822,9 @@ fn default_scissor(physical_resolution: Vec2<u32>) -> Aabr<u16> {
 
 impl iced::Renderer for IcedRenderer {
     // Default styling
-    type Defaults = Defaults;
-    // TODO: use graph of primitives to enable diffing???
-    type Output = (Primitive, iced::mouse::Interaction);
+    // type Defaults = Defaults;
+    // // TODO: use graph of primitives to enable diffing???
+    // type Output = (Primitive, iced::mouse::Interaction);
 
     fn layout<'a, M>(
         &mut self,
@@ -832,35 +832,33 @@ impl iced::Renderer for IcedRenderer {
         limits: &iced::layout::Limits,
     ) -> iced::layout::Node {
         
-
         // Trim text measurements cache?
-
         element.layout(self, limits)
     }
 
-    fn overlay(
-        &mut self,
-        (base_primitive, base_interaction): Self::Output,
-        (overlay_primitive, overlay_interaction): Self::Output,
-        overlay_bounds: iced::Rectangle,
-    ) -> Self::Output {
+    // fn overlay(
+    //     &mut self,
+    //     (base_primitive, base_interaction): Self::Output,
+    //     (overlay_primitive, overlay_interaction): Self::Output,
+    //     overlay_bounds: iced::Rectangle,
+    // ) -> Self::Output {
         
-        (
-            Primitive::Group {
-                primitives: vec![base_primitive, Primitive::Clip {
-                    bounds: iced::Rectangle {
-                        // TODO: do we need this + 0.5?
-                        width: overlay_bounds.width + 0.5,
-                        height: overlay_bounds.height + 0.5,
-                        ..overlay_bounds
-                    },
-                    offset: Vec2::new(0, 0),
-                    content: Box::new(overlay_primitive),
-                }],
-            },
-            base_interaction.max(overlay_interaction),
-        )
-    }
+    //     (
+    //         Primitive::Group {
+    //             primitives: vec![base_primitive, Primitive::Clip {
+    //                 bounds: iced::Rectangle {
+    //                     // TODO: do we need this + 0.5?
+    //                     width: overlay_bounds.width + 0.5,
+    //                     height: overlay_bounds.height + 0.5,
+    //                     ..overlay_bounds
+    //                 },
+    //                 offset: Vec2::new(0, 0),
+    //                 content: Box::new(overlay_primitive),
+    //             }],
+    //         },
+    //         base_interaction.max(overlay_interaction),
+    //     )
+    // }
 }
 
 fn apply_alpha(color: Rgba<f32>, alpha: f32) -> Rgba<f32> {

@@ -18,7 +18,9 @@ use crate::{
     window, GlobalState,
 };
 use i18n::{LanguageMetadata, LocalizationHandle};
-use iced::{text_input, Column, Container, HorizontalAlignment, Length, Row, Space};
+use iced::{Length, Horizontal};
+use iced::widget::{Text, Column, Container, text_input, Row, Space};
+
 use keyboard_keynames::key_layout::KeyLayout;
 //ImageFrame, Tooltip,
 use crate::settings::Settings;
@@ -239,10 +241,10 @@ impl Controls {
             .text_color(TEXT_COLOR)
             .disabled_text_color(DISABLED_TEXT_COLOR);
 
-        let alpha = iced::Text::new(&self.alpha)
+        let alpha = Text::new(&self.alpha)
             .size(self.fonts.cyri.scale(12))
             .width(Length::Fill)
-            .horizontal_alignment(HorizontalAlignment::Center);
+            .horizontal_alignment(Horizontal::Center);
 
         let top_text = Row::with_children(vec![
             Space::new(Length::Fill, Length::Shrink).into(),
@@ -251,10 +253,10 @@ impl Controls {
                 // Login screen shows the Velroen logo over the version
                 Space::new(Length::Fill, Length::Shrink).into()
             } else {
-                iced::Text::new(&self.version)
+                Text::new(&self.version)
                     .size(self.fonts.cyri.scale(15))
                     .width(Length::Fill)
-                    .horizontal_alignment(HorizontalAlignment::Right)
+                    .horizontal_alignment(Horizontal::Right)
                     .into()
             },
         ])
@@ -430,16 +432,16 @@ impl Controls {
         if let Screen::Login { screen, .. } = &mut self.screen {
             // TODO: add select all function in iced
             if screen.banner.username.is_focused() {
-                screen.banner.username = iced::text_input::State::new();
-                screen.banner.password = iced::text_input::State::focused();
+                screen.banner.username = text_input::State::new();
+                screen.banner.password = text_input::State::focused();
                 screen.banner.password.move_cursor_to_end();
             } else if screen.banner.password.is_focused() {
-                screen.banner.password = iced::text_input::State::new();
-                screen.banner.server = iced::text_input::State::focused();
+                screen.banner.password = text_input::State::new();
+                screen.banner.server = text_input::State::focused();
                 screen.banner.server.move_cursor_to_end();
             } else if screen.banner.server.is_focused() {
-                screen.banner.server = iced::text_input::State::new();
-                screen.banner.username = iced::text_input::State::focused();
+                screen.banner.server = text_input::State::new();
+                screen.banner.username = text_input::State::focused();
                 screen.banner.username.move_cursor_to_end();
             }
         }

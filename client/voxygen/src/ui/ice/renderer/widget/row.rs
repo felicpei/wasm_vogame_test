@@ -1,5 +1,6 @@
 use super::super::{IcedRenderer, Primitive};
-use iced::{mouse, row, Element, Layout, Point, Rectangle};
+use iced::{mouse, Element, Layout, Point, Rectangle};
+use iced::widget::row;
 
 impl row::Renderer for IcedRenderer {
     fn draw<M>(

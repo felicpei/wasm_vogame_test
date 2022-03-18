@@ -13,7 +13,9 @@ use crate::{
 };
 use common::assets::{self, AssetExt};
 use i18n::Localization;
-use iced::{button, Align, Column, Container, Length, Row, Space, Text};
+use iced::{Length,Alignment};
+use iced::widget::{button, Column, Container, Row, Space, Text};
+
 use keyboard_keynames::key_layout::KeyLayout;
 use serde::{Deserialize, Serialize};
 
@@ -138,7 +140,7 @@ impl Screen {
                         .width(Length::Fill)
                         .height(Length::Fill)
                         .center_x()
-                        .align_y(Align::End)
+                        .align_y(Alignment::End)
                         .into()
                 } else {
                     Space::new(Length::Fill, Length::Fill).into()
@@ -158,7 +160,7 @@ impl Screen {
 
                 let tip_cancel = Column::with_children(vec![tip, cancel.into()])
                     .width(Length::FillPortion(3))
-                    .align_items(Align::Center)
+                    .align_items(Alignment::Center)
                     .spacing(5)
                     .padding(5);
 
@@ -169,14 +171,14 @@ impl Screen {
                 )
                 .width(Length::Fill)
                 .padding(10)
-                .align_x(Align::End);
+                .align_x(Alignment::End);
 
                 let bottom_content = Row::with_children(vec![
                     Space::new(Length::Fill, Length::Shrink).into(),
                     tip_cancel.into(),
                     gear.into(),
                 ])
-                .align_items(Align::Center)
+                .align_items(Alignment::Center)
                 .width(Length::Fill);
 
                 let left_art = Image::new(imgs.loading_art_l)

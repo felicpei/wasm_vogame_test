@@ -22,7 +22,7 @@ impl TakeScreenshot {
         blit_layout: &blit::BlitLayout,
         sampler: &wgpu::Sampler,
         // Used to determine the resolution and texture format
-        sc_desc: &wgpu::SwapChainDescriptor,
+        sc_desc: &wgpu::SurfaceConfiguration,
         // Function that is given the image after downloading it from the GPU
         // This is executed in a background thread
         screenshot_fn: ScreenshotFn,
@@ -38,9 +38,9 @@ impl TakeScreenshot {
             sample_count: 1,
             dimension: wgpu::TextureDimension::D2,
             format: sc_desc.format,
-            usage: wgpu::TextureUsage::COPY_SRC
-                | wgpu::TextureUsage::SAMPLED
-                | wgpu::TextureUsage::RENDER_ATTACHMENT,
+            usage: wgpu::TextureUsages::COPY_SRC
+                | wgpu::TextureUsages::TEXTURE_BINDING
+                | wgpu::TextureUsages::RENDER_ATTACHMENT,
         });
 
         let view = texture.create_view(&wgpu::TextureViewDescriptor {
@@ -62,7 +62,7 @@ impl TakeScreenshot {
         let buffer = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("screenshot download buffer"),
             size: (padded_bytes_per_row * sc_desc.height) as u64,
-            usage: wgpu::BufferUsage::COPY_DST | wgpu::BufferUsage::MAP_READ,
+            usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
             mapped_at_creation: false,
         });
 
@@ -102,6 +102,7 @@ impl TakeScreenshot {
                 texture: &self.texture,
                 mip_level: 0,
                 origin: wgpu::Origin3d::ZERO,
+                aspect: wgpu::TextureAspect::All,
             },
             wgpu::ImageCopyBuffer {
                 buffer: &self.buffer,

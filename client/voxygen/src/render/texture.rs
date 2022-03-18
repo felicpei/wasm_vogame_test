@@ -56,7 +56,7 @@ impl Texture {
             sample_count: 1,
             dimension: wgpu::TextureDimension::D2,
             format,
-            usage: wgpu::TextureUsage::SAMPLED | wgpu::TextureUsage::COPY_DST,
+            usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
         });
 
         queue.write_texture(
@@ -64,6 +64,7 @@ impl Texture {
                 texture: &tex,
                 mip_level: 0,
                 origin: wgpu::Origin3d::ZERO,
+                aspect: wgpu::TextureAspect::All,
             },
             buffer.as_slice(),
             wgpu::ImageDataLayout {
@@ -129,7 +130,7 @@ impl Texture {
             dimension: wgpu::TextureDimension::D2,
             format: wgpu::TextureFormat::Rgba8UnormSrgb,
             // TODO: nondynamic version doesn't seeem to have different usage, unify code?
-            usage: wgpu::TextureUsage::SAMPLED | wgpu::TextureUsage::COPY_DST,
+            usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
         };
 
         let sampler_info = wgpu::SamplerDescriptor {
@@ -210,6 +211,7 @@ impl Texture {
                     y: offset[1],
                     z: 0,
                 },
+                aspect: wgpu::TextureAspect::All,
             },
             data,
             wgpu::ImageDataLayout {

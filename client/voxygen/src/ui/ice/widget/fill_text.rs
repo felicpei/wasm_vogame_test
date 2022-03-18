@@ -1,5 +1,5 @@
-use iced::{layout, Element, Hasher, Layout, Length, Point, Rectangle, Size, Widget};
-use std::hash::Hash;
+use iced::widget::{Text};
+use iced::{Element, Size, Widget, Point, Length, Rectangle, Layout, layout };
 
 const DEFAULT_FILL_FRACTION: f32 = 1.0;
 const DEFAULT_VERTICAL_ADJUSTMENT: f32 = 0.05;
@@ -20,7 +20,7 @@ where
     // TODO: use the produced glyph geometry directly to do this and/or add support to
     // layouting library
     vertical_adjustment: f32,
-    text: iced::Text<R>,
+    text: Text<R>,
 }
 
 impl<R> FillText<R>
@@ -32,7 +32,7 @@ where
             //max_font_size: u16::MAX,
             fill_fraction: DEFAULT_FILL_FRACTION,
             vertical_adjustment: DEFAULT_VERTICAL_ADJUSTMENT,
-            text: iced::Text::new(label),
+            text: Text::new(label),
         }
     }
 
@@ -81,8 +81,8 @@ where
 
         // Size adjusted for centering
         text.align(
-            iced::Align::Center,
-            iced::Align::Center,
+            iced::Alignment::Center,
+            iced::Alignment::Center,
             Size::new(
                 size.width,
                 size.height - 2.0 * font_size as f32 * self.vertical_adjustment,
@@ -112,14 +112,14 @@ where
         )
     }
 
-    fn hash_layout(&self, state: &mut Hasher) {
-        struct Marker;
-        std::any::TypeId::of::<Marker>().hash(state);
+    // fn hash_layout(&self, state: &mut Hasher) {
+    //     struct Marker;
+    //     std::any::TypeId::of::<Marker>().hash(state);
 
-        self.fill_fraction.to_bits().hash(state);
-        self.vertical_adjustment.to_bits().hash(state);
-        Widget::<M, R>::hash_layout(&self.text, state);
-    }
+    //     self.fill_fraction.to_bits().hash(state);
+    //     self.vertical_adjustment.to_bits().hash(state);
+    //     Widget::<M, R>::hash_layout(&self.text, state);
+    // }
 }
 
 impl<'a, M, R> From<FillText<R>> for Element<'a, M, R>

@@ -34,7 +34,7 @@ impl Vertex {
         const ATTRIBUTES: [wgpu::VertexAttribute; 1] = wgpu::vertex_attr_array![0 => Uint32];
         wgpu::VertexBufferLayout {
             array_stride: Self::STRIDE,
-            step_mode: wgpu::InputStepMode::Vertex,
+            step_mode: wgpu::VertexStepMode::Vertex,
             attributes: &ATTRIBUTES,
         }
     }
@@ -90,7 +90,7 @@ impl FluidPipeline {
                 strip_index_format: None,
                 front_face: wgpu::FrontFace::Ccw,
                 cull_mode: None,
-                clamp_depth: false,
+                unclipped_depth: false,
                 polygon_mode: wgpu::PolygonMode::Fill,
                 conservative: false,
             },
@@ -132,9 +132,10 @@ impl FluidPipeline {
                             operation: wgpu::BlendOperation::Add,
                         },
                     }),
-                    write_mask: wgpu::ColorWrite::ALL,
+                    write_mask: wgpu::ColorWrites::ALL,
                 }],
             }),
+            multiview: None,
         });
 
         Self {

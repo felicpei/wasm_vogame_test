@@ -4,8 +4,9 @@ use crate::ui::{
     ice::{component::neat_button, style, Element},
 };
 use i18n::Localization;
-use iced::{
-    button, scrollable, Align, Button, Column, Container, Length, Row, Scrollable, Space, Text,
+use iced::{Length, Alignment, Horizontal};
+use iced::widget::{
+    button, scrollable, Button, Column, Container, Row, Scrollable, Space, Text,
 };
 
 pub struct Screen {
@@ -37,7 +38,7 @@ impl Screen {
         let title = Text::new(i18n.get("main.servers.select_server"))
             .size(fonts.cyri.scale(35))
             .width(Length::Fill)
-            .horizontal_alignment(iced::HorizontalAlignment::Center);
+            .horizontal_alignment(iced::Horizontal::Center);
 
         let back_button = Container::new(
             Container::new(neat_button(
@@ -50,7 +51,7 @@ impl Screen {
             .max_width(200),
         )
         .width(Length::Fill)
-        .align_x(Align::Center);
+        .align_x(Horizontal::Center);
 
         let delete_button = Container::new(
             Container::new(neat_button(
@@ -63,11 +64,11 @@ impl Screen {
             .max_width(200),
         )
         .width(Length::Fill)
-        .align_x(Align::Center);
+        .align_x(Horizontal::Center);
 
         let mut list = Scrollable::new(&mut self.servers_list)
             .spacing(8)
-            .align_items(Align::Start)
+            .align_items(Alignment::Start)
             .width(Length::Fill)
             .height(Length::Fill);
 
@@ -94,7 +95,7 @@ impl Screen {
                             Text::new(server.as_ref())
                                 .size(fonts.cyri.scale(30))
                                 .width(Length::FillPortion(95))
-                                .vertical_alignment(iced::VerticalAlignment::Center)
+                                .vertical_alignment(iced::Vertical::Center)
                                 .into(),
                         ]),
                     )
@@ -141,7 +142,7 @@ impl Screen {
             .max_width(500),
         )
         .width(Length::Fill)
-        .align_x(Align::Center)
+        .align_x(Horizontal::Center)
         .padding(80)
         .into()
     }

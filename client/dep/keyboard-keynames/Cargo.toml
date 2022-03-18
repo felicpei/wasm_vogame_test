@@ -13,7 +13,11 @@ categories = ["game-development", "os"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-winit = "=0.25"
+
+[dependencies.winit]
+version = "0.26"
+git = "https://github.com/iced-rs/winit"
+rev = "02a12380960cec2f351c09a33d6a7cc2789d96a6"
 
 [target.'cfg(windows)'.dependencies]
 winapi = "0.3.9"

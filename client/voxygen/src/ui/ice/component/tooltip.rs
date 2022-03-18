@@ -1,5 +1,7 @@
 use crate::ui::ice as ui;
-use iced::{Container, Element, Text};
+use iced::Element;
+use iced::widget::{Container, Text};
+
 use ui::{
     style,
     widget::{Tooltip, TooltipManager},

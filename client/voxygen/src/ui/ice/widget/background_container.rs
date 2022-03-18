@@ -1,5 +1,5 @@
 use iced::{
-    layout, Clipboard, Element, Event, Hasher, Layout, Length, Point, Rectangle, Size, Widget,
+    layout, Element, Event, Layout, Length, Point, Rectangle, Size, Widget,
 };
 use std::{hash::Hash, u32};
 
@@ -278,20 +278,20 @@ where
         )
     }
 
-    fn hash_layout(&self, state: &mut Hasher) {
-        struct Marker;
-        std::any::TypeId::of::<Marker>().hash(state);
+    // fn hash_layout(&self, state: &mut Hasher) {
+    //     struct Marker;
+    //     std::any::TypeId::of::<Marker>().hash(state);
 
-        self.width().hash(state);
-        self.height().hash(state);
-        self.max_width.hash(state);
-        self.max_height.hash(state);
-        self.background.aspect_ratio_fixed().hash(state);
-        self.padding.hash(state);
-        // TODO: add pixel dims (need renderer)
+    //     self.width().hash(state);
+    //     self.height().hash(state);
+    //     self.max_width.hash(state);
+    //     self.max_height.hash(state);
+    //     self.background.aspect_ratio_fixed().hash(state);
+    //     self.padding.hash(state);
+    //     // TODO: add pixel dims (need renderer)
 
-        self.content.hash_layout(state);
-    }
+    //     self.content.hash_layout(state);
+    // }
 
     fn on_event(
         &mut self,
@@ -299,7 +299,7 @@ where
         layout: Layout<'_>,
         cursor_position: Point,
         renderer: &R,
-        clipboard: &mut dyn Clipboard,
+        clipboard: &mut dyn iced::native::Clipboard,
         messages: &mut Vec<M>,
     ) -> iced::event::Status {
         self.content.on_event(
@@ -312,8 +312,8 @@ where
         )
     }
 
-    fn overlay(&mut self, layout: Layout<'_>) -> Option<iced::overlay::Element<'_, M, R>> {
-        self.content.overlay(layout.children().next().unwrap())
+    fn overlay(&mut self, layout: Layout<'_>, renderer: &R) -> Option<iced::overlay::Element<'_, M, R>> {
+        self.content.overlay(layout.children().next().unwrap(), renderer)
     }
 }
 

@@ -1,5 +1,5 @@
 use super::super::{IcedRenderer, Primitive};
-use iced::{mouse, space, Rectangle};
+use iced::{mouse, widget::space, Rectangle};
 
 impl space::Renderer for IcedRenderer {
     fn draw(&mut self, _bounds: Rectangle) -> Self::Output {

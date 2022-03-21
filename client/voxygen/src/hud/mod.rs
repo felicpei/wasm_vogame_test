@@ -56,7 +56,7 @@ use crate::{
     ecs::{comp as vcomp, comp::HpFloaterList},
     game_input::GameInput,
     hud::{img_ids::ImgsRot, prompt_dialog::DialogOutcomeEvent},
-    render::UiDrawer,
+    render::ThirdPassDrawer,
     scene::{
         camera::{self, Camera},
         terrain::Interaction,
@@ -2609,52 +2609,6 @@ impl Hud {
             .font_size(self.fonts.cyri.scale(14))
             .set(self.ids.graphics_backend, ui_widgets);
 
-            let gpu_timings = global_state.window.renderer().timings();
-            let mut timings_height = 0.0;
-
-            // GPU timing for different pipelines
-            if !gpu_timings.is_empty() {
-                let num_timings = gpu_timings.len();
-                // Make sure we have enough ids
-                if self.ids.gpu_timings.len() < num_timings {
-                    self.ids
-                        .gpu_timings
-                        .resize(num_timings, &mut ui_widgets.widget_id_generator());
-                }
-
-                for (i, timing) in gpu_timings.iter().enumerate() {
-                    let timings_text = &format!(
-                        "{:16}{:.3} ms",
-                        &format!("{}:", timing.1),
-                        timing.2 * 1000.0,
-                    );
-                    let timings_widget = Text::new(timings_text)
-                        .color(TEXT_COLOR)
-                        .down(V_PAD)
-                        .x_place_on(
-                            self.ids.debug_bg,
-                            conrod_core::position::Place::Start(Some(
-                                H_PAD + 10.0 * timing.0 as f64,
-                            )),
-                        )
-                        .font_id(self.fonts.cyri.conrod_id)
-                        .font_size(self.fonts.cyri.scale(14));
-
-                    // Calculate timings height
-                    timings_height += timings_widget.get_h(ui_widgets).unwrap_or(0.0) + V_PAD;
-
-                    timings_widget.set(self.ids.gpu_timings[i], ui_widgets);
-                }
-            }
-
-            // Set debug box dimensions, only timings height is dynamic
-            // TODO: Make the background box size fully dynamic
-            let debug_bg_size = [320.0, 370.0 + timings_height];
-
-            Rectangle::fill(debug_bg_size)
-                .rgba(0.0, 0.0, 0.0, global_state.settings.chat.chat_opacity)
-                .top_left_with_margins_on(ui_widgets.window, 10.0, 10.0)
-                .set(self.ids.debug_bg, ui_widgets);
         }
 
         if global_state.settings.interface.toggle_hotkey_hints {
@@ -4176,7 +4130,7 @@ impl Hud {
     #[inline]
     pub fn clear_cursor(&mut self) { self.slot_manager.idle(); }
 
-    pub fn render<'a>(&'a self, drawer: &mut UiDrawer<'_, 'a>) {
+    pub fn render<'a>(&'a self, drawer: &mut ThirdPassDrawer<'a>) {
         
         // Don't show anything if the UI is toggled off.
         if self.show.ui {

@@ -1,12 +1,12 @@
 //! Distribute content vertically.
+use std::hash::Hash;
+
 use crate::event::{self, Event};
 use crate::layout;
-use crate::mouse;
 use crate::overlay;
-use crate::renderer;
 use crate::{
-    Alignment, Clipboard, Element, Layout, Length, Padding, Point, Rectangle,
-    Shell, Widget,
+    Alignment, Clipboard, Element, Hasher, Layout, Length, Padding, Point,
+    Rectangle, Widget,
 };
 
 use std::u32;
@@ -105,7 +105,7 @@ impl<'a, Message, Renderer> Column<'a, Message, Renderer> {
 impl<'a, Message, Renderer> Widget<Message, Renderer>
     for Column<'a, Message, Renderer>
 where
-    Renderer: crate::Renderer,
+    Renderer: self::Renderer,
 {
     fn width(&self) -> Length {
         self.width
@@ -144,7 +144,7 @@ where
         cursor_position: Point,
         renderer: &Renderer,
         clipboard: &mut dyn Clipboard,
-        shell: &mut Shell<'_, Message>,
+        messages: &mut Vec<Message>,
     ) -> event::Status {
         self.children
             .iter_mut()
@@ -156,66 +156,85 @@ where
                     cursor_position,
                     renderer,
                     clipboard,
-                    shell,
+                    messages,
                 )
             })
             .fold(event::Status::Ignored, event::Status::merge)
     }
 
-    fn mouse_interaction(
-        &self,
-        layout: Layout<'_>,
-        cursor_position: Point,
-        viewport: &Rectangle,
-        renderer: &Renderer,
-    ) -> mouse::Interaction {
-        self.children
-            .iter()
-            .zip(layout.children())
-            .map(|(child, layout)| {
-                child.widget.mouse_interaction(
-                    layout,
-                    cursor_position,
-                    viewport,
-                    renderer,
-                )
-            })
-            .max()
-            .unwrap_or_default()
-    }
-
     fn draw(
         &self,
         renderer: &mut Renderer,
-        style: &renderer::Style,
+        defaults: &Renderer::Defaults,
         layout: Layout<'_>,
         cursor_position: Point,
         viewport: &Rectangle,
-    ) {
-        for (child, layout) in self.children.iter().zip(layout.children()) {
-            child.draw(renderer, style, layout, cursor_position, viewport);
+    ) -> Renderer::Output {
+        renderer.draw(
+            defaults,
+            &self.children,
+            layout,
+            cursor_position,
+            viewport,
+        )
+    }
+
+    fn hash_layout(&self, state: &mut Hasher) {
+        struct Marker;
+        std::any::TypeId::of::<Marker>().hash(state);
+
+        self.width.hash(state);
+        self.height.hash(state);
+        self.max_width.hash(state);
+        self.max_height.hash(state);
+        self.align_items.hash(state);
+        self.spacing.hash(state);
+        self.padding.hash(state);
+
+        for child in &self.children {
+            child.widget.hash_layout(state);
         }
     }
 
     fn overlay(
         &mut self,
         layout: Layout<'_>,
-        renderer: &Renderer,
     ) -> Option<overlay::Element<'_, Message, Renderer>> {
         self.children
             .iter_mut()
             .zip(layout.children())
-            .filter_map(|(child, layout)| {
-                child.widget.overlay(layout, renderer)
-            })
+            .filter_map(|(child, layout)| child.widget.overlay(layout))
             .next()
     }
+}
+
+/// The renderer of a [`Column`].
+///
+/// Your [renderer] will need to implement this trait before being
+/// able to use a [`Column`] in your user interface.
+///
+/// [renderer]: crate::renderer
+pub trait Renderer: crate::Renderer + Sized {
+    /// Draws a [`Column`].
+    ///
+    /// It receives:
+    /// - the children of the [`Column`]
+    /// - the [`Layout`] of the [`Column`] and its children
+    /// - the cursor position
+    fn draw<Message>(
+        &mut self,
+        defaults: &Self::Defaults,
+        content: &[Element<'_, Message, Self>],
+        layout: Layout<'_>,
+        cursor_position: Point,
+        viewport: &Rectangle,
+    ) -> Self::Output;
 }
 
 impl<'a, Message, Renderer> From<Column<'a, Message, Renderer>>
     for Element<'a, Message, Renderer>
 where
-    Renderer: 'a + crate::Renderer,
+    Renderer: 'a + self::Renderer,
     Message: 'a,
 {
     fn from(

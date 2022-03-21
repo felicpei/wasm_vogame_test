@@ -17,7 +17,7 @@ use crate::{
     error::Error,
     render::{
         create_ui_quad, create_ui_quad_vert_gradient, DynamicModel, Mesh, Renderer, UiBoundLocals,
-        UiDrawer, UiLocals, UiMode, UiVertex,
+        ThirdPassDrawer, UiLocals, UiMode, UiVertex,
     },
 };
 use common::{slowjob::SlowJobPool, util::srgba_to_linear};
@@ -361,8 +361,8 @@ impl IcedRenderer {
     fn position_glyphs(
         &mut self,
         bounds: iced::Rectangle,
-        horizontal_alignment: iced::Alignment,
-        vertical_alignment: iced::Alignment,
+        horizontal_alignment: iced::Horizontal,
+        vertical_alignment: iced::Vertical,
         text: &str,
         size: u16,
         font: FontId,
@@ -371,15 +371,15 @@ impl IcedRenderer {
         // TODO: add option to align based on the geometry of the rendered glyphs
         // instead of all possible glyphs
         let (x, h_align) = match horizontal_alignment {
-            iced::Alignment::Left => (bounds.x, HorizontalAlign::Left),
-            iced::Alignment::Center => (bounds.center_x(), HorizontalAlign::Center),
-            iced::Alignment::Right => (bounds.x + bounds.width, HorizontalAlign::Right),
+            iced::Horizontal::Left => (bounds.x, HorizontalAlign::Left),
+            iced::Horizontal::Center => (bounds.center_x(), HorizontalAlign::Center),
+            iced::Horizontal::Right => (bounds.x + bounds.width, HorizontalAlign::Right),
         };
 
         let (y, v_align) = match vertical_alignment {
-            iced::Alignment::Top => (bounds.y, VerticalAlign::Top),
-            iced::Alignment::Center => (bounds.center_y(), VerticalAlign::Center),
-            iced::Alignment::Bottom => (bounds.y + bounds.height, VerticalAlign::Bottom),
+            iced::Vertical::Top => (bounds.y, VerticalAlign::Top),
+            iced::Vertical::Center => (bounds.center_y(), VerticalAlign::Center),
+            iced::Vertical::Bottom => (bounds.y + bounds.height, VerticalAlign::Bottom),
         };
 
         let p_scale = self.p_scale;
@@ -772,16 +772,15 @@ impl IcedRenderer {
         }
     }
 
-    pub fn render<'a>(&'a self, drawer: &mut UiDrawer<'_, 'a>) {
-        
-        let mut drawer = drawer.prepare(&self.interface_locals, &self.model, self.window_scissor);
+    pub fn render<'a>(&'a self,  drawer: &mut ThirdPassDrawer<'a>) {
+        drawer.ui_prepare(&self.interface_locals, &self.model, self.window_scissor);
         for draw_command in self.draw_commands.iter() {
             match draw_command {
                 DrawCommand::Scissor(new_scissor) => {
-                    drawer.set_scissor(*new_scissor);
+                    drawer.ui_set_scissor(*new_scissor);
                 },
                 DrawCommand::WorldPos(index) => {
-                    drawer.set_locals(
+                    drawer.ui_set_locals(
                         index.map_or(&self.interface_locals, |i| &self.ingame_locals[i]),
                     );
                 },
@@ -791,7 +790,7 @@ impl IcedRenderer {
                         DrawKind::Image(tex_id) => self.cache.graphic_cache().get_tex(*tex_id),
                         DrawKind::Plain => self.cache.glyph_cache_tex(),
                     };
-                    drawer.draw(&tex.1, verts.clone()); // Note: trivial clone
+                    drawer.ui_draw(&tex.1, verts.clone()); // Note: trivial clone
                 },
             }
         }
@@ -822,9 +821,9 @@ fn default_scissor(physical_resolution: Vec2<u32>) -> Aabr<u16> {
 
 impl iced::Renderer for IcedRenderer {
     // Default styling
-    // type Defaults = Defaults;
-    // // TODO: use graph of primitives to enable diffing???
-    // type Output = (Primitive, iced::mouse::Interaction);
+    type Defaults = Defaults;
+    // TODO: use graph of primitives to enable diffing???
+    type Output = (Primitive, iced::mouse::Interaction);
 
     fn layout<'a, M>(
         &mut self,
@@ -836,29 +835,29 @@ impl iced::Renderer for IcedRenderer {
         element.layout(self, limits)
     }
 
-    // fn overlay(
-    //     &mut self,
-    //     (base_primitive, base_interaction): Self::Output,
-    //     (overlay_primitive, overlay_interaction): Self::Output,
-    //     overlay_bounds: iced::Rectangle,
-    // ) -> Self::Output {
+    fn overlay(
+        &mut self,
+        (base_primitive, base_interaction): Self::Output,
+        (overlay_primitive, overlay_interaction): Self::Output,
+        overlay_bounds: iced::Rectangle,
+    ) -> Self::Output {
         
-    //     (
-    //         Primitive::Group {
-    //             primitives: vec![base_primitive, Primitive::Clip {
-    //                 bounds: iced::Rectangle {
-    //                     // TODO: do we need this + 0.5?
-    //                     width: overlay_bounds.width + 0.5,
-    //                     height: overlay_bounds.height + 0.5,
-    //                     ..overlay_bounds
-    //                 },
-    //                 offset: Vec2::new(0, 0),
-    //                 content: Box::new(overlay_primitive),
-    //             }],
-    //         },
-    //         base_interaction.max(overlay_interaction),
-    //     )
-    // }
+        (
+            Primitive::Group {
+                primitives: vec![base_primitive, Primitive::Clip {
+                    bounds: iced::Rectangle {
+                        // TODO: do we need this + 0.5?
+                        width: overlay_bounds.width + 0.5,
+                        height: overlay_bounds.height + 0.5,
+                        ..overlay_bounds
+                    },
+                    offset: Vec2::new(0, 0),
+                    content: Box::new(overlay_primitive),
+                }],
+            },
+            base_interaction.max(overlay_interaction),
+        )
+    }
 }
 
 fn apply_alpha(color: Rgba<f32>, alpha: f32) -> Rgba<f32> {

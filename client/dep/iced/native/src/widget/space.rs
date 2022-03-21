@@ -1,7 +1,9 @@
 //! Distribute content vertically.
-use crate::layout;
-use crate::renderer;
-use crate::{Element, Layout, Length, Point, Rectangle, Size, Widget};
+use std::hash::Hash;
+
+use crate::{
+    layout, Element, Hasher, Layout, Length, Point, Rectangle, Size, Widget,
+};
 
 /// An amount of empty space.
 ///
@@ -37,7 +39,7 @@ impl Space {
 
 impl<Message, Renderer> Widget<Message, Renderer> for Space
 where
-    Renderer: crate::Renderer,
+    Renderer: self::Renderer,
 {
     fn width(&self) -> Length {
         self.width
@@ -59,18 +61,34 @@ where
 
     fn draw(
         &self,
-        _renderer: &mut Renderer,
-        _style: &renderer::Style,
-        _layout: Layout<'_>,
+        renderer: &mut Renderer,
+        _defaults: &Renderer::Defaults,
+        layout: Layout<'_>,
         _cursor_position: Point,
         _viewport: &Rectangle,
-    ) {
+    ) -> Renderer::Output {
+        renderer.draw(layout.bounds())
     }
+
+    fn hash_layout(&self, state: &mut Hasher) {
+        std::any::TypeId::of::<Space>().hash(state);
+
+        self.width.hash(state);
+        self.height.hash(state);
+    }
+}
+
+/// The renderer of an amount of [`Space`].
+pub trait Renderer: crate::Renderer {
+    /// Draws an amount of empty [`Space`].
+    ///
+    /// You should most likely return an empty primitive here.
+    fn draw(&mut self, bounds: Rectangle) -> Self::Output;
 }
 
 impl<'a, Message, Renderer> From<Space> for Element<'a, Message, Renderer>
 where
-    Renderer: crate::Renderer,
+    Renderer: self::Renderer,
     Message: 'a,
 {
     fn from(space: Space) -> Element<'a, Message, Renderer> {

@@ -1,24 +1,21 @@
 //! Navigate an endless amount of content with a scrollbar.
+use crate::column;
 use crate::event::{self, Event};
 use crate::layout;
 use crate::mouse;
 use crate::overlay;
-use crate::renderer;
 use crate::touch;
-use crate::widget::Column;
 use crate::{
-    Alignment, Background, Clipboard, Color, Element, Layout, Length, Padding,
-    Point, Rectangle, Shell, Size, Vector, Widget,
+    Alignment, Clipboard, Column, Element, Hasher, Layout, Length, Padding, Point,
+    Rectangle, Size, Vector, Widget,
 };
 
-use std::{f32, u32};
-
-pub use iced_style::scrollable::StyleSheet;
+use std::{f32, hash::Hash, u32};
 
 /// A widget that can vertically display an infinite amount of content with a
 /// scrollbar.
 #[allow(missing_debug_implementations)]
-pub struct Scrollable<'a, Message, Renderer> {
+pub struct Scrollable<'a, Message, Renderer: self::Renderer> {
     state: &'a mut State,
     height: Length,
     max_height: u32,
@@ -27,10 +24,10 @@ pub struct Scrollable<'a, Message, Renderer> {
     scroller_width: u16,
     content: Column<'a, Message, Renderer>,
     on_scroll: Option<Box<dyn Fn(f32) -> Message>>,
-    style_sheet: Box<dyn StyleSheet + 'a>,
+    style: Renderer::Style,
 }
 
-impl<'a, Message, Renderer: crate::Renderer> Scrollable<'a, Message, Renderer> {
+impl<'a, Message, Renderer: self::Renderer> Scrollable<'a, Message, Renderer> {
     /// Creates a new [`Scrollable`] with the given [`State`].
     pub fn new(state: &'a mut State) -> Self {
         Scrollable {
@@ -42,7 +39,7 @@ impl<'a, Message, Renderer: crate::Renderer> Scrollable<'a, Message, Renderer> {
             scroller_width: 10,
             content: Column::new(),
             on_scroll: None,
-            style_sheet: Default::default(),
+            style: Renderer::Style::default(),
         }
     }
 
@@ -123,11 +120,8 @@ impl<'a, Message, Renderer: crate::Renderer> Scrollable<'a, Message, Renderer> {
     }
 
     /// Sets the style of the [`Scrollable`] .
-    pub fn style(
-        mut self,
-        style_sheet: impl Into<Box<dyn StyleSheet + 'a>>,
-    ) -> Self {
-        self.style_sheet = style_sheet.into();
+    pub fn style(mut self, style: impl Into<Renderer::Style>) -> Self {
+        self.style = style.into();
         self
     }
 
@@ -144,67 +138,17 @@ impl<'a, Message, Renderer: crate::Renderer> Scrollable<'a, Message, Renderer> {
         &self,
         bounds: Rectangle,
         content_bounds: Rectangle,
-        shell: &mut Shell<'_, Message>,
+        messages: &mut Vec<Message>,
     ) {
         if content_bounds.height <= bounds.height {
             return;
         }
 
         if let Some(on_scroll) = &self.on_scroll {
-            shell.publish(on_scroll(
+            messages.push(on_scroll(
                 self.state.offset.absolute(bounds, content_bounds)
                     / (content_bounds.height - bounds.height),
             ));
-        }
-    }
-
-    fn scrollbar(
-        &self,
-        bounds: Rectangle,
-        content_bounds: Rectangle,
-    ) -> Option<Scrollbar> {
-        let offset = self.state.offset(bounds, content_bounds);
-
-        if content_bounds.height > bounds.height {
-            let outer_width = self.scrollbar_width.max(self.scroller_width)
-                + 2 * self.scrollbar_margin;
-
-            let outer_bounds = Rectangle {
-                x: bounds.x + bounds.width - outer_width as f32,
-                y: bounds.y,
-                width: outer_width as f32,
-                height: bounds.height,
-            };
-
-            let scrollbar_bounds = Rectangle {
-                x: bounds.x + bounds.width
-                    - f32::from(outer_width / 2 + self.scrollbar_width / 2),
-                y: bounds.y,
-                width: self.scrollbar_width as f32,
-                height: bounds.height,
-            };
-
-            let ratio = bounds.height / content_bounds.height;
-            let scroller_height = bounds.height * ratio;
-            let y_offset = offset as f32 * ratio;
-
-            let scroller_bounds = Rectangle {
-                x: bounds.x + bounds.width
-                    - f32::from(outer_width / 2 + self.scroller_width / 2),
-                y: scrollbar_bounds.y + y_offset,
-                width: self.scroller_width as f32,
-                height: scroller_height,
-            };
-
-            Some(Scrollbar {
-                outer_bounds,
-                bounds: scrollbar_bounds,
-                scroller: Scroller {
-                    bounds: scroller_bounds,
-                },
-            })
-        } else {
-            None
         }
     }
 }
@@ -212,7 +156,7 @@ impl<'a, Message, Renderer: crate::Renderer> Scrollable<'a, Message, Renderer> {
 impl<'a, Message, Renderer> Widget<Message, Renderer>
     for Scrollable<'a, Message, Renderer>
 where
-    Renderer: crate::Renderer,
+    Renderer: self::Renderer,
 {
     fn width(&self) -> Length {
         Widget::<Message, Renderer>::width(&self.content)
@@ -250,7 +194,7 @@ where
         cursor_position: Point,
         renderer: &Renderer,
         clipboard: &mut dyn Clipboard,
-        shell: &mut Shell<'_, Message>,
+        messages: &mut Vec<Message>,
     ) -> event::Status {
         let bounds = layout.bounds();
         let is_mouse_over = bounds.contains(cursor_position);
@@ -258,7 +202,15 @@ where
         let content = layout.children().next().unwrap();
         let content_bounds = content.bounds();
 
-        let scrollbar = self.scrollbar(bounds, content_bounds);
+        let offset = self.state.offset(bounds, content_bounds);
+        let scrollbar = renderer.scrollbar(
+            bounds,
+            content_bounds,
+            offset,
+            self.scrollbar_width,
+            self.scrollbar_margin,
+            self.scroller_width,
+        );
         let is_mouse_over_scrollbar = scrollbar
             .as_ref()
             .map(|scrollbar| scrollbar.is_mouse_over(cursor_position))
@@ -285,7 +237,7 @@ where
                 cursor_position,
                 renderer,
                 clipboard,
-                shell,
+                messages,
             )
         };
 
@@ -306,7 +258,7 @@ where
                         }
                     }
 
-                    self.notify_on_scroll(bounds, content_bounds, shell);
+                    self.notify_on_scroll(bounds, content_bounds, messages);
 
                     return event::Status::Captured;
                 }
@@ -335,7 +287,7 @@ where
                                 self.notify_on_scroll(
                                     bounds,
                                     content_bounds,
-                                    shell,
+                                    messages,
                                 );
                             }
                         }
@@ -376,7 +328,7 @@ where
                             content_bounds,
                         );
 
-                        self.notify_on_scroll(bounds, content_bounds, shell);
+                        self.notify_on_scroll(bounds, content_bounds, messages);
 
                         return event::Status::Captured;
                     }
@@ -408,7 +360,7 @@ where
                             self.notify_on_scroll(
                                 bounds,
                                 content_bounds,
-                                shell,
+                                messages,
                             );
 
                             return event::Status::Captured;
@@ -422,17 +374,26 @@ where
         event::Status::Ignored
     }
 
-    fn mouse_interaction(
+    fn draw(
         &self,
+        renderer: &mut Renderer,
+        defaults: &Renderer::Defaults,
         layout: Layout<'_>,
         cursor_position: Point,
         _viewport: &Rectangle,
-        renderer: &Renderer,
-    ) -> mouse::Interaction {
+    ) -> Renderer::Output {
         let bounds = layout.bounds();
         let content_layout = layout.children().next().unwrap();
         let content_bounds = content_layout.bounds();
-        let scrollbar = self.scrollbar(bounds, content_bounds);
+        let offset = self.state.offset(bounds, content_bounds);
+        let scrollbar = renderer.scrollbar(
+            bounds,
+            content_bounds,
+            offset,
+            self.scrollbar_width,
+            self.scrollbar_margin,
+            self.scroller_width,
+        );
 
         let is_mouse_over = bounds.contains(cursor_position);
         let is_mouse_over_scrollbar = scrollbar
@@ -440,145 +401,57 @@ where
             .map(|scrollbar| scrollbar.is_mouse_over(cursor_position))
             .unwrap_or(false);
 
-        if is_mouse_over_scrollbar || self.state.is_scroller_grabbed() {
-            mouse::Interaction::Idle
-        } else {
-            let offset = self.state.offset(bounds, content_bounds);
-
+        let content = {
             let cursor_position = if is_mouse_over && !is_mouse_over_scrollbar {
                 Point::new(cursor_position.x, cursor_position.y + offset as f32)
             } else {
                 Point::new(cursor_position.x, -1.0)
             };
 
-            self.content.mouse_interaction(
-                content_layout,
-                cursor_position,
-                &Rectangle {
-                    y: bounds.y + offset as f32,
-                    ..bounds
-                },
-                renderer,
-            )
-        }
-    }
-
-    fn draw(
-        &self,
-        renderer: &mut Renderer,
-        style: &renderer::Style,
-        layout: Layout<'_>,
-        cursor_position: Point,
-        _viewport: &Rectangle,
-    ) {
-        let bounds = layout.bounds();
-        let content_layout = layout.children().next().unwrap();
-        let content_bounds = content_layout.bounds();
-        let offset = self.state.offset(bounds, content_bounds);
-        let scrollbar = self.scrollbar(bounds, content_bounds);
-
-        let is_mouse_over = bounds.contains(cursor_position);
-        let is_mouse_over_scrollbar = scrollbar
-            .as_ref()
-            .map(|scrollbar| scrollbar.is_mouse_over(cursor_position))
-            .unwrap_or(false);
-
-        let cursor_position = if is_mouse_over && !is_mouse_over_scrollbar {
-            Point::new(cursor_position.x, cursor_position.y + offset as f32)
-        } else {
-            Point::new(cursor_position.x, -1.0)
-        };
-
-        if let Some(scrollbar) = scrollbar {
-            renderer.with_layer(bounds, |renderer| {
-                renderer.with_translation(
-                    Vector::new(0.0, -(offset as f32)),
-                    |renderer| {
-                        self.content.draw(
-                            renderer,
-                            style,
-                            content_layout,
-                            cursor_position,
-                            &Rectangle {
-                                y: bounds.y + offset as f32,
-                                ..bounds
-                            },
-                        );
-                    },
-                );
-            });
-
-            let style = if self.state.is_scroller_grabbed() {
-                self.style_sheet.dragging()
-            } else if is_mouse_over_scrollbar {
-                self.style_sheet.hovered()
-            } else {
-                self.style_sheet.active()
-            };
-
-            let is_scrollbar_visible =
-                style.background.is_some() || style.border_width > 0.0;
-
-            renderer.with_layer(
-                Rectangle {
-                    width: bounds.width + 2.0,
-                    height: bounds.height + 2.0,
-                    ..bounds
-                },
-                |renderer| {
-                    if is_scrollbar_visible {
-                        renderer.fill_quad(
-                            renderer::Quad {
-                                bounds: scrollbar.bounds,
-                                border_radius: style.border_radius,
-                                border_width: style.border_width,
-                                border_color: style.border_color,
-                            },
-                            style.background.unwrap_or(Background::Color(
-                                Color::TRANSPARENT,
-                            )),
-                        );
-                    }
-
-                    if is_mouse_over
-                        || self.state.is_scroller_grabbed()
-                        || is_scrollbar_visible
-                    {
-                        renderer.fill_quad(
-                            renderer::Quad {
-                                bounds: scrollbar.scroller.bounds,
-                                border_radius: style.scroller.border_radius,
-                                border_width: style.scroller.border_width,
-                                border_color: style.scroller.border_color,
-                            },
-                            style.scroller.color,
-                        );
-                    }
-                },
-            );
-        } else {
             self.content.draw(
                 renderer,
-                style,
+                defaults,
                 content_layout,
                 cursor_position,
                 &Rectangle {
                     y: bounds.y + offset as f32,
                     ..bounds
                 },
-            );
-        }
+            )
+        };
+
+        self::Renderer::draw(
+            renderer,
+            &self.state,
+            bounds,
+            content_layout.bounds(),
+            is_mouse_over,
+            is_mouse_over_scrollbar,
+            scrollbar,
+            offset,
+            &self.style,
+            content,
+        )
+    }
+
+    fn hash_layout(&self, state: &mut Hasher) {
+        struct Marker;
+        std::any::TypeId::of::<Marker>().hash(state);
+
+        self.height.hash(state);
+        self.max_height.hash(state);
+
+        self.content.hash_layout(state)
     }
 
     fn overlay(
         &mut self,
         layout: Layout<'_>,
-        renderer: &Renderer,
     ) -> Option<overlay::Element<'_, Message, Renderer>> {
         let Self { content, state, .. } = self;
 
         content
-            .overlay(layout.children().next().unwrap(), renderer)
+            .overlay(layout.children().next().unwrap())
             .map(|overlay| {
                 let bounds = layout.bounds();
                 let content_layout = layout.children().next().unwrap();
@@ -707,13 +580,16 @@ impl State {
 pub struct Scrollbar {
     /// The outer bounds of the scrollable, including the [`Scrollbar`] and
     /// [`Scroller`].
-    outer_bounds: Rectangle,
+    pub outer_bounds: Rectangle,
 
     /// The bounds of the [`Scrollbar`].
-    bounds: Rectangle,
+    pub bounds: Rectangle,
+
+    /// The margin within the [`Scrollbar`].
+    pub margin: u16,
 
     /// The bounds of the [`Scroller`].
-    scroller: Scroller,
+    pub scroller: Scroller,
 }
 
 impl Scrollbar {
@@ -750,13 +626,60 @@ impl Scrollbar {
 #[derive(Debug, Clone, Copy)]
 pub struct Scroller {
     /// The bounds of the [`Scroller`].
-    bounds: Rectangle,
+    pub bounds: Rectangle,
+}
+
+/// The renderer of a [`Scrollable`].
+///
+/// Your [renderer] will need to implement this trait before being
+/// able to use a [`Scrollable`] in your user interface.
+///
+/// [renderer]: crate::renderer
+pub trait Renderer: column::Renderer + Sized {
+    /// The style supported by this renderer.
+    type Style: Default;
+
+    /// Returns the [`Scrollbar`] given the bounds and content bounds of a
+    /// [`Scrollable`].
+    fn scrollbar(
+        &self,
+        bounds: Rectangle,
+        content_bounds: Rectangle,
+        offset: u32,
+        scrollbar_width: u16,
+        scrollbar_margin: u16,
+        scroller_width: u16,
+    ) -> Option<Scrollbar>;
+
+    /// Draws the [`Scrollable`].
+    ///
+    /// It receives:
+    /// - the [`State`] of the [`Scrollable`]
+    /// - the bounds of the [`Scrollable`] widget
+    /// - the bounds of the [`Scrollable`] content
+    /// - whether the mouse is over the [`Scrollable`] or not
+    /// - whether the mouse is over the [`Scrollbar`] or not
+    /// - a optional [`Scrollbar`] to be rendered
+    /// - the scrolling offset
+    /// - the drawn content
+    fn draw(
+        &mut self,
+        scrollable: &State,
+        bounds: Rectangle,
+        content_bounds: Rectangle,
+        is_mouse_over: bool,
+        is_mouse_over_scrollbar: bool,
+        scrollbar: Option<Scrollbar>,
+        offset: u32,
+        style: &Self::Style,
+        content: Self::Output,
+    ) -> Self::Output;
 }
 
 impl<'a, Message, Renderer> From<Scrollable<'a, Message, Renderer>>
     for Element<'a, Message, Renderer>
 where
-    Renderer: 'a + crate::Renderer,
+    Renderer: 'a + self::Renderer,
     Message: 'a,
 {
     fn from(

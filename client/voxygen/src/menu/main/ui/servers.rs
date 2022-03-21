@@ -4,7 +4,7 @@ use crate::ui::{
     ice::{component::neat_button, style, Element},
 };
 use i18n::Localization;
-use iced::{Length, Alignment, Horizontal};
+use iced::{Length, Alignment};
 use iced::widget::{
     button, scrollable, Button, Column, Container, Row, Scrollable, Space, Text,
 };
@@ -51,7 +51,7 @@ impl Screen {
             .max_width(200),
         )
         .width(Length::Fill)
-        .align_x(Horizontal::Center);
+        .align_x(Alignment::Center);
 
         let delete_button = Container::new(
             Container::new(neat_button(
@@ -64,7 +64,7 @@ impl Screen {
             .max_width(200),
         )
         .width(Length::Fill)
-        .align_x(Horizontal::Center);
+        .align_x(Alignment::Center);
 
         let mut list = Scrollable::new(&mut self.servers_list)
             .spacing(8)
@@ -142,7 +142,7 @@ impl Screen {
             .max_width(500),
         )
         .width(Length::Fill)
-        .align_x(Horizontal::Center)
+        .align_x(Alignment::Center)
         .padding(80)
         .into()
     }

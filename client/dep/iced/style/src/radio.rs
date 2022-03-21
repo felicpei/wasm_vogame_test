@@ -8,7 +8,6 @@ pub struct Style {
     pub dot_color: Color,
     pub border_width: f32,
     pub border_color: Color,
-    pub text_color: Option<Color>,
 }
 
 /// A set of rules that dictate the style of a radio button.
@@ -27,7 +26,6 @@ impl StyleSheet for Default {
             dot_color: Color::from_rgb(0.3, 0.3, 0.3),
             border_width: 1.0,
             border_color: Color::from_rgb(0.6, 0.6, 0.6),
-            text_color: None,
         }
     }
 
@@ -39,17 +37,17 @@ impl StyleSheet for Default {
     }
 }
 
-impl<'a> std::default::Default for Box<dyn StyleSheet + 'a> {
+impl std::default::Default for Box<dyn StyleSheet> {
     fn default() -> Self {
         Box::new(Default)
     }
 }
 
-impl<'a, T> From<T> for Box<dyn StyleSheet + 'a>
+impl<T> From<T> for Box<dyn StyleSheet>
 where
-    T: StyleSheet + 'a,
+    T: 'static + StyleSheet,
 {
-    fn from(style_sheet: T) -> Self {
-        Box::new(style_sheet)
+    fn from(style: T) -> Self {
+        Box::new(style)
     }
 }

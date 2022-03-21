@@ -3,9 +3,8 @@ use crate::event::{self, Event};
 use crate::image;
 use crate::layout;
 use crate::mouse;
-use crate::renderer;
 use crate::{
-    Clipboard, Element, Layout, Length, Point, Rectangle, Shell, Size, Vector,
+    Clipboard, Element, Hasher, Layout, Length, Point, Rectangle, Size, Vector,
     Widget,
 };
 
@@ -13,7 +12,7 @@ use std::hash::Hash;
 
 /// A frame that displays an image with the ability to zoom in/out and pan.
 #[allow(missing_debug_implementations)]
-pub struct Viewer<'a, Handle> {
+pub struct Viewer<'a> {
     state: &'a mut State,
     padding: u16,
     width: Length,
@@ -21,12 +20,14 @@ pub struct Viewer<'a, Handle> {
     min_scale: f32,
     max_scale: f32,
     scale_step: f32,
-    handle: Handle,
+    handle: image::Handle,
 }
 
-impl<'a, Handle> Viewer<'a, Handle> {
-    /// Creates a new [`Viewer`] with the given [`State`].
-    pub fn new(state: &'a mut State, handle: Handle) -> Self {
+impl<'a> Viewer<'a> {
+    /// Creates a new [`Viewer`] with the given [`State`] and [`Handle`].
+    ///
+    /// [`Handle`]: image::Handle
+    pub fn new(state: &'a mut State, handle: image::Handle) -> Self {
         Viewer {
             state,
             padding: 0,
@@ -87,7 +88,7 @@ impl<'a, Handle> Viewer<'a, Handle> {
     /// will be respected.
     fn image_size<Renderer>(&self, renderer: &Renderer, bounds: Size) -> Size
     where
-        Renderer: image::Renderer<Handle = Handle>,
+        Renderer: self::Renderer + image::Renderer,
     {
         let (width, height) = renderer.dimensions(&self.handle);
 
@@ -112,11 +113,9 @@ impl<'a, Handle> Viewer<'a, Handle> {
     }
 }
 
-impl<'a, Message, Renderer, Handle> Widget<Message, Renderer>
-    for Viewer<'a, Handle>
+impl<'a, Message, Renderer> Widget<Message, Renderer> for Viewer<'a>
 where
-    Renderer: image::Renderer<Handle = Handle>,
-    Handle: Clone + Hash,
+    Renderer: self::Renderer + image::Renderer,
 {
     fn width(&self) -> Length {
         self.width
@@ -133,30 +132,19 @@ where
     ) -> layout::Node {
         let (width, height) = renderer.dimensions(&self.handle);
 
+        let aspect_ratio = width as f32 / height as f32;
+
         let mut size = limits
             .width(self.width)
             .height(self.height)
             .resolve(Size::new(width as f32, height as f32));
 
-        let expansion_size = if height > width {
-            self.width
-        } else {
-            self.height
-        };
+        let viewport_aspect_ratio = size.width / size.height;
 
-        // Only calculate viewport sizes if the images are constrained to a limited space.
-        // If they are Fill|Portion let them expand within their alotted space.
-        match expansion_size {
-            Length::Shrink | Length::Units(_) => {
-                let aspect_ratio = width as f32 / height as f32;
-                let viewport_aspect_ratio = size.width / size.height;
-                if viewport_aspect_ratio > aspect_ratio {
-                    size.width = width as f32 * size.height / height as f32;
-                } else {
-                    size.height = height as f32 * size.width / width as f32;
-                }
-            }
-            Length::Fill | Length::FillPortion(_) => {}
+        if viewport_aspect_ratio > aspect_ratio {
+            size.width = width as f32 * size.height / height as f32;
+        } else {
+            size.height = height as f32 * size.width / width as f32;
         }
 
         layout::Node::new(size)
@@ -169,7 +157,7 @@ where
         cursor_position: Point,
         renderer: &Renderer,
         _clipboard: &mut dyn Clipboard,
-        _shell: &mut Shell<'_, Message>,
+        _messages: &mut Vec<Message>,
     ) -> event::Status {
         let bounds = layout.bounds();
         let is_mouse_over = bounds.contains(cursor_position);
@@ -281,33 +269,14 @@ where
         }
     }
 
-    fn mouse_interaction(
-        &self,
-        layout: Layout<'_>,
-        cursor_position: Point,
-        _viewport: &Rectangle,
-        _renderer: &Renderer,
-    ) -> mouse::Interaction {
-        let bounds = layout.bounds();
-        let is_mouse_over = bounds.contains(cursor_position);
-
-        if self.state.is_cursor_grabbed() {
-            mouse::Interaction::Grabbing
-        } else if is_mouse_over {
-            mouse::Interaction::Grab
-        } else {
-            mouse::Interaction::Idle
-        }
-    }
-
     fn draw(
         &self,
         renderer: &mut Renderer,
-        _style: &renderer::Style,
+        _defaults: &Renderer::Defaults,
         layout: Layout<'_>,
-        _cursor_position: Point,
+        cursor_position: Point,
         _viewport: &Rectangle,
-    ) {
+    ) -> Renderer::Output {
         let bounds = layout.bounds();
 
         let image_size = self.image_size(renderer, bounds.size());
@@ -321,19 +290,28 @@ where
             image_top_left - self.state.offset(bounds, image_size)
         };
 
-        renderer.with_layer(bounds, |renderer| {
-            renderer.with_translation(translation, |renderer| {
-                image::Renderer::draw(
-                    renderer,
-                    self.handle.clone(),
-                    Rectangle {
-                        x: bounds.x,
-                        y: bounds.y,
-                        ..Rectangle::with_size(image_size)
-                    },
-                )
-            });
-        });
+        let is_mouse_over = bounds.contains(cursor_position);
+
+        self::Renderer::draw(
+            renderer,
+            &self.state,
+            bounds,
+            image_size,
+            translation,
+            self.handle.clone(),
+            is_mouse_over,
+        )
+    }
+
+    fn hash_layout(&self, state: &mut Hasher) {
+        struct Marker;
+        std::any::TypeId::of::<Marker>().hash(state);
+
+        self.width.hash(state);
+        self.height.hash(state);
+        self.padding.hash(state);
+
+        self.handle.hash(state);
     }
 }
 
@@ -384,14 +362,41 @@ impl State {
     }
 }
 
-impl<'a, Message, Renderer, Handle> From<Viewer<'a, Handle>>
-    for Element<'a, Message, Renderer>
+/// The renderer of an [`Viewer`].
+///
+/// Your [renderer] will need to implement this trait before being
+/// able to use a [`Viewer`] in your user interface.
+///
+/// [renderer]: crate::renderer
+pub trait Renderer: crate::Renderer + Sized {
+    /// Draws the [`Viewer`].
+    ///
+    /// It receives:
+    /// - the [`State`] of the [`Viewer`]
+    /// - the bounds of the [`Viewer`] widget
+    /// - the [`Size`] of the scaled [`Viewer`] image
+    /// - the translation of the clipped image
+    /// - the [`Handle`] to the underlying image
+    /// - whether the mouse is over the [`Viewer`] or not
+    ///
+    /// [`Handle`]: image::Handle
+    fn draw(
+        &mut self,
+        state: &State,
+        bounds: Rectangle,
+        image_size: Size,
+        translation: Vector,
+        handle: image::Handle,
+        is_mouse_over: bool,
+    ) -> Self::Output;
+}
+
+impl<'a, Message, Renderer> From<Viewer<'a>> for Element<'a, Message, Renderer>
 where
-    Renderer: 'a + image::Renderer<Handle = Handle>,
+    Renderer: 'a + self::Renderer + image::Renderer,
     Message: 'a,
-    Handle: Clone + Hash + 'a,
 {
-    fn from(viewer: Viewer<'a, Handle>) -> Element<'a, Message, Renderer> {
+    fn from(viewer: Viewer<'a>) -> Element<'a, Message, Renderer> {
         Element::new(viewer)
     }
 }

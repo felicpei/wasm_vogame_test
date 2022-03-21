@@ -1,8 +1,7 @@
 //! Write a graphics backend.
 use iced_native::image;
 use iced_native::svg;
-use iced_native::text;
-use iced_native::{Font, Point, Size};
+use iced_native::{Font, Size};
 
 /// The graphics backend of a [`Renderer`].
 ///
@@ -44,23 +43,6 @@ pub trait Text {
         font: Font,
         bounds: Size,
     ) -> (f32, f32);
-
-    /// Tests whether the provided point is within the boundaries of [`Text`]
-    /// laid out with the given parameters, returning information about
-    /// the nearest character.
-    ///
-    /// If nearest_only is true, the hit test does not consider whether the
-    /// the point is interior to any glyph bounds, returning only the character
-    /// with the nearest centeroid.
-    fn hit_test(
-        &self,
-        contents: &str,
-        size: f32,
-        font: Font,
-        bounds: Size,
-        point: Point,
-        nearest_only: bool,
-    ) -> Option<text::Hit>;
 }
 
 /// A graphics backend that supports image rendering.

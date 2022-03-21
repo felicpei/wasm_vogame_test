@@ -273,7 +273,7 @@ fn measure_cursor_and_scroll_offset(
     cursor_index: usize,
     font: FontId,
 ) -> (f32, f32) {
-    //use text_input::Renderer;
+    use text_input::Renderer;
 
     // TODO: so much allocation (fyi .until() allocates)
     let text_before_cursor = value.until(cursor_index).to_string();

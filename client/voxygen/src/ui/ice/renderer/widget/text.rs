@@ -1,8 +1,8 @@
 use super::super::{super::FontId, IcedRenderer, Primitive};
 use glyph_brush::GlyphCruncher;
-use iced::{mouse, Color, Horizontal, Vertical, Rectangle, Size};
+use iced::{mouse, text, Color, Horizontal, Vertical, Rectangle, Size};
 
-impl iced::text::Renderer for IcedRenderer {
+impl text::Renderer for IcedRenderer {
     type Font = FontId;
 
     // TODO: expose as setting
@@ -41,7 +41,7 @@ impl iced::text::Renderer for IcedRenderer {
         color: Option<Color>,
         horizontal_alignment: Horizontal,
         vertical_alignment: Vertical,
-    ) {
+    ) -> Self::Output {
         let glyphs = self.position_glyphs(
             bounds,
             horizontal_alignment,

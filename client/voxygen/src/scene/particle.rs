@@ -2,7 +2,7 @@ use super::{terrain::BlocksOfInterest, SceneData, Terrain};
 use crate::{
     mesh::{greedy::GreedyMesh, segment::generate_mesh_base_vol_particle},
     render::{
-        pipelines::particle::ParticleMode, Instances, Light, Model, ParticleDrawer,
+        pipelines::particle::ParticleMode, Instances, Light, Model, FirstPassDrawer,
         ParticleInstance, ParticleVertex, Renderer,
     },
 };
@@ -1457,7 +1457,7 @@ impl ParticleMgr {
         self.instances = gpu_instances;
     }
 
-    pub fn render<'a>(&'a self, drawer: &mut ParticleDrawer<'_, 'a>, scene_data: &SceneData) {
+    pub fn render<'a>(&'a self, drawer: &mut FirstPassDrawer<'a>, scene_data: &SceneData) {
         
         if scene_data.particles_enabled {
             let model = &self
@@ -1465,7 +1465,7 @@ impl ParticleMgr {
                 .get(DEFAULT_MODEL_KEY)
                 .expect("Expected particle model in cache");
 
-            drawer.draw(model, &self.instances);
+            drawer.draw_particles(model, &self.instances);
         }
     }
 

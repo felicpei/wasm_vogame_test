@@ -16,7 +16,7 @@ use super::{
 };
 use crate::{
     error::Error,
-    render::{Renderer, UiDrawer},
+    render::{Renderer, ThirdPassDrawer},
     window::Window,
 };
 use common::slowjob::SlowJobPool;
@@ -192,7 +192,7 @@ impl IcedUi {
             let _event_status_list = user_interface.update(
                 &self.events,
                 cursor_position,
-                &mut self.renderer,
+                &self.renderer,
                 clipboard,
                 &mut messages,
             );
@@ -213,5 +213,5 @@ impl IcedUi {
         (messages, mouse_interaction)
     }
 
-    pub fn render<'a>(&'a self, drawer: &mut UiDrawer<'_, 'a>) { self.renderer.render(drawer); }
+    pub fn render<'a>(&'a self, drawer: &mut ThirdPassDrawer<'a>) { self.renderer.render(drawer); }
 }

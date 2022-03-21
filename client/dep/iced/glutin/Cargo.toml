@@ -2,10 +2,10 @@
 name = "iced_glutin"
 version = "0.2.0"
 authors = ["Héctor Ramón Jiménez <hector0193@gmail.com>"]
-edition = "2021"
+edition = "2018"
 description = "A glutin runtime for Iced"
 license = "MIT"
-repository = "https://github.com/iced-rs/iced"
+repository = "https://github.com/hecrj/iced"
 documentation = "https://docs.rs/iced_glutin"
 keywords = ["gui", "ui", "graphics", "interface", "widgets"]
 categories = ["gui"]
@@ -13,10 +13,8 @@ categories = ["gui"]
 [features]
 debug = ["iced_winit/debug"]
 
-[dependencies.glutin]
-version = "0.28"
-git = "https://github.com/iced-rs/glutin"
-rev = "7a0ee02782eb2bf059095e0c953c4bb53f1eef0e"
+[dependencies]
+glutin = "0.26"
 
 [dependencies.iced_native]
 version = "0.4"

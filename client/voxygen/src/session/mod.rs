@@ -1500,14 +1500,12 @@ impl PlayState for SessionState {
         {
             let mut third_pass = drawer.third_pass();
             third_pass.draw_postprocess();
+
             // Draw the UI to the screen
-            if let Some(mut ui_drawer) = third_pass.draw_ui() {
-                self.hud.render(&mut ui_drawer);
-            }; // Note: this semicolon is needed for the third_pass borrow to be dropped before it's lifetime ends
+            third_pass.init_ui();
+            self.hud.render(&mut third_pass);
         }
     }
-
-    fn egui_enabled(&self) -> bool { true }
 }
 
 fn find_shortest_distance(arr: &[Option<f32>]) -> Option<f32> {

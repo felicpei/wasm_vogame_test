@@ -1,26 +1,19 @@
-use std::borrow::Cow;
-
 use iced_native::{Point, Rectangle, Size, Vector};
 
 use crate::{
-    canvas::path,
     canvas::{Fill, Geometry, Path, Stroke, Text},
     triangle, Primitive,
 };
 
-use lyon::tessellation;
-
 /// The frame of a [`Canvas`].
 ///
 /// [`Canvas`]: crate::widget::Canvas
-#[allow(missing_debug_implementations)]
+#[derive(Debug)]
 pub struct Frame {
     size: Size,
     buffers: lyon::tessellation::VertexBuffers<triangle::Vertex2D, u32>,
     primitives: Vec<Primitive>,
     transforms: Transforms,
-    fill_tessellator: tessellation::FillTessellator,
-    stroke_tessellator: tessellation::StrokeTessellator,
 }
 
 #[derive(Debug)]
@@ -52,8 +45,6 @@ impl Frame {
                     is_identity: true,
                 },
             },
-            fill_tessellator: tessellation::FillTessellator::new(),
-            stroke_tessellator: tessellation::StrokeTessellator::new(),
         }
     }
 
@@ -84,30 +75,26 @@ impl Frame {
     /// Draws the given [`Path`] on the [`Frame`] by filling it with the
     /// provided style.
     pub fn fill(&mut self, path: &Path, fill: impl Into<Fill>) {
+        use lyon::tessellation::{
+            BuffersBuilder, FillOptions, FillTessellator,
+        };
+
         let Fill { color, rule } = fill.into();
 
-        let mut buffers = tessellation::BuffersBuilder::new(
+        let mut buffers = BuffersBuilder::new(
             &mut self.buffers,
             FillVertex(color.into_linear()),
         );
 
-        let options =
-            tessellation::FillOptions::default().with_fill_rule(rule.into());
+        let mut tessellator = FillTessellator::new();
+        let options = FillOptions::default().with_fill_rule(rule.into());
 
         let result = if self.transforms.current.is_identity {
-            self.fill_tessellator.tessellate_path(
-                path.raw(),
-                &options,
-                &mut buffers,
-            )
+            tessellator.tessellate_path(path.raw(), &options, &mut buffers)
         } else {
             let path = path.transformed(&self.transforms.current.raw);
 
-            self.fill_tessellator.tessellate_path(
-                path.raw(),
-                &options,
-                &mut buffers,
-            )
+            tessellator.tessellate_path(path.raw(), &options, &mut buffers)
         };
 
         let _ = result.expect("Tessellate path");
@@ -121,9 +108,11 @@ impl Frame {
         size: Size,
         fill: impl Into<Fill>,
     ) {
+        use lyon::tessellation::{BuffersBuilder, FillOptions};
+
         let Fill { color, rule } = fill.into();
 
-        let mut buffers = tessellation::BuffersBuilder::new(
+        let mut buffers = BuffersBuilder::new(
             &mut self.buffers,
             FillVertex(color.into_linear()),
         );
@@ -138,55 +127,42 @@ impl Frame {
                 lyon::math::Vector::new(size.width, size.height),
             );
 
-        let options =
-            tessellation::FillOptions::default().with_fill_rule(rule.into());
-
-        let _ = self
-            .fill_tessellator
-            .tessellate_rectangle(
-                &lyon::math::Rect::new(top_left, size.into()),
-                &options,
-                &mut buffers,
-            )
-            .expect("Fill rectangle");
+        let _ = lyon::tessellation::basic_shapes::fill_rectangle(
+            &lyon::math::Rect::new(top_left, size.into()),
+            &FillOptions::default().with_fill_rule(rule.into()),
+            &mut buffers,
+        )
+        .expect("Fill rectangle");
     }
 
     /// Draws the stroke of the given [`Path`] on the [`Frame`] with the
     /// provided style.
-    pub fn stroke<'a>(&mut self, path: &Path, stroke: impl Into<Stroke<'a>>) {
+    pub fn stroke(&mut self, path: &Path, stroke: impl Into<Stroke>) {
+        use lyon::tessellation::{
+            BuffersBuilder, StrokeOptions, StrokeTessellator,
+        };
+
         let stroke = stroke.into();
 
-        let mut buffers = tessellation::BuffersBuilder::new(
+        let mut buffers = BuffersBuilder::new(
             &mut self.buffers,
             StrokeVertex(stroke.color.into_linear()),
         );
 
-        let mut options = tessellation::StrokeOptions::default();
+        let mut tessellator = StrokeTessellator::new();
+
+        let mut options = StrokeOptions::default();
         options.line_width = stroke.width;
         options.start_cap = stroke.line_cap.into();
         options.end_cap = stroke.line_cap.into();
         options.line_join = stroke.line_join.into();
 
-        let path = if stroke.line_dash.segments.is_empty() {
-            Cow::Borrowed(path)
-        } else {
-            Cow::Owned(path::dashed(path, stroke.line_dash))
-        };
-
         let result = if self.transforms.current.is_identity {
-            self.stroke_tessellator.tessellate_path(
-                path.raw(),
-                &options,
-                &mut buffers,
-            )
+            tessellator.tessellate_path(path.raw(), &options, &mut buffers)
         } else {
             let path = path.transformed(&self.transforms.current.raw);
 
-            self.stroke_tessellator.tessellate_path(
-                path.raw(),
-                &options,
-                &mut buffers,
-            )
+            tessellator.tessellate_path(path.raw(), &options, &mut buffers)
         };
 
         let _ = result.expect("Stroke path");
@@ -253,27 +229,6 @@ impl Frame {
         self.transforms.current = self.transforms.previous.pop().unwrap();
     }
 
-    /// Executes the given drawing operations within a [`Rectangle`] region,
-    /// clipping any geometry that overflows its bounds. Any transformations
-    /// performed are local to the provided closure.
-    ///
-    /// This method is useful to perform drawing operations that need to be
-    /// clipped.
-    #[inline]
-    pub fn with_clip(&mut self, region: Rectangle, f: impl FnOnce(&mut Frame)) {
-        let mut frame = Frame::new(region.size());
-
-        f(&mut frame);
-
-        self.primitives.push(Primitive::Clip {
-            bounds: region,
-            content: Box::new(Primitive::Translate {
-                translation: Vector::new(region.x, region.y),
-                content: Box::new(frame.into_geometry().into_primitive()),
-            }),
-        });
-    }
-
     /// Applies a translation to the current transform of the [`Frame`].
     #[inline]
     pub fn translate(&mut self, translation: Vector) {
@@ -327,15 +282,28 @@ impl Frame {
 
 struct FillVertex([f32; 4]);
 
+impl lyon::tessellation::BasicVertexConstructor<triangle::Vertex2D>
+    for FillVertex
+{
+    fn new_vertex(
+        &mut self,
+        position: lyon::math::Point,
+    ) -> triangle::Vertex2D {
+        triangle::Vertex2D {
+            position: [position.x, position.y],
+            color: self.0,
+        }
+    }
+}
+
 impl lyon::tessellation::FillVertexConstructor<triangle::Vertex2D>
     for FillVertex
 {
     fn new_vertex(
         &mut self,
-        vertex: lyon::tessellation::FillVertex<'_>,
+        position: lyon::math::Point,
+        _attributes: lyon::tessellation::FillAttributes<'_>,
     ) -> triangle::Vertex2D {
-        let position = vertex.position();
-
         triangle::Vertex2D {
             position: [position.x, position.y],
             color: self.0,
@@ -350,10 +318,9 @@ impl lyon::tessellation::StrokeVertexConstructor<triangle::Vertex2D>
 {
     fn new_vertex(
         &mut self,
-        vertex: lyon::tessellation::StrokeVertex<'_, '_>,
+        position: lyon::math::Point,
+        _attributes: lyon::tessellation::StrokeAttributes<'_, '_>,
     ) -> triangle::Vertex2D {
-        let position = vertex.position();
-
         triangle::Vertex2D {
             position: [position.x, position.y],
             color: self.0,

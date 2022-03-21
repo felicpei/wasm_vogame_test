@@ -1,4 +1,5 @@
 use crate::{Color, Error, Size, Viewport};
+use iced_native::mouse;
 
 use core::ffi::c_void;
 
@@ -48,15 +49,15 @@ pub trait GLCompositor: Sized {
     /// Resizes the viewport of the [`GLCompositor`].
     fn resize_viewport(&mut self, physical_size: Size<u32>);
 
-    /// Presents the primitives of the [`Renderer`] to the next frame of the
-    /// [`GLCompositor`].
+    /// Draws the provided output with the given [`Renderer`].
     ///
     /// [`Renderer`]: crate::Renderer
-    fn present<T: AsRef<str>>(
+    fn draw<T: AsRef<str>>(
         &mut self,
         renderer: &mut Self::Renderer,
         viewport: &Viewport,
         background_color: Color,
+        output: &<Self::Renderer as iced_native::Renderer>::Output,
         overlay: &[T],
-    );
+    ) -> mouse::Interaction;
 }

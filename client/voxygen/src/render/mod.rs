@@ -46,9 +46,7 @@ pub use self::{
     },
     renderer::{
         drawer::{
-            DebugDrawer, Drawer, FigureDrawer, FigureShadowDrawer, FirstPassDrawer, ParticleDrawer,
-            PreparedUiDrawer, SecondPassDrawer, ShadowPassDrawer, SpriteDrawer, TerrainDrawer,
-            TerrainShadowDrawer, ThirdPassDrawer, UiDrawer,
+            Drawer, FirstPassDrawer, SecondPassDrawer, ShadowPassDrawer, ThirdPassDrawer,
         },
         ColLightInfo, Renderer,
     },
@@ -348,7 +346,6 @@ pub struct RenderMode {
 
     pub upscale_mode: UpscaleMode,
     pub present_mode: PresentMode,
-    pub profiler_enabled: bool,
 }
 
 impl Default for RenderMode {
@@ -364,7 +361,6 @@ impl Default for RenderMode {
             experimental_shaders: HashSet::default(),
             upscale_mode: UpscaleMode::default(),
             present_mode: PresentMode::default(),
-            profiler_enabled: false,
         }
     }
 }
@@ -385,7 +381,6 @@ impl RenderMode {
             OtherModes {
                 upscale_mode: self.upscale_mode,
                 present_mode: self.present_mode,
-                profiler_enabled: self.profiler_enabled,
             },
         )
     }
@@ -410,7 +405,6 @@ pub struct PipelineModes {
 struct OtherModes {
     upscale_mode: UpscaleMode,
     present_mode: PresentMode,
-    profiler_enabled: bool,
 }
 
 /// Experimental shader modes.

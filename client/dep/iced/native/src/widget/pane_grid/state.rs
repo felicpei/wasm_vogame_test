@@ -1,7 +1,7 @@
-use crate::widget::pane_grid::{
-    Axis, Configuration, Direction, Node, Pane, Split,
+use crate::{
+    pane_grid::{Axis, Configuration, Direction, Node, Pane, Split},
+    Hasher, Point, Rectangle, Size,
 };
-use crate::{Point, Rectangle, Size};
 
 use std::collections::{BTreeMap, HashMap};
 
@@ -291,5 +291,11 @@ impl Internal {
 
     pub fn idle(&mut self) {
         self.action = Action::Idle;
+    }
+
+    pub fn hash_layout(&self, hasher: &mut Hasher) {
+        use std::hash::Hash;
+
+        self.layout.hash(hasher);
     }
 }

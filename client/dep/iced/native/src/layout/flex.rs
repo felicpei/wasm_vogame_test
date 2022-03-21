@@ -16,8 +16,11 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-use crate::layout::{Limits, Node};
-use crate::{Alignment, Element, Padding, Point, Size};
+
+use crate::{
+    layout::{Limits, Node},
+    Alignment, Element, Padding, Point, Size,
+};
 
 /// The main axis of a flex layout.
 #[derive(Debug)]
@@ -79,32 +82,6 @@ where
     let mut nodes: Vec<Node> = Vec::with_capacity(items.len());
     nodes.resize(items.len(), Node::default());
 
-    if align_items == Alignment::Fill {
-        let mut fill_cross = axis.cross(limits.min());
-
-        items.iter().for_each(|child| {
-            let cross_fill_factor = match axis {
-                Axis::Horizontal => child.height(),
-                Axis::Vertical => child.width(),
-            }
-            .fill_factor();
-
-            if cross_fill_factor == 0 {
-                let (max_width, max_height) = axis.pack(available, max_cross);
-
-                let child_limits =
-                    Limits::new(Size::ZERO, Size::new(max_width, max_height));
-
-                let layout = child.layout(renderer, &child_limits);
-                let size = layout.size();
-
-                fill_cross = fill_cross.max(axis.cross(size));
-            }
-        });
-
-        cross = fill_cross;
-    }
-
     for (i, child) in items.iter().enumerate() {
         let fill_factor = match axis {
             Axis::Horizontal => child.width(),
@@ -113,31 +90,16 @@ where
         .fill_factor();
 
         if fill_factor == 0 {
-            let (min_width, min_height) = if align_items == Alignment::Fill {
-                axis.pack(0.0, cross)
-            } else {
-                axis.pack(0.0, 0.0)
-            };
+            let (max_width, max_height) = axis.pack(available, max_cross);
 
-            let (max_width, max_height) = if align_items == Alignment::Fill {
-                axis.pack(available, cross)
-            } else {
-                axis.pack(available, max_cross)
-            };
-
-            let child_limits = Limits::new(
-                Size::new(min_width, min_height),
-                Size::new(max_width, max_height),
-            );
+            let child_limits =
+                Limits::new(Size::ZERO, Size::new(max_width, max_height));
 
             let layout = child.layout(renderer, &child_limits);
             let size = layout.size();
 
             available -= axis.main(size);
-
-            if align_items != Alignment::Fill {
-                cross = cross.max(axis.cross(size));
-            }
+            cross = cross.max(axis.cross(size));
 
             nodes[i] = layout;
         } else {
@@ -162,28 +124,19 @@ where
                 max_main
             };
 
-            let (min_width, min_height) = if align_items == Alignment::Fill {
-                axis.pack(min_main, cross)
-            } else {
-                axis.pack(min_main, axis.cross(limits.min()))
-            };
+            let (min_main, min_cross) =
+                axis.pack(min_main, axis.cross(limits.min()));
 
-            let (max_width, max_height) = if align_items == Alignment::Fill {
-                axis.pack(max_main, cross)
-            } else {
-                axis.pack(max_main, max_cross)
-            };
+            let (max_main, max_cross) =
+                axis.pack(max_main, axis.cross(limits.max()));
 
             let child_limits = Limits::new(
-                Size::new(min_width, min_height),
-                Size::new(max_width, max_height),
+                Size::new(min_main, min_cross),
+                Size::new(max_main, max_cross),
             );
 
             let layout = child.layout(renderer, &child_limits);
-
-            if align_items != Alignment::Fill {
-                cross = cross.max(axis.cross(layout.size()));
-            }
+            cross = cross.max(axis.cross(layout.size()));
 
             nodes[i] = layout;
         }
@@ -203,18 +156,10 @@ where
 
         match axis {
             Axis::Horizontal => {
-                node.align(
-                    Alignment::Start,
-                    align_items,
-                    Size::new(0.0, cross),
-                );
+                node.align(Alignment::Start, align_items, Size::new(0.0, cross));
             }
             Axis::Vertical => {
-                node.align(
-                    align_items,
-                    Alignment::Start,
-                    Size::new(cross, 0.0),
-                );
+                node.align(align_items, Alignment::Start, Size::new(cross, 0.0));
             }
         }
 

@@ -2,9 +2,7 @@ pub use crate::Overlay;
 
 use crate::event::{self, Event};
 use crate::layout;
-use crate::mouse;
-use crate::renderer;
-use crate::{Clipboard, Layout, Point, Rectangle, Shell, Size, Vector};
+use crate::{Clipboard, Hasher, Layout, Point, Size, Vector};
 
 /// A generic [`Overlay`].
 #[allow(missing_debug_implementations)]
@@ -23,11 +21,6 @@ where
         overlay: Box<dyn Overlay<Message, Renderer> + 'a>,
     ) -> Self {
         Self { position, overlay }
-    }
-
-    /// Returns the position of the [`Element`].
-    pub fn position(&self) -> Point {
-        self.position
     }
 
     /// Translates the [`Element`].
@@ -62,7 +55,7 @@ where
         cursor_position: Point,
         renderer: &Renderer,
         clipboard: &mut dyn Clipboard,
-        shell: &mut Shell<'_, Message>,
+        messages: &mut Vec<Message>,
     ) -> event::Status {
         self.overlay.on_event(
             event,
@@ -70,23 +63,7 @@ where
             cursor_position,
             renderer,
             clipboard,
-            shell,
-        )
-    }
-
-    /// Returns the current [`mouse::Interaction`] of the [`Element`].
-    pub fn mouse_interaction(
-        &self,
-        layout: Layout<'_>,
-        cursor_position: Point,
-        viewport: &Rectangle,
-        renderer: &Renderer,
-    ) -> mouse::Interaction {
-        self.overlay.mouse_interaction(
-            layout,
-            cursor_position,
-            viewport,
-            renderer,
+            messages,
         )
     }
 
@@ -94,11 +71,17 @@ where
     pub fn draw(
         &self,
         renderer: &mut Renderer,
-        style: &renderer::Style,
+        defaults: &Renderer::Defaults,
         layout: Layout<'_>,
         cursor_position: Point,
-    ) {
-        self.overlay.draw(renderer, style, layout, cursor_position)
+    ) -> Renderer::Output {
+        self.overlay
+            .draw(renderer, defaults, layout, cursor_position)
+    }
+
+    /// Computes the _layout_ hash of the [`Element`].
+    pub fn hash_layout(&self, state: &mut Hasher) {
+        self.overlay.hash_layout(state, self.position);
     }
 }
 
@@ -136,10 +119,9 @@ where
         cursor_position: Point,
         renderer: &Renderer,
         clipboard: &mut dyn Clipboard,
-        shell: &mut Shell<'_, B>,
+        messages: &mut Vec<B>,
     ) -> event::Status {
-        let mut local_messages = Vec::new();
-        let mut local_shell = Shell::new(&mut local_messages);
+        let mut original_messages = Vec::new();
 
         let event_status = self.content.on_event(
             event,
@@ -147,36 +129,28 @@ where
             cursor_position,
             renderer,
             clipboard,
-            &mut local_shell,
+            &mut original_messages,
         );
 
-        shell.merge(local_shell, self.mapper);
+        original_messages
+            .drain(..)
+            .for_each(|message| messages.push((self.mapper)(message)));
 
         event_status
-    }
-
-    fn mouse_interaction(
-        &self,
-        layout: Layout<'_>,
-        cursor_position: Point,
-        viewport: &Rectangle,
-        renderer: &Renderer,
-    ) -> mouse::Interaction {
-        self.content.mouse_interaction(
-            layout,
-            cursor_position,
-            viewport,
-            renderer,
-        )
     }
 
     fn draw(
         &self,
         renderer: &mut Renderer,
-        style: &renderer::Style,
+        defaults: &Renderer::Defaults,
         layout: Layout<'_>,
         cursor_position: Point,
-    ) {
-        self.content.draw(renderer, style, layout, cursor_position)
+    ) -> Renderer::Output {
+        self.content
+            .draw(renderer, defaults, layout, cursor_position)
+    }
+
+    fn hash_layout(&self, state: &mut Hasher, position: Point) {
+        self.content.hash_layout(state, position);
     }
 }

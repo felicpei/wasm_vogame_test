@@ -1,7 +1,8 @@
 use iced::{
-    layout, mouse, Alignment, Element, Event, Layout, Length, Padding, Point,
+    layout, mouse, Alignment, Element, Event, Hasher, Layout, Length, Padding, Point,
     Rectangle, Size, Widget,
 };
+use std::hash::Hash;
 
 /// A widget used to overlay one widget on top of another
 /// Layout behaves similar to the iced::Container widget
@@ -159,19 +160,19 @@ where
         )
     }
 
-    // fn hash_layout(&self, state: &mut Hasher) {
-    //     struct Marker;
-    //     std::any::TypeId::of::<Marker>().hash(state);
+    fn hash_layout(&self, state: &mut Hasher) {
+        struct Marker;
+        std::any::TypeId::of::<Marker>().hash(state);
 
-    //     self.padding.hash(state);
-    //     self.width.hash(state);
-    //     self.height.hash(state);
-    //     self.max_width.hash(state);
-    //     self.max_height.hash(state);
+        self.padding.hash(state);
+        self.width.hash(state);
+        self.height.hash(state);
+        self.max_width.hash(state);
+        self.max_height.hash(state);
 
-    //     self.over.hash_layout(state);
-    //     self.under.hash_layout(state);
-    // }
+        self.over.hash_layout(state);
+        self.under.hash_layout(state);
+    }
 
     fn on_event(
         &mut self,
@@ -180,7 +181,7 @@ where
         cursor_position: Point,
         renderer: &R,
         clipboard: &mut dyn iced::native::Clipboard,
-        shell: &mut iced::Shell<'_, M>,
+        messages: &mut Vec<M>,
     ) -> iced::event::Status {
         let mut children = layout.children();
         let over_layout = children.next().unwrap();
@@ -192,7 +193,7 @@ where
             cursor_position,
             renderer,
             clipboard,
-            shell,
+            messages,
         );
 
         // If mouse press check if over the overlay widget before sending to under
@@ -207,7 +208,7 @@ where
                     cursor_position,
                     renderer,
                     clipboard,
-                    shell,
+                    messages,
                 )
                 .merge(status)
         } else {
@@ -215,13 +216,11 @@ where
         }
     }
 
-    fn overlay(&mut self, layout: Layout<'_>, renderer: &R) -> Option<iced::overlay::Element<'_, M, R>> {
+    fn overlay(&mut self, layout: Layout<'_>) -> Option<iced::overlay::Element<'_, M, R>> {
         let mut children = layout.children();
-
         let (over, under) = (&mut self.over, &mut self.under);
-
-        over.overlay(children.next().unwrap(), renderer)
-            .or_else(move || under.overlay(children.next().unwrap(), renderer))
+        over.overlay(children.next().unwrap())
+            .or_else(move || under.overlay(children.next().unwrap()))
     }
 }
 

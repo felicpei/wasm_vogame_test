@@ -2,7 +2,7 @@
 name = "iced_winit"
 version = "0.3.0"
 authors = ["Héctor Ramón Jiménez <hector0193@gmail.com>"]
-edition = "2021"
+edition = "2018"
 description = "A winit runtime for Iced"
 license = "MIT"
 repository = "https://github.com/hecrj/iced"
@@ -17,6 +17,7 @@ debug = ["iced_native/debug"]
 window_clipboard = "0.2"
 log = "0.4"
 thiserror = "1.0"
+
 
 [dependencies.winit]
 version = "0.26"
@@ -35,17 +36,5 @@ path = "../graphics"
 version = "0.3"
 path = "../futures"
 
-[dependencies.iced_lazy]
-version = "0.1.0"
-path = "../lazy"
-
-[dependencies.iced_style]
-version = "0.3"
-path = "../style"
-
 [target.'cfg(target_os = "windows")'.dependencies.winapi]
 version = "0.3.6"
-
-[target.'cfg(target_arch = "wasm32")'.dependencies.web-sys]
-version = "0.3"
-features = ["Document", "Window"]

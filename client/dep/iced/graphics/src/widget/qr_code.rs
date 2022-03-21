@@ -1,11 +1,10 @@
 //! Encode and display information in a QR code.
 use crate::canvas;
-use crate::renderer::{self, Renderer};
-use crate::Backend;
+use crate::{Backend, Defaults, Primitive, Renderer, Vector};
 
-use iced_native::layout;
 use iced_native::{
-    Color, Element, Layout, Length, Point, Rectangle, Size, Vector, Widget,
+    layout, mouse, Color, Element, Hasher, Layout, Length, Point, Rectangle,
+    Size, Widget,
 };
 use thiserror::Error;
 
@@ -73,16 +72,20 @@ where
         ))
     }
 
+    fn hash_layout(&self, state: &mut Hasher) {
+        use std::hash::Hash;
+
+        self.state.contents.hash(state);
+    }
+
     fn draw(
         &self,
-        renderer: &mut Renderer<B>,
-        _style: &renderer::Style,
+        _renderer: &mut Renderer<B>,
+        _defaults: &Defaults,
         layout: Layout<'_>,
         _cursor_position: Point,
         _viewport: &Rectangle,
-    ) {
-        use iced_native::Renderer as _;
-
+    ) -> (Primitive, mouse::Interaction) {
         let bounds = layout.bounds();
         let side_length = self.state.width + 2 * QUIET_ZONE;
 
@@ -119,11 +122,13 @@ where
                 });
         });
 
-        let translation = Vector::new(bounds.x, bounds.y);
-
-        renderer.with_translation(translation, |renderer| {
-            renderer.draw_primitive(geometry.into_primitive());
-        });
+        (
+            Primitive::Translate {
+                translation: Vector::new(bounds.x, bounds.y),
+                content: Box::new(geometry.into_primitive()),
+            },
+            mouse::Interaction::default(),
+        )
     }
 }
 

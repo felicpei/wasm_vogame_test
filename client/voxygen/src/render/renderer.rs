@@ -3,7 +3,6 @@ pub(super) mod drawer;
 // Consts and bind groups for post-process and clouds
 mod locals;
 mod pipeline_creation;
-mod screenshot;
 mod shaders;
 mod shadow_map;
 
@@ -158,13 +157,6 @@ pub struct Renderer {
     other_modes: OtherModes,
     resolution: Vec2<u32>,
 
-    // If this is Some then a screenshot will be taken and passed to the handler here
-    take_screenshot: Option<screenshot::ScreenshotFn>,
-
-    profiler: wgpu_profiler::GpuProfiler,
-    profile_times: Vec<wgpu_profiler::GpuTimerScopeResult>,
-    profiler_features_enabled: bool,
-
     // This checks is added because windows resizes the window to 0,0 when
     // minimizing and this causes a bunch of validation errors
     is_minimized: bool,
@@ -181,7 +173,7 @@ impl Renderer {
         mode: RenderMode,
         runtime: &tokio::runtime::Runtime,
     ) -> Result<Self, RenderError> {
-        let (pipeline_modes, mut other_modes) = mode.split();
+        let (pipeline_modes, other_modes) = mode.split();
         // Enable seamless cubemaps globally, where available--they are essentially a
         // strict improvement on regular cube maps.
         //
@@ -302,7 +294,7 @@ impl Renderer {
                 features: wgpu::Features::DEPTH_CLIP_CONTROL
                     | wgpu::Features::ADDRESS_MODE_CLAMP_TO_BORDER
                     | wgpu::Features::PUSH_CONSTANTS
-                    | (adapter.features() & wgpu_profiler::GpuProfiler::REQUIRED_WGPU_FEATURES),
+                    | adapter.features(),
                 limits,
             },
             trace_path,
@@ -318,16 +310,6 @@ impl Renderer {
                 &error, &info,
             );
         });
-
-        let profiler_features_enabled = device
-            .features()
-            .contains(wgpu_profiler::GpuProfiler::REQUIRED_WGPU_FEATURES);
-        if !profiler_features_enabled {
-            log::info!(
-                "The features for GPU profiling (timestamp queries) are not available on this \
-                 adapter"
-            );
-        }
 
         let format = surface.get_preferred_format(&adapter)
             .expect("No supported swap chain format found");
@@ -476,10 +458,6 @@ impl Renderer {
             create_quad_index_buffer_u16(&device, QUAD_INDEX_BUFFER_U16_START_VERT_LEN as usize);
         let quad_index_buffer_u32 =
             create_quad_index_buffer_u32(&device, QUAD_INDEX_BUFFER_U32_START_VERT_LEN as usize);
-        let mut profiler = wgpu_profiler::GpuProfiler::new(4, queue.get_timestamp_period());
-        other_modes.profiler_enabled &= profiler_features_enabled;
-        profiler.enable_timer = other_modes.profiler_enabled;
-        profiler.enable_debug_marker = other_modes.profiler_enabled;
 
         Ok(Self {
             device,
@@ -508,11 +486,6 @@ impl Renderer {
             pipeline_modes,
             other_modes,
             resolution: Vec2::new(dims.width, dims.height),
-
-            take_screenshot: None,
-            profiler,
-            profile_times: Vec::new(),
-            profiler_features_enabled,
 
             is_minimized: false,
 
@@ -555,16 +528,6 @@ impl Renderer {
             // Update present mode in swap chain descriptor
             self.sc_desc.present_mode = self.other_modes.present_mode.into();
 
-            // Only enable profiling if the wgpu features are enabled
-            self.other_modes.profiler_enabled &= self.profiler_features_enabled;
-            // Enable/disable profiler
-            if !self.other_modes.profiler_enabled {
-                // Clear the times if disabled
-                core::mem::take(&mut self.profile_times);
-            }
-            self.profiler.enable_timer = self.other_modes.profiler_enabled;
-            self.profiler.enable_debug_marker = self.other_modes.profiler_enabled;
-
             // Recreate render target
             self.on_resize(self.resolution);
         }
@@ -587,33 +550,6 @@ impl Renderer {
 
     /// Get the pipelines mode.
     pub fn pipeline_modes(&self) -> &PipelineModes { &self.pipeline_modes }
-
-    /// Get the current profiling times
-    /// Nested timings immediately follow their parent
-    /// Returns Vec<(how nested this timing is, label, length in seconds)>
-    pub fn timings(&self) -> Vec<(u8, &str, f64)> {
-        use wgpu_profiler::GpuTimerScopeResult;
-        fn recursive_collect<'a>(
-            vec: &mut Vec<(u8, &'a str, f64)>,
-            result: &'a GpuTimerScopeResult,
-            nest_level: u8,
-        ) {
-            vec.push((
-                nest_level,
-                &result.label,
-                result.time.end - result.time.start,
-            ));
-            result
-                .nested_scopes
-                .iter()
-                .for_each(|child| recursive_collect(vec, child, nest_level + 1));
-        }
-        let mut vec = Vec::new();
-        self.profile_times
-            .iter()
-            .for_each(|child| recursive_collect(&mut vec, child, 0));
-        vec
-    }
 
     /// Resize internal render targets to match window render target dimensions.
     pub fn on_resize(&mut self, dims: Vec2<u32>) {
@@ -911,14 +847,6 @@ impl Renderer {
        
         if self.is_minimized {
             return Ok(None);
-        }
-
-        // Try to get the latest profiling results
-        if self.other_modes.profiler_enabled {
-            // Note: this lags a few frames behind
-            if let Some(profile_times) = self.profiler.process_finished_frame() {
-                self.profile_times = profile_times;
-            }
         }
 
         // Handle polling background pipeline creation/recreation
@@ -1326,96 +1254,6 @@ impl Renderer {
     ) {
         texture.update(&self.queue, offset, size, bytemuck::cast_slice(data))
     }
-
-    /// Queue to obtain a screenshot on the next frame render
-    pub fn create_screenshot(
-        &mut self,
-        screenshot_handler: impl FnOnce(Result<image::DynamicImage, String>) + Send + 'static,
-    ) {
-        // Queue screenshot
-        self.take_screenshot = Some(Box::new(screenshot_handler));
-        // Take profiler snapshot
-        if self.other_modes.profiler_enabled {
-            let file_name = format!(
-                "frame-trace_{}.json",
-                std::time::SystemTime::now()
-                    .duration_since(std::time::SystemTime::UNIX_EPOCH)
-                    .map(|d| d.as_millis())
-                    .unwrap_or(0)
-            );
-
-            if let Err(err) = wgpu_profiler::chrometrace::write_chrometrace(
-                std::path::Path::new(&file_name),
-                &self.profile_times,
-            ) {
-                log::error!("{:?} Failed to save GPU timing snapshot", err);
-            } else {
-                log::info!("Saved GPU timing snapshot as: {}", file_name);
-            }
-        }
-    }
-
-    // Consider reenabling at some time
-    //
-    // /// Queue the rendering of the player silhouette in the upcoming frame.
-    // pub fn render_player_shadow(
-    //     &mut self,
-    //     _model: &figure::FigureModel,
-    //     _col_lights: &Texture<ColLightFmt>,
-    //     _global: &GlobalModel,
-    //     _bones: &Consts<figure::BoneData>,
-    //     _lod: &lod_terrain::LodData,
-    //     _locals: &Consts<shadow::Locals>,
-    // ) {
-    //     // FIXME: Consider reenabling at some point.
-    //     /* let (point_shadow_maps, directed_shadow_maps) =
-    //         if let Some(shadow_map) = &mut self.shadow_map {
-    //             (
-    //                 (
-    //                     shadow_map.point_res.clone(),
-    //                     shadow_map.point_sampler.clone(),
-    //                 ),
-    //                 (
-    //                     shadow_map.directed_res.clone(),
-    //                     shadow_map.directed_sampler.clone(),
-    //                 ),
-    //             )
-    //         } else {
-    //             (
-    //                 (self.noise_tex.srv.clone(), self.noise_tex.sampler.clone()),
-    //                 (self.noise_tex.srv.clone(), self.noise_tex.sampler.clone()),
-    //             )
-    //         };
-    //     let model = &model.opaque;
-
-    //     self.encoder.draw(
-    //         &gfx::Slice {
-    //             start: model.vertex_range().start,
-    //             end: model.vertex_range().end,
-    //             base_vertex: 0,
-    //             instances: None,
-    //             buffer: gfx::IndexBuffer::Auto,
-    //         },
-    //         &self.player_shadow_pipeline.pso,
-    //         &figure::pipe::Data {
-    //             vbuf: model.vbuf.clone(),
-    //             col_lights: (col_lights.srv.clone(), col_lights.sampler.clone()),
-    //             locals: locals.buf.clone(),
-    //             globals: global.globals.buf.clone(),
-    //             bones: bones.buf.clone(),
-    //             lights: global.lights.buf.clone(),
-    //             shadows: global.shadows.buf.clone(),
-    //             light_shadows: global.shadow_mats.buf.clone(),
-    //             point_shadow_maps,
-    //             directed_shadow_maps,
-    //             noise: (self.noise_tex.srv.clone(),
-    // self.noise_tex.sampler.clone()),             alt: (lod.alt.srv.clone(),
-    // lod.alt.sampler.clone()),             horizon: (lod.horizon.srv.clone(),
-    // lod.horizon.sampler.clone()),             tgt_color:
-    // self.tgt_color_view.clone(),             tgt_depth:
-    // (self.tgt_depth_view.clone()/* , (0, 0) */),         },
-    //     ); */
-    // }
 }
 
 fn create_quad_index_buffer_u16(device: &wgpu::Device, vert_length: usize) -> Buffer<u16> {

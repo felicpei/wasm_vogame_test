@@ -3,15 +3,14 @@
 //! A [`Canvas`] widget can be used to draw different kinds of 2D shapes in a
 //! [`Frame`]. It can be used for animation, data visualization, game graphics,
 //! and more!
-use crate::renderer::{self, Renderer};
-use crate::{Backend, Primitive};
-
+use crate::{Backend, Defaults, Primitive, Renderer};
 use iced_native::layout;
 use iced_native::mouse;
 use iced_native::{
-    Clipboard, Element, Layout, Length, Point, Rectangle, Shell, Size, Vector,
+    Clipboard, Element, Hasher, Layout, Length, Point, Rectangle, Size, Vector,
     Widget,
 };
+use std::hash::Hash;
 use std::marker::PhantomData;
 
 pub mod event;
@@ -34,7 +33,7 @@ pub use frame::Frame;
 pub use geometry::Geometry;
 pub use path::Path;
 pub use program::Program;
-pub use stroke::{LineCap, LineDash, LineJoin, Stroke};
+pub use stroke::{LineCap, LineJoin, Stroke};
 pub use text::Text;
 
 /// A widget capable of drawing 2D graphics.
@@ -157,7 +156,7 @@ where
         cursor_position: Point,
         _renderer: &Renderer<B>,
         _clipboard: &mut dyn Clipboard,
-        shell: &mut Shell<'_, Message>,
+        messages: &mut Vec<Message>,
     ) -> event::Status {
         let bounds = layout.bounds();
 
@@ -178,7 +177,7 @@ where
                 self.program.update(canvas_event, bounds, cursor);
 
             if let Some(message) = message {
-                shell.publish(message);
+                messages.push(message);
             }
 
             return event_status;
@@ -187,48 +186,40 @@ where
         event::Status::Ignored
     }
 
-    fn mouse_interaction(
-        &self,
-        layout: Layout<'_>,
-        cursor_position: Point,
-        _viewport: &Rectangle,
-        _renderer: &Renderer<B>,
-    ) -> mouse::Interaction {
-        let bounds = layout.bounds();
-        let cursor = Cursor::from_window_position(cursor_position);
-
-        self.program.mouse_interaction(bounds, cursor)
-    }
-
     fn draw(
         &self,
-        renderer: &mut Renderer<B>,
-        _style: &renderer::Style,
+        _renderer: &mut Renderer<B>,
+        _defaults: &Defaults,
         layout: Layout<'_>,
         cursor_position: Point,
         _viewport: &Rectangle,
-    ) {
-        use iced_native::Renderer as _;
-
+    ) -> (Primitive, mouse::Interaction) {
         let bounds = layout.bounds();
-
-        if bounds.width < 1.0 || bounds.height < 1.0 {
-            return;
-        }
-
         let translation = Vector::new(bounds.x, bounds.y);
         let cursor = Cursor::from_window_position(cursor_position);
 
-        renderer.with_translation(translation, |renderer| {
-            renderer.draw_primitive(Primitive::Group {
-                primitives: self
-                    .program
-                    .draw(bounds, cursor)
-                    .into_iter()
-                    .map(Geometry::into_primitive)
-                    .collect(),
-            });
-        });
+        (
+            Primitive::Translate {
+                translation,
+                content: Box::new(Primitive::Group {
+                    primitives: self
+                        .program
+                        .draw(bounds, cursor)
+                        .into_iter()
+                        .map(Geometry::into_primitive)
+                        .collect(),
+                }),
+            },
+            self.program.mouse_interaction(bounds, cursor),
+        )
+    }
+
+    fn hash_layout(&self, state: &mut Hasher) {
+        struct Marker;
+        std::any::TypeId::of::<Marker>().hash(state);
+
+        self.width.hash(state);
+        self.height.hash(state);
     }
 }
 

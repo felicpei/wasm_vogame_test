@@ -1,6 +1,6 @@
-use crate::mouse;
-use crate::user_interface::{self, UserInterface};
-use crate::{Clipboard, Command, Debug, Event, Point, Program, Size};
+use crate::{
+    Cache, Command, Debug, Event, Point, Program, Renderer, Size, UserInterface,
+};
 
 /// The execution state of a [`Program`]. It leverages caching, event
 /// processing, and rendering primitive storage.
@@ -10,10 +10,10 @@ where
     P: Program + 'static,
 {
     program: P,
-    cache: Option<user_interface::Cache>,
+    cache: Option<Cache>,
+    primitive: <P::Renderer as Renderer>::Output,
     queued_events: Vec<Event>,
     queued_messages: Vec<P::Message>,
-    mouse_interaction: mouse::Interaction,
 }
 
 impl<P> State<P>
@@ -25,31 +25,41 @@ where
     pub fn new(
         mut program: P,
         bounds: Size,
+        cursor_position: Point,
         renderer: &mut P::Renderer,
         debug: &mut Debug,
     ) -> Self {
-        let user_interface = build_user_interface(
+        let mut user_interface = build_user_interface(
             &mut program,
-            user_interface::Cache::default(),
+            Cache::default(),
             renderer,
             bounds,
             debug,
         );
+
+        debug.draw_started();
+        let primitive = user_interface.draw(renderer, cursor_position);
+        debug.draw_finished();
 
         let cache = Some(user_interface.into_cache());
 
         State {
             program,
             cache,
+            primitive,
             queued_events: Vec::new(),
             queued_messages: Vec::new(),
-            mouse_interaction: mouse::Interaction::Idle,
         }
     }
 
     /// Returns a reference to the [`Program`] of the [`State`].
     pub fn program(&self) -> &P {
         &self.program
+    }
+
+    /// Returns a reference to the current rendering primitive of the [`State`].
+    pub fn primitive(&self) -> &<P::Renderer as Renderer>::Output {
+        &self.primitive
     }
 
     /// Queues an event in the [`State`] for processing during an [`update`].
@@ -71,11 +81,6 @@ where
         self.queued_events.is_empty() && self.queued_messages.is_empty()
     }
 
-    /// Returns the current [`mouse::Interaction`] of the [`State`].
-    pub fn mouse_interaction(&self) -> mouse::Interaction {
-        self.mouse_interaction
-    }
-
     /// Processes all the queued events and messages, rebuilding and redrawing
     /// the widgets of the linked [`Program`] if necessary.
     ///
@@ -86,7 +91,7 @@ where
         bounds: Size,
         cursor_position: Point,
         renderer: &mut P::Renderer,
-        clipboard: &mut dyn Clipboard,
+        clipboard: &mut P::Clipboard,
         debug: &mut Debug,
     ) -> Option<Command<P::Message>> {
         let mut user_interface = build_user_interface(
@@ -114,8 +119,7 @@ where
 
         if messages.is_empty() {
             debug.draw_started();
-            self.mouse_interaction =
-                user_interface.draw(renderer, cursor_position);
+            self.primitive = user_interface.draw(renderer, cursor_position);
             debug.draw_finished();
 
             self.cache = Some(user_interface.into_cache());
@@ -131,7 +135,7 @@ where
                     debug.log_message(&message);
 
                     debug.update_started();
-                    let command = self.program.update(message);
+                    let command = self.program.update(message, clipboard);
                     debug.update_finished();
 
                     command
@@ -146,8 +150,7 @@ where
             );
 
             debug.draw_started();
-            self.mouse_interaction =
-                user_interface.draw(renderer, cursor_position);
+            self.primitive = user_interface.draw(renderer, cursor_position);
             debug.draw_finished();
 
             self.cache = Some(user_interface.into_cache());
@@ -159,7 +162,7 @@ where
 
 fn build_user_interface<'a, P: Program>(
     program: &'a mut P,
-    cache: user_interface::Cache,
+    cache: Cache,
     renderer: &mut P::Renderer,
     size: Size,
     debug: &mut Debug,

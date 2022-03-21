@@ -7,7 +7,7 @@ mod servers;
 
 use crate::{
     credits::Credits,
-    render::UiDrawer,
+    render::ThirdPassDrawer,
     ui::{
         self,
         fonts::IcedFonts as Fonts,
@@ -561,5 +561,5 @@ impl MainMenuUi {
         events
     }
 
-    pub fn render<'a>(&'a self, drawer: &mut UiDrawer<'_, 'a>) { self.ui.render(drawer); }
+    pub fn render<'a>(&'a self, drawer: &mut ThirdPassDrawer<'a>) { self.ui.render(drawer); }
 }

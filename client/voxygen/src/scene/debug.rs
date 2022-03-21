@@ -1,5 +1,5 @@
 use crate::render::{
-    Bound, Consts, DebugDrawer, DebugLocals, DebugVertex, Mesh, Model, Quad, Renderer, Tri,
+    Bound, Consts, FirstPassDrawer, DebugLocals, DebugVertex, Mesh, Model, Quad, Renderer, Tri,
 };
 use common::util::srgba_to_linear;
 use hashbrown::{HashMap, HashSet};
@@ -216,9 +216,9 @@ impl Debug {
         }
     }
 
-    pub fn render<'a>(&'a self, drawer: &mut DebugDrawer<'_, 'a>) {
+    pub fn render<'a>(&'a self, drawer: &mut FirstPassDrawer<'a>) {
         for (model, locals) in self.models.values() {
-            drawer.draw(model, locals);
+            drawer.draw_debug(model, locals);
         }
     }
 }

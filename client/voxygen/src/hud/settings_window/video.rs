@@ -1085,23 +1085,6 @@ impl<'a> Widget for Video<'a> {
             .color(TEXT_COLOR)
             .set(state.ids.gpu_profiler_label, ui);
 
-        let gpu_profiler_enabled = ToggleButton::new(
-            render_mode.profiler_enabled,
-            self.imgs.checkbox,
-            self.imgs.checkbox_checked,
-        )
-        .w_h(18.0, 18.0)
-        .right_from(state.ids.gpu_profiler_label, 10.0)
-        .hover_images(self.imgs.checkbox_mo, self.imgs.checkbox_checked_mo)
-        .press_images(self.imgs.checkbox_press, self.imgs.checkbox_checked)
-        .set(state.ids.gpu_profiler_button, ui);
-
-        if render_mode.profiler_enabled != gpu_profiler_enabled {
-            events.push(GraphicsChange::ChangeRenderMode(Box::new(RenderMode {
-                profiler_enabled: gpu_profiler_enabled,
-                ..render_mode.clone()
-            })));
-        }
 
         // Particles
         Text::new(self.localized_strings.get("hud.settings.particles"))

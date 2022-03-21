@@ -13,7 +13,6 @@ use super::{
 use core::{num::NonZeroU32, ops::Range};
 use std::sync::Arc;
 use vek::Aabr;
-use wgpu_profiler::scope::{ManualOwningScope, OwningScope, Scope};
 
 // Currently available pipelines
 enum Pipelines<'frame> {
@@ -63,13 +62,10 @@ struct RendererBorrow<'frame> {
 }
 
 pub struct Drawer<'frame> {
-    encoder: Option<ManualOwningScope<'frame, wgpu::CommandEncoder>>,
+    encoder: Box<wgpu::CommandEncoder>,
     borrow: RendererBorrow<'frame>,
     swap_tex: wgpu::TextureView,
     globals: &'frame GlobalsBindGroup,
-    // Texture and other info for taking a screenshot
-    // Writes to this instead in the third pass if it is present
-    taking_screenshot: Option<super::screenshot::TakeScreenshot>,
 }
 
 impl<'frame> Drawer<'frame> {
@@ -79,16 +75,7 @@ impl<'frame> Drawer<'frame> {
         swap_tex: wgpu::TextureView,
         globals: &'frame GlobalsBindGroup,
     ) -> Self {
-        let taking_screenshot = renderer.take_screenshot.take().map(|screenshot_fn| {
-            super::screenshot::TakeScreenshot::new(
-                &renderer.device,
-                &renderer.layouts.blit,
-                &renderer.sampler,
-                &renderer.sc_desc,
-                screenshot_fn,
-            )
-        });
-
+       
         let (pipelines, shadow) = match &renderer.state {
             super::State::Interface { pipelines, .. } => (Pipelines::Interface(pipelines), None),
             super::State::Complete {
@@ -109,15 +96,12 @@ impl<'frame> Drawer<'frame> {
             quad_index_buffer_u32: &renderer.quad_index_buffer_u32,
         };
 
-        let encoder =
-            ManualOwningScope::start("frame", &mut renderer.profiler, encoder, borrow.device);
 
         Self {
-            encoder: Some(encoder),
+            encoder: Box::new(encoder),
             borrow,
             swap_tex,
             globals,
-            taking_screenshot,
         }
     }
 
@@ -132,26 +116,25 @@ impl<'frame> Drawer<'frame> {
         }
 
         if let ShadowMap::Enabled(ref shadow_renderer) = self.borrow.shadow?.map {
-            let encoder = self.encoder.as_mut().unwrap();
-            let device = self.borrow.device;
-            let mut render_pass =
-                encoder.scoped_render_pass("shadow_pass", device, &wgpu::RenderPassDescriptor {
-                    label: Some("shadow pass"),
-                    color_attachments: &[],
-                    depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
-                        view: &shadow_renderer.directed_depth.view,
-                        depth_ops: Some(wgpu::Operations {
-                            load: wgpu::LoadOp::Clear(1.0),
-                            store: true,
-                        }),
-                        stencil_ops: None,
+            let encoder = self.encoder.as_mut();
+
+            let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                label: Some("shadow pass"),
+                color_attachments: &[],
+                depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
+                    view: &shadow_renderer.directed_depth.view,
+                    depth_ops: Some(wgpu::Operations {
+                        load: wgpu::LoadOp::Clear(1.0),
+                        store: true,
                     }),
-                });
+                    stencil_ops: None,
+                }),
+            });
 
             render_pass.set_bind_group(0, &self.globals.bind_group, &[]);
 
             Some(ShadowPassDrawer {
-                render_pass,
+                render_pass: Box::new(render_pass),
                 borrow: &self.borrow,
                 shadow_renderer,
             })
@@ -165,12 +148,10 @@ impl<'frame> Drawer<'frame> {
         let pipelines = self.borrow.pipelines.all()?;
         // Note: this becomes Some once pipeline creation is complete even if shadows
         // are not enabled
-        let shadow = self.borrow.shadow?;
+        let shadow = self.borrow.shadow.unwrap();
 
-        let encoder = self.encoder.as_mut().unwrap();
-        let device = self.borrow.device;
-        let mut render_pass =
-            encoder.scoped_render_pass("first_pass", device, &wgpu::RenderPassDescriptor {
+	    let encoder = self.encoder.as_mut();
+        let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                 label: Some("first pass"),
                 color_attachments: &[wgpu::RenderPassColorAttachment {
                     view: &self.borrow.views.tgt_color,
@@ -194,11 +175,12 @@ impl<'frame> Drawer<'frame> {
         render_pass.set_bind_group(1, &shadow.bind.bind_group, &[]);
 
         Some(FirstPassDrawer {
-            render_pass,
+            render_pass: Box::new(render_pass),
             borrow: &self.borrow,
             pipelines,
             globals: self.globals,
             shadows: &shadow.bind,
+            col_lights: None,
         })
     }
 
@@ -206,10 +188,8 @@ impl<'frame> Drawer<'frame> {
     pub fn second_pass(&mut self) -> Option<SecondPassDrawer> {
         let pipeline = &self.borrow.pipelines.all()?.clouds;
 
-        let encoder = self.encoder.as_mut().unwrap();
-        let device = self.borrow.device;
-        let mut render_pass =
-            encoder.scoped_render_pass("second_pass", device, &wgpu::RenderPassDescriptor {
+	    let encoder = self.encoder.as_mut();
+        let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                 label: Some("second pass (clouds)"),
                 color_attachments: &[wgpu::RenderPassColorAttachment {
                     view: &self.borrow.views.tgt_color_pp,
@@ -225,7 +205,7 @@ impl<'frame> Drawer<'frame> {
         render_pass.set_bind_group(0, &self.globals.bind_group, &[]);
 
         Some(SecondPassDrawer {
-            render_pass,
+            render_pass: Box::new(render_pass),
             borrow: &self.borrow,
             pipeline,
         })
@@ -251,21 +231,19 @@ impl<'frame> Drawer<'frame> {
                 None => return,
             };
 
-        let device = self.borrow.device;
-        let mut encoder = self.encoder.as_mut().unwrap().scope("bloom", device);
-
+	    let encoder = self.encoder.as_mut();
+        
         let mut run_bloom_pass = |bind, view, label: String, pipeline, load| {
             let pass_label = format!("bloom {} pass", label);
-            let mut render_pass =
-                encoder.scoped_render_pass(&label, device, &wgpu::RenderPassDescriptor {
-                    label: Some(&pass_label),
-                    color_attachments: &[wgpu::RenderPassColorAttachment {
-                        resolve_target: None,
-                        view,
-                        ops: wgpu::Operations { store: true, load },
-                    }],
-                    depth_stencil_attachment: None,
-                });
+            let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                label: Some(&pass_label),
+                color_attachments: &[wgpu::RenderPassColorAttachment {
+                    resolve_target: None,
+                    view,
+                    ops: wgpu::Operations { store: true, load },
+                }],
+                depth_stencil_attachment: None,
+            });
 
             render_pass.set_bind_group(0, bind, &[]);
             render_pass.set_pipeline(pipeline);
@@ -324,31 +302,27 @@ impl<'frame> Drawer<'frame> {
     }
 
     pub fn third_pass(&mut self) -> ThirdPassDrawer {
-        let encoder = self.encoder.as_mut().unwrap();
-        let device = self.borrow.device;
-        let mut render_pass =
-            encoder.scoped_render_pass("third_pass", device, &wgpu::RenderPassDescriptor {
-                label: Some("third pass (postprocess + ui)"),
-                color_attachments: &[wgpu::RenderPassColorAttachment {
-                    // If a screenshot was requested render to that as an intermediate texture
-                    // instead
-                    view: self
-                        .taking_screenshot
-                        .as_ref()
-                        .map_or(&self.swap_tex, |s| s.texture_view()),
-                    resolve_target: None,
-                    ops: wgpu::Operations {
-                        load: wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),
-                        store: true,
-                    },
-                }],
-                depth_stencil_attachment: None,
-            });
+        
+        let encoder = self.encoder.as_mut();
+        let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+            label: Some("third pass (postprocess + ui)"),
+            color_attachments: &[wgpu::RenderPassColorAttachment {
+                // If a screenshot was requested render to that as an intermediate texture
+                // instead
+                view: &self.swap_tex,
+                resolve_target: None,
+                ops: wgpu::Operations {
+                    load: wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),
+                    store: true,
+                },
+            }],
+            depth_stencil_attachment: None,
+        });
 
         render_pass.set_bind_group(0, &self.globals.bind_group, &[]);
 
         ThirdPassDrawer {
-            render_pass,
+            render_pass: Box::new(render_pass),
             borrow: &self.borrow,
         }
     }
@@ -366,12 +340,7 @@ impl<'frame> Drawer<'frame> {
         }
 
         if let Some(ShadowMap::Enabled(ref shadow_renderer)) = self.borrow.shadow.map(|s| &s.map) {
-            let device = self.borrow.device;
-            let mut encoder = self
-                .encoder
-                .as_mut()
-                .unwrap()
-                .scope("point shadows", device);
+            
             const STRIDE: usize = std::mem::size_of::<shadow::PointLightMatrix>();
             let data = bytemuck::cast_slice(matrices);
 
@@ -393,8 +362,8 @@ impl<'frame> Drawer<'frame> {
                         });
 
                 let label = format!("point shadow face-{} pass", face);
-                let mut render_pass =
-                    encoder.scoped_render_pass(&label, device, &wgpu::RenderPassDescriptor {
+                let encoder = self.encoder.as_mut();
+                let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                         label: Some(&label),
                         color_attachments: &[],
                         depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
@@ -440,11 +409,8 @@ impl<'frame> Drawer<'frame> {
     /// aren't used here they are needed for the ShadowMap to exist)
     pub fn clear_shadows(&mut self) {
         if let Some(ShadowMap::Enabled(ref shadow_renderer)) = self.borrow.shadow.map(|s| &s.map) {
-            let device = self.borrow.device;
-            let encoder = self.encoder.as_mut().unwrap();
-            let _ = encoder.scoped_render_pass(
-                "clear_directed_shadow",
-                device,
+            
+            let _ = self.encoder.as_mut().begin_render_pass(
                 &wgpu::RenderPassDescriptor {
                     label: Some("clear directed shadow pass"),
                     color_attachments: &[],
@@ -477,7 +443,7 @@ impl<'frame> Drawer<'frame> {
                         });
 
                 let label = format!("clear point shadow face-{} pass", face);
-                let _ = encoder.scoped_render_pass(&label, device, &wgpu::RenderPassDescriptor {
+                let _ = self.encoder.as_mut().begin_render_pass(&wgpu::RenderPassDescriptor {
                     label: Some(&label),
                     color_attachments: &[],
                     depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
@@ -494,391 +460,267 @@ impl<'frame> Drawer<'frame> {
     }
 }
 
-impl<'frame> Drop for Drawer<'frame> {
-    fn drop(&mut self) {
-        let mut encoder = self.encoder.take().unwrap();
-
-        // If taking a screenshot and the blit pipeline is available
-        // NOTE: blit pipeline should always be available for now so we don't report an
-        // error if it isn't
-        let download_and_handle_screenshot = self
-            .taking_screenshot
-            .take()
-            .zip(self.borrow.pipelines.blit())
-            .map(|(screenshot, blit)| {
-                // Image needs to be copied from the screenshot texture to the swapchain texture
-                let mut render_pass = encoder.scoped_render_pass(
-                    "screenshot blit",
-                    self.borrow.device,
-                    &wgpu::RenderPassDescriptor {
-                        label: Some("Blit screenshot pass"),
-                        color_attachments: &[wgpu::RenderPassColorAttachment {
-                            view: &self.swap_tex,
-                            resolve_target: None,
-                            ops: wgpu::Operations {
-                                load: wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),
-                                store: true,
-                            },
-                        }],
-                        depth_stencil_attachment: None,
-                    },
-                );
-                render_pass.set_pipeline(&blit.pipeline);
-                render_pass.set_bind_group(0, screenshot.bind_group(), &[]);
-                render_pass.draw(0..3, 0..1);
-                drop(render_pass);
-                // Issues a command to copy from the texture to a buffer and returns a closure
-                // that will send the buffer off to another thread to be mapped
-                // and processed.
-                screenshot.copy_to_buffer(&mut encoder)
-            });
-
-        let (mut encoder, profiler) = encoder.end_scope();
-        profiler.resolve_queries(&mut encoder);
-
-        // It is recommended to only do one submit per frame
-        self.borrow.queue.submit(std::iter::once(encoder.finish()));
-        // Need to call this after submit so the async mapping doesn't occur before
-        // copying the screenshot to the buffer which will be mapped.
-        if let Some(f) = download_and_handle_screenshot {
-            f();
-        }
-
-        profiler
-            .end_frame()
-            .expect("Gpu profiler error! Maybe there was an unclosed scope?");
-    }
-}
-
 // Shadow pass
 pub struct ShadowPassDrawer<'pass> {
-    render_pass: OwningScope<'pass, wgpu::RenderPass<'pass>>,
+    render_pass: Box<wgpu::RenderPass<'pass>>,
     borrow: &'pass RendererBorrow<'pass>,
     shadow_renderer: &'pass ShadowMapRenderer,
 }
 
 impl<'pass> ShadowPassDrawer<'pass> {
-    pub fn draw_figure_shadows(&mut self) -> FigureShadowDrawer<'_, 'pass> {
-        let mut render_pass = self
-            .render_pass
-            .scope("direcred_figure_shadows", self.borrow.device);
+    pub fn init_figure_shadows(&mut self) {
 
+        let render_pass = self.render_pass.as_mut();
         render_pass.set_pipeline(&self.shadow_renderer.figure_directed_pipeline.pipeline);
-        set_quad_index_buffer::<terrain::Vertex>(&mut render_pass, self.borrow);
-
-        FigureShadowDrawer { render_pass }
+        set_quad_index_buffer::<terrain::Vertex>(render_pass, self.borrow);
     }
 
-    pub fn draw_terrain_shadows(&mut self) -> TerrainShadowDrawer<'_, 'pass> {
-        let mut render_pass = self
-            .render_pass
-            .scope("direcred_terrain_shadows", self.borrow.device);
-
-        render_pass.set_pipeline(&self.shadow_renderer.terrain_directed_pipeline.pipeline);
-        set_quad_index_buffer::<terrain::Vertex>(&mut render_pass, self.borrow);
-
-        TerrainShadowDrawer { render_pass }
-    }
-}
-
-pub struct FigureShadowDrawer<'pass_ref, 'pass: 'pass_ref> {
-    render_pass: Scope<'pass_ref, wgpu::RenderPass<'pass>>,
-}
-
-impl<'pass_ref, 'pass: 'pass_ref> FigureShadowDrawer<'pass_ref, 'pass> {
-    pub fn draw<'data: 'pass>(
+    pub fn draw_figure_shadows<'data: 'pass>(
         &mut self,
         model: SubModel<'data, terrain::Vertex>,
         locals: &'data figure::BoundLocals,
     ) {
-        self.render_pass.set_bind_group(1, &locals.bind_group, &[]);
-        self.render_pass.set_vertex_buffer(0, model.buf());
-        self.render_pass
-            .draw_indexed(0..model.len() as u32 / 4 * 6, 0, 0..1);
+
+        let render_pass = self.render_pass.as_mut();
+        render_pass.set_bind_group(1, &locals.bind_group, &[]);
+        render_pass.set_vertex_buffer(0, model.buf());
+        render_pass.draw_indexed(0..model.len() as u32 / 4 * 6, 0, 0..1);
     }
-}
 
-pub struct TerrainShadowDrawer<'pass_ref, 'pass: 'pass_ref> {
-    render_pass: Scope<'pass_ref, wgpu::RenderPass<'pass>>,
-}
 
-impl<'pass_ref, 'pass: 'pass_ref> TerrainShadowDrawer<'pass_ref, 'pass> {
-    pub fn draw<'data: 'pass>(
+    pub fn init_terrain_shadows(&mut self) {
+
+        let render_pass = self.render_pass.as_mut();
+        render_pass.set_pipeline(&self.shadow_renderer.terrain_directed_pipeline.pipeline);
+        set_quad_index_buffer::<terrain::Vertex>(render_pass, self.borrow);
+    }
+
+    pub fn draw_terrain_shadows<'data: 'pass>(
         &mut self,
         model: &'data Model<terrain::Vertex>,
         locals: &'data terrain::BoundLocals,
     ) {
-        self.render_pass.set_bind_group(1, &locals.bind_group, &[]);
-        self.render_pass.set_vertex_buffer(0, model.buf().slice(..));
-        self.render_pass
-            .draw_indexed(0..model.len() as u32 / 4 * 6, 0, 0..1);
+        let render_pass = self.render_pass.as_mut();
+        render_pass.set_bind_group(1, &locals.bind_group, &[]);
+        render_pass.set_vertex_buffer(0, model.buf().slice(..));
+        render_pass.draw_indexed(0..model.len() as u32 / 4 * 6, 0, 0..1);
     }
 }
 
 // First pass
 pub struct FirstPassDrawer<'pass> {
-    pub(super) render_pass: OwningScope<'pass, wgpu::RenderPass<'pass>>,
+    pub(super) render_pass: Box<wgpu::RenderPass<'pass>>,
     borrow: &'pass RendererBorrow<'pass>,
     pipelines: &'pass super::Pipelines,
     globals: &'pass GlobalsBindGroup,
     shadows: &'pass ShadowTexturesBindGroup,
+    col_lights: Option<&'pass Arc<ColLights<terrain::Locals>>>,
 }
 
 impl<'pass> FirstPassDrawer<'pass> {
     pub fn draw_skybox<'data: 'pass>(&mut self, model: &'data Model<skybox::Vertex>) {
-        let mut render_pass = self.render_pass.scope("skybox", self.borrow.device);
+
+        let render_pass = self.render_pass.as_mut();
 
         render_pass.set_pipeline(&self.pipelines.skybox.pipeline);
-        set_quad_index_buffer::<skybox::Vertex>(&mut render_pass, self.borrow);
+        set_quad_index_buffer::<skybox::Vertex>(render_pass, self.borrow);
+
         render_pass.set_vertex_buffer(0, model.buf().slice(..));
         render_pass.draw(0..model.len() as u32, 0..1);
     }
 
-    pub fn draw_debug(&mut self) -> DebugDrawer<'_, 'pass> {
-        let mut render_pass = self.render_pass.scope("debug", self.borrow.device);
+    pub fn init_debug(&mut self) {
 
+        let render_pass = self.render_pass.as_mut();
         render_pass.set_pipeline(&self.pipelines.debug.pipeline);
-        set_quad_index_buffer::<debug::Vertex>(&mut render_pass, self.borrow);
-
-        DebugDrawer {
-            render_pass,
-            shadows: self.shadows,
-        }
+        set_quad_index_buffer::<debug::Vertex>(render_pass, self.borrow);
     }
 
-    pub fn draw_lod_terrain<'data: 'pass>(&mut self, model: &'data Model<lod_terrain::Vertex>) {
-        let mut render_pass = self.render_pass.scope("lod_terrain", self.borrow.device);
-
-        render_pass.set_pipeline(&self.pipelines.lod_terrain.pipeline);
-        set_quad_index_buffer::<lod_terrain::Vertex>(&mut render_pass, self.borrow);
-        render_pass.set_vertex_buffer(0, model.buf().slice(..));
-        render_pass.draw_indexed(0..model.len() as u32 / 4 * 6, 0, 0..1);
-    }
-
-    pub fn draw_figures(&mut self) -> FigureDrawer<'_, 'pass> {
-        let mut render_pass = self.render_pass.scope("figures", self.borrow.device);
-
-        render_pass.set_pipeline(&self.pipelines.figure.pipeline);
-        // Note: figures use the same vertex type as the terrain
-        set_quad_index_buffer::<terrain::Vertex>(&mut render_pass, self.borrow);
-
-        FigureDrawer { render_pass }
-    }
-
-    pub fn draw_terrain(&mut self) -> TerrainDrawer<'_, 'pass> {
-        let mut render_pass = self.render_pass.scope("terrain", self.borrow.device);
-
-        render_pass.set_pipeline(&self.pipelines.terrain.pipeline);
-        set_quad_index_buffer::<terrain::Vertex>(&mut render_pass, self.borrow);
-
-        TerrainDrawer {
-            render_pass,
-            col_lights: None,
-        }
-    }
-
-    pub fn draw_particles(&mut self) -> ParticleDrawer<'_, 'pass> {
-        let mut render_pass = self.render_pass.scope("particles", self.borrow.device);
-
-        render_pass.set_pipeline(&self.pipelines.particle.pipeline);
-        set_quad_index_buffer::<particle::Vertex>(&mut render_pass, self.borrow);
-
-        ParticleDrawer { render_pass }
-    }
-
-    pub fn draw_sprites<'data: 'pass>(
-        &mut self,
-        globals: &'data sprite::SpriteGlobalsBindGroup,
-        col_lights: &'data ColLights<sprite::Locals>,
-    ) -> SpriteDrawer<'_, 'pass> {
-        let mut render_pass = self.render_pass.scope("sprites", self.borrow.device);
-
-        render_pass.set_pipeline(&self.pipelines.sprite.pipeline);
-        set_quad_index_buffer::<sprite::Vertex>(&mut render_pass, self.borrow);
-        render_pass.set_bind_group(0, &globals.bind_group, &[]);
-        render_pass.set_bind_group(2, &col_lights.bind_group, &[]);
-
-        SpriteDrawer {
-            render_pass,
-            globals: self.globals,
-        }
-    }
-
-    pub fn draw_fluid(&mut self) -> FluidDrawer<'_, 'pass> {
-        let mut render_pass = self.render_pass.scope("fluid", self.borrow.device);
-
-        render_pass.set_pipeline(&self.pipelines.fluid.pipeline);
-        set_quad_index_buffer::<fluid::Vertex>(&mut render_pass, self.borrow);
-
-        FluidDrawer { render_pass }
-    }
-}
-
-pub struct DebugDrawer<'pass_ref, 'pass: 'pass_ref> {
-    render_pass: Scope<'pass_ref, wgpu::RenderPass<'pass>>,
-    shadows: &'pass ShadowTexturesBindGroup,
-}
-
-impl<'pass_ref, 'pass: 'pass_ref> DebugDrawer<'pass_ref, 'pass> {
-    pub fn draw<'data: 'pass>(
+    pub fn draw_debug<'data: 'pass>(
         &mut self,
         model: &'data Model<debug::Vertex>,
         locals: &'data debug::BoundLocals,
     ) {
-        self.render_pass.set_bind_group(1, &locals.bind_group, &[]);
-        self.render_pass.set_vertex_buffer(0, model.buf().slice(..));
-        self.render_pass.draw(0..model.len() as u32, 0..1);
+        let render_pass = self.render_pass.as_mut();
+        render_pass.set_bind_group(1, &locals.bind_group, &[]);
+        render_pass.set_vertex_buffer(0, model.buf().slice(..));
+        render_pass.draw(0..model.len() as u32, 0..1);
     }
-}
 
-impl<'pass_ref, 'pass: 'pass_ref> Drop for DebugDrawer<'pass_ref, 'pass> {
-    fn drop(&mut self) {
+    pub fn drop_debug<'data: 'pass>(&mut self){
         // Maintain that the shadow bind group is set in
         // slot 1 by default during the main pass
-        self.render_pass
-            .set_bind_group(1, &self.shadows.bind_group, &[]);
+        let render_pass = self.render_pass.as_mut();
+        render_pass.set_bind_group(1, &self.shadows.bind_group, &[]);
     }
-}
-pub struct FigureDrawer<'pass_ref, 'pass: 'pass_ref> {
-    render_pass: Scope<'pass_ref, wgpu::RenderPass<'pass>>,
-}
 
-impl<'pass_ref, 'pass: 'pass_ref> FigureDrawer<'pass_ref, 'pass> {
-    pub fn draw<'data: 'pass>(
+    pub fn draw_lod_terrain<'data: 'pass>(&mut self, model: &'data Model<lod_terrain::Vertex>) {
+
+        let render_pass = self.render_pass.as_mut();
+
+        render_pass.set_pipeline(&self.pipelines.lod_terrain.pipeline);
+        set_quad_index_buffer::<lod_terrain::Vertex>(render_pass, self.borrow);
+        render_pass.set_vertex_buffer(0, model.buf().slice(..));
+        render_pass.draw_indexed(0..model.len() as u32 / 4 * 6, 0, 0..1);
+    }
+
+    pub fn init_figures(&mut self) {
+        let render_pass = self.render_pass.as_mut();
+        render_pass.set_pipeline(&self.pipelines.figure.pipeline);
+        // Note: figures use the same vertex type as the terrain
+        set_quad_index_buffer::<terrain::Vertex>(render_pass, self.borrow);
+    }
+    
+    pub fn draw_figures<'data: 'pass>(
         &mut self,
         model: SubModel<'data, terrain::Vertex>,
         locals: &'data figure::BoundLocals,
         // TODO: don't rebind this every time once they are shared between figures
         col_lights: &'data ColLights<figure::Locals>,
     ) {
-        self.render_pass
-            .set_bind_group(2, &col_lights.bind_group, &[]);
-        self.render_pass.set_bind_group(3, &locals.bind_group, &[]);
-        self.render_pass.set_vertex_buffer(0, model.buf());
-        self.render_pass
-            .draw_indexed(0..model.len() as u32 / 4 * 6, 0, 0..1);
+
+        let render_pass = self.render_pass.as_mut();
+        render_pass.set_bind_group(2, &col_lights.bind_group, &[]);
+        render_pass.set_bind_group(3, &locals.bind_group, &[]);
+        render_pass.set_vertex_buffer(0, model.buf());
+        render_pass.draw_indexed(0..model.len() as u32 / 4 * 6, 0, 0..1);
     }
-}
 
-pub struct TerrainDrawer<'pass_ref, 'pass: 'pass_ref> {
-    render_pass: Scope<'pass_ref, wgpu::RenderPass<'pass>>,
-    col_lights: Option<&'pass_ref Arc<ColLights<terrain::Locals>>>,
-}
+    pub fn drop_figures<'data: 'pass>(&mut self){
 
-impl<'pass_ref, 'pass: 'pass_ref> TerrainDrawer<'pass_ref, 'pass> {
-    pub fn draw<'data: 'pass>(
+    }
+
+
+    pub fn init_terrain(&mut self) {
+
+        let render_pass = self.render_pass.as_mut();
+        render_pass.set_pipeline(&self.pipelines.terrain.pipeline);
+        set_quad_index_buffer::<terrain::Vertex>(render_pass, self.borrow);
+    }
+
+    pub fn draw_terrain<'data: 'pass>(
         &mut self,
         model: &'data Model<terrain::Vertex>,
         col_lights: &'data Arc<ColLights<terrain::Locals>>,
         locals: &'data terrain::BoundLocals,
     ) {
+        let render_pass = self.render_pass.as_mut();
+
         if self.col_lights
             // Check if we are still using the same atlas texture as the previous drawn
             // chunk
             .filter(|current_col_lights| Arc::ptr_eq(current_col_lights, col_lights))
             .is_none()
         {
-            self.render_pass
-                .set_bind_group(2, &col_lights.bind_group, &[]);
+            render_pass.set_bind_group(2, &col_lights.bind_group, &[]);
             self.col_lights = Some(col_lights);
         };
 
-        self.render_pass.set_bind_group(3, &locals.bind_group, &[]);
-        self.render_pass.set_vertex_buffer(0, model.buf().slice(..));
-        self.render_pass
-            .draw_indexed(0..model.len() as u32 / 4 * 6, 0, 0..1);
+        render_pass.set_bind_group(3, &locals.bind_group, &[]);
+        render_pass.set_vertex_buffer(0, model.buf().slice(..));
+        render_pass.draw_indexed(0..model.len() as u32 / 4 * 6, 0, 0..1);
     }
-}
 
-pub struct ParticleDrawer<'pass_ref, 'pass: 'pass_ref> {
-    render_pass: Scope<'pass_ref, wgpu::RenderPass<'pass>>,
-}
 
-impl<'pass_ref, 'pass: 'pass_ref> ParticleDrawer<'pass_ref, 'pass> {
-    // Note: if we ever need to draw less than the whole model, these APIs can be
-    // changed
-    pub fn draw<'data: 'pass>(
+    pub fn init_particles(&mut self)  {
+
+        let render_pass = self.render_pass.as_mut();
+        render_pass.set_pipeline(&self.pipelines.particle.pipeline);
+        set_quad_index_buffer::<particle::Vertex>(render_pass, self.borrow);
+    }
+
+    pub fn draw_particles<'data: 'pass>(
         &mut self,
         model: &'data Model<particle::Vertex>,
         instances: &'data Instances<particle::Instance>,
     ) {
-        self.render_pass.set_vertex_buffer(0, model.buf().slice(..));
-        self.render_pass
-            .set_vertex_buffer(1, instances.buf().slice(..));
-        self.render_pass
-            // TODO: since we cast to u32 maybe this should returned by the len/count functions?
-            .draw_indexed(0..model.len() as u32 / 4 * 6, 0, 0..instances.count() as u32);
+        let render_pass = self.render_pass.as_mut();
+        render_pass.set_vertex_buffer(0, model.buf().slice(..));
+        render_pass.set_vertex_buffer(1, instances.buf().slice(..));
+        render_pass.draw_indexed(0..model.len() as u32 / 4 * 6, 0, 0..instances.count() as u32);
     }
-}
 
-pub struct SpriteDrawer<'pass_ref, 'pass: 'pass_ref> {
-    render_pass: Scope<'pass_ref, wgpu::RenderPass<'pass>>,
-    globals: &'pass GlobalsBindGroup,
-}
+   
+    pub fn init_sprites<'data: 'pass>(
+        &mut self,
+        globals: &'data sprite::SpriteGlobalsBindGroup,
+        col_lights: &'data ColLights<sprite::Locals>,
+    ) {
 
-impl<'pass_ref, 'pass: 'pass_ref> SpriteDrawer<'pass_ref, 'pass> {
-    pub fn draw<'data: 'pass>(
+        let render_pass = self.render_pass.as_mut();
+        render_pass.set_pipeline(&self.pipelines.sprite.pipeline);
+        set_quad_index_buffer::<sprite::Vertex>(render_pass, self.borrow);
+        render_pass.set_bind_group(0, &globals.bind_group, &[]);
+        render_pass.set_bind_group(2, &col_lights.bind_group, &[]);
+    }
+
+    pub fn draw_sprites<'data: 'pass>(
         &mut self,
         terrain_locals: &'data terrain::BoundLocals,
         instances: &'data Instances<sprite::Instance>,
     ) {
-        self.render_pass
-            .set_bind_group(3, &terrain_locals.bind_group, &[]);
 
-        self.render_pass
-            .set_vertex_buffer(0, instances.buf().slice(..));
-        self.render_pass.draw_indexed(
+        let render_pass = self.render_pass.as_mut();
+        render_pass.set_bind_group(3, &terrain_locals.bind_group, &[]);
+
+        render_pass.set_vertex_buffer(0, instances.buf().slice(..));
+        render_pass.draw_indexed(
             0..sprite::VERT_PAGE_SIZE / 4 * 6,
             0,
             0..instances.count() as u32,
         );
     }
-}
 
-impl<'pass_ref, 'pass: 'pass_ref> Drop for SpriteDrawer<'pass_ref, 'pass> {
-    fn drop(&mut self) {
+    pub fn drop_sprites<'data: 'pass>(&mut self) {
         // Reset to regular globals
-        self.render_pass
-            .set_bind_group(0, &self.globals.bind_group, &[]);
+        let render_pass = self.render_pass.as_mut();
+        render_pass.set_bind_group(0, &self.globals.bind_group, &[]);
     }
-}
 
-pub struct FluidDrawer<'pass_ref, 'pass: 'pass_ref> {
-    render_pass: Scope<'pass_ref, wgpu::RenderPass<'pass>>,
-}
+    pub fn init_fluid(&mut self) {
+        let render_pass = self.render_pass.as_mut();
+        render_pass.set_pipeline(&self.pipelines.fluid.pipeline);
+        set_quad_index_buffer::<fluid::Vertex>(render_pass, self.borrow);
+    }
 
-impl<'pass_ref, 'pass: 'pass_ref> FluidDrawer<'pass_ref, 'pass> {
-    pub fn draw<'data: 'pass>(
+    pub fn draw_fluid<'data: 'pass>(
         &mut self,
         model: &'data Model<fluid::Vertex>,
         locals: &'data terrain::BoundLocals,
     ) {
-        self.render_pass.set_vertex_buffer(0, model.buf().slice(..));
-        self.render_pass.set_bind_group(2, &locals.bind_group, &[]);
-        self.render_pass
-            .draw_indexed(0..model.len() as u32 / 4 * 6, 0, 0..1);
+        let render_pass = self.render_pass.as_mut();
+        render_pass.set_vertex_buffer(0, model.buf().slice(..));
+        render_pass.set_bind_group(2, &locals.bind_group, &[]);
+        render_pass.draw_indexed(0..model.len() as u32 / 4 * 6, 0, 0..1);
+    }
+
+    
+    pub fn drop_fluid<'data: 'pass>(&mut self) {
+       
     }
 }
 
+
 // Second pass: clouds
 pub struct SecondPassDrawer<'pass> {
-    render_pass: OwningScope<'pass, wgpu::RenderPass<'pass>>,
+    render_pass: Box<wgpu::RenderPass<'pass>>,
     borrow: &'pass RendererBorrow<'pass>,
     pipeline: &'pass clouds::CloudsPipeline,
 }
 
 impl<'pass> SecondPassDrawer<'pass> {
     pub fn draw_clouds(&mut self) {
-        self.render_pass.set_pipeline(&self.pipeline.pipeline);
-        self.render_pass
-            .set_bind_group(1, &self.borrow.locals.clouds_bind.bind_group, &[]);
-        self.render_pass.draw(0..3, 0..1);
+
+        let render_pass = self.render_pass.as_mut();
+        render_pass.set_pipeline(&self.pipeline.pipeline);
+        render_pass.set_bind_group(1, &self.borrow.locals.clouds_bind.bind_group, &[]);
+        render_pass.draw(0..3, 0..1);
     }
 }
 
 /// Third pass: postprocess + ui
 pub struct ThirdPassDrawer<'pass> {
-    render_pass: OwningScope<'pass, wgpu::RenderPass<'pass>>,
+    render_pass: Box<wgpu::RenderPass<'pass>>,
     borrow: &'pass RendererBorrow<'pass>,
 }
 
@@ -890,7 +732,7 @@ impl<'pass> ThirdPassDrawer<'pass> {
             None => return,
         };
 
-        let mut render_pass = self.render_pass.scope("postprocess", self.borrow.device);
+        let render_pass = self.render_pass.as_mut();
         render_pass.set_pipeline(&postprocess.pipeline);
         render_pass.set_bind_group(1, &self.borrow.locals.postprocess_bind.bind_group, &[]);
         render_pass.draw(0..3, 0..1);
@@ -898,61 +740,43 @@ impl<'pass> ThirdPassDrawer<'pass> {
 
     /// Returns None if the UI pipeline is not available (note: this should
     /// never be the case for now)
-    pub fn draw_ui(&mut self) -> Option<UiDrawer<'_, 'pass>> {
-        let ui = self.borrow.pipelines.ui()?;
+    pub fn init_ui(&mut self)  {
+        let ui = self.borrow.pipelines.ui().unwrap();
 
-        let mut render_pass = self.render_pass.scope("ui", self.borrow.device);
+        let render_pass = self.render_pass.as_mut();
         render_pass.set_pipeline(&ui.pipeline);
-        set_quad_index_buffer::<ui::Vertex>(&mut render_pass, self.borrow);
-
-        Some(UiDrawer { render_pass })
+        set_quad_index_buffer::<ui::Vertex>(render_pass, self.borrow);
     }
-}
 
-pub struct UiDrawer<'pass_ref, 'pass: 'pass_ref> {
-    render_pass: Scope<'pass_ref, wgpu::RenderPass<'pass>>,
-}
-
-pub struct PreparedUiDrawer<'pass_ref, 'pass: 'pass_ref> {
-    render_pass: &'pass_ref mut wgpu::RenderPass<'pass>,
-}
-
-impl<'pass_ref, 'pass: 'pass_ref> UiDrawer<'pass_ref, 'pass> {
     /// Set vertex buffer, initial scissor, and locals
     /// These can be changed later but this ensures that they don't have to be
     /// set with every draw call
-    pub fn prepare<'data: 'pass>(
+    pub fn ui_prepare<'data: 'pass>(
         &mut self,
         locals: &'data ui::BoundLocals,
         buf: &'data DynamicModel<ui::Vertex>,
         scissor: Aabr<u16>,
-    ) -> PreparedUiDrawer<'_, 'pass> {
-        // Note: not actually prepared yet
-        // we do this to avoid having to write extra code for the set functions
-        let mut prepared = PreparedUiDrawer {
-            render_pass: &mut *self.render_pass,
-        };
+    )  {
         // Prepare
-        prepared.set_locals(locals);
-        prepared.set_model(buf);
-        prepared.set_scissor(scissor);
-
-        prepared
-    }
-}
-
-impl<'pass_ref, 'pass: 'pass_ref> PreparedUiDrawer<'pass_ref, 'pass> {
-    pub fn set_locals<'data: 'pass>(&mut self, locals: &'data ui::BoundLocals) {
-        self.render_pass.set_bind_group(1, &locals.bind_group, &[]);
+        self.ui_set_locals(locals);
+        self.ui_set_model(buf);
+        self.ui_set_scissor(scissor);
     }
 
-    pub fn set_model<'data: 'pass>(&mut self, model: &'data DynamicModel<ui::Vertex>) {
-        self.render_pass.set_vertex_buffer(0, model.buf().slice(..))
+    pub fn ui_set_locals<'data: 'pass>(&mut self, locals: &'data ui::BoundLocals) {
+        let render_pass = self.render_pass.as_mut();
+        render_pass.set_bind_group(1, &locals.bind_group, &[]);
     }
 
-    pub fn set_scissor(&mut self, scissor: Aabr<u16>) {
+    pub fn ui_set_model<'data: 'pass>(&mut self, model: &'data DynamicModel<ui::Vertex>) {
+        let render_pass = self.render_pass.as_mut();
+        render_pass.set_vertex_buffer(0, model.buf().slice(..))
+    }
+
+    pub fn ui_set_scissor(&mut self, scissor: Aabr<u16>) {
         let Aabr { min, max } = scissor;
-        self.render_pass.set_scissor_rect(
+        let render_pass = self.render_pass.as_mut();
+        render_pass.set_scissor_rect(
             min.x as u32,
             min.y as u32,
             (max.x - min.x) as u32,
@@ -960,11 +784,13 @@ impl<'pass_ref, 'pass: 'pass_ref> PreparedUiDrawer<'pass_ref, 'pass> {
         );
     }
 
-    pub fn draw<'data: 'pass>(&mut self, texture: &'data ui::TextureBindGroup, verts: Range<u32>) {
-        self.render_pass.set_bind_group(2, &texture.bind_group, &[]);
-        self.render_pass.draw(verts, 0..1);
+    pub fn ui_draw<'data: 'pass>(&mut self, texture: &'data ui::TextureBindGroup, verts: Range<u32>) {
+        let render_pass = self.render_pass.as_mut();
+        render_pass.set_bind_group(2, &texture.bind_group, &[]);
+        render_pass.draw(verts, 0..1);
     }
 }
+
 
 fn set_quad_index_buffer<'a, V: super::super::Vertex>(
     pass: &mut wgpu::RenderPass<'a>,

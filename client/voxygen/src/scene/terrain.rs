@@ -12,7 +12,7 @@ use crate::{
         pipelines::{self, ColLights},
         ColLightInfo, FirstPassDrawer, FluidVertex, GlobalModel, Instances, LodData, Mesh, Model,
         RenderError, Renderer, SpriteGlobalsBindGroup, SpriteInstance, SpriteVertex, SpriteVerts,
-        TerrainLocals, TerrainShadowDrawer, TerrainVertex, SPRITE_VERT_PAGE_SIZE,
+        TerrainLocals, TerrainVertex, SPRITE_VERT_PAGE_SIZE,ShadowPassDrawer
     },
 };
 
@@ -1364,7 +1364,7 @@ impl<V: RectRasterableVol> Terrain<V> {
 
     pub fn render_shadows<'a>(
         &'a self,
-        drawer: &mut TerrainShadowDrawer<'_, 'a>,
+        drawer: &mut ShadowPassDrawer<'a>,
         focus_pos: Vec3<f32>,
     ) {
         
@@ -1393,7 +1393,7 @@ impl<V: RectRasterableVol> Terrain<V> {
                     .as_ref()
                     .map(|model| (model, &chunk.locals))
             })
-            .for_each(|(model, locals)| drawer.draw(model, locals));
+            .for_each(|(model, locals)| drawer.draw_terrain_shadows(model, locals));
     }
 
     pub fn chunks_for_point_shadows(
@@ -1433,7 +1433,7 @@ impl<V: RectRasterableVol> Terrain<V> {
 
     pub fn render<'a>(&'a self, drawer: &mut FirstPassDrawer<'a>, focus_pos: Vec3<f32>) {
         
-        let mut drawer = drawer.draw_terrain();
+        drawer.init_terrain();
 
         let focus_chunk = Vec2::from(focus_pos).map2(TerrainChunk::RECT_SIZE, |e: f32, sz| {
             (e as i32).div_euclid(sz as i32)
@@ -1452,7 +1452,7 @@ impl<V: RectRasterableVol> Terrain<V> {
                     .as_ref()
                     .map(|model| (model, &chunk.col_lights, &chunk.locals))
             })
-            .for_each(|(model, col_lights, locals)| drawer.draw(model, col_lights, locals));
+            .for_each(|(model, col_lights, locals)| drawer.draw_terrain(model, col_lights, locals));
     }
 
     pub fn render_translucent<'a>(
@@ -1485,7 +1485,7 @@ impl<V: RectRasterableVol> Terrain<V> {
         let sprite_hid_detail_distance = sprite_render_distance * 0.35;
         let sprite_high_detail_distance = sprite_render_distance * 0.15;
 
-        let mut sprite_drawer = drawer.draw_sprites(&self.sprite_globals, &self.sprite_col_lights);
+        drawer.init_sprites(&self.sprite_globals, &self.sprite_col_lights);
         chunk_iter
             .clone()
             .filter(|(_, c)| c.visible.is_visible())
@@ -1517,15 +1517,15 @@ impl<V: RectRasterableVol> Terrain<V> {
                         4
                     };
 
-                    sprite_drawer.draw(&chunk.locals, &chunk.sprite_instances[lod_level]);
+                    drawer.draw_sprites(&chunk.locals, &chunk.sprite_instances[lod_level]);
                 }
             });
-        drop(sprite_drawer);
+
+        drawer.drop_sprites();
         
 
         // Translucent
-        
-        let mut fluid_drawer = drawer.draw_fluid();
+        drawer.init_fluid();
         chunk_iter
             .filter(|(_, chunk)| chunk.visible.is_visible())
             .filter_map(|(_, chunk)| {
@@ -1538,12 +1538,11 @@ impl<V: RectRasterableVol> Terrain<V> {
             .into_iter()
             .rev() // Render back-to-front
             .for_each(|(model, locals)| {
-                fluid_drawer.draw(
+                drawer.draw_fluid(
                     model,
                     locals,
                 )
             });
-        drop(fluid_drawer);
-        
+            drawer.drop_fluid();
     }
 }

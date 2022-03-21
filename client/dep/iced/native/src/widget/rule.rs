@@ -1,27 +1,28 @@
 //! Display a horizontal or vertical rule for dividing content.
-use crate::layout;
-use crate::renderer;
-use crate::{Color, Element, Layout, Length, Point, Rectangle, Size, Widget};
 
-pub use iced_style::rule::{FillMode, Style, StyleSheet};
+use std::hash::Hash;
+
+use crate::{
+    layout, Element, Hasher, Layout, Length, Point, Rectangle, Size, Widget,
+};
 
 /// Display a horizontal or vertical rule for dividing content.
-#[allow(missing_debug_implementations)]
-pub struct Rule<'a> {
+#[derive(Debug, Copy, Clone)]
+pub struct Rule<Renderer: self::Renderer> {
     width: Length,
     height: Length,
+    style: Renderer::Style,
     is_horizontal: bool,
-    style_sheet: Box<dyn StyleSheet + 'a>,
 }
 
-impl<'a> Rule<'a> {
+impl<Renderer: self::Renderer> Rule<Renderer> {
     /// Creates a horizontal [`Rule`] for dividing content by the given vertical spacing.
     pub fn horizontal(spacing: u16) -> Self {
         Rule {
             width: Length::Fill,
             height: Length::from(Length::Units(spacing)),
+            style: Renderer::Style::default(),
             is_horizontal: true,
-            style_sheet: Default::default(),
         }
     }
 
@@ -30,24 +31,21 @@ impl<'a> Rule<'a> {
         Rule {
             width: Length::from(Length::Units(spacing)),
             height: Length::Fill,
+            style: Renderer::Style::default(),
             is_horizontal: false,
-            style_sheet: Default::default(),
         }
     }
 
     /// Sets the style of the [`Rule`].
-    pub fn style(
-        mut self,
-        style_sheet: impl Into<Box<dyn StyleSheet + 'a>>,
-    ) -> Self {
-        self.style_sheet = style_sheet.into();
+    pub fn style(mut self, style: impl Into<Renderer::Style>) -> Self {
+        self.style = style.into();
         self
     }
 }
 
-impl<'a, Message, Renderer> Widget<Message, Renderer> for Rule<'a>
+impl<Message, Renderer> Widget<Message, Renderer> for Rule<Renderer>
 where
-    Renderer: crate::Renderer,
+    Renderer: self::Renderer,
 {
     fn width(&self) -> Length {
         self.width
@@ -70,62 +68,49 @@ where
     fn draw(
         &self,
         renderer: &mut Renderer,
-        _style: &renderer::Style,
+        _defaults: &Renderer::Defaults,
         layout: Layout<'_>,
         _cursor_position: Point,
         _viewport: &Rectangle,
-    ) {
-        let bounds = layout.bounds();
-        let style = self.style_sheet.style();
+    ) -> Renderer::Output {
+        renderer.draw(layout.bounds(), &self.style, self.is_horizontal)
+    }
 
-        let bounds = if self.is_horizontal {
-            let line_y = (bounds.y + (bounds.height / 2.0)
-                - (style.width as f32 / 2.0))
-                .round();
+    fn hash_layout(&self, state: &mut Hasher) {
+        struct Marker;
+        std::any::TypeId::of::<Marker>().hash(state);
 
-            let (offset, line_width) = style.fill_mode.fill(bounds.width);
-            let line_x = bounds.x + offset;
-
-            Rectangle {
-                x: line_x,
-                y: line_y,
-                width: line_width,
-                height: style.width as f32,
-            }
-        } else {
-            let line_x = (bounds.x + (bounds.width / 2.0)
-                - (style.width as f32 / 2.0))
-                .round();
-
-            let (offset, line_height) = style.fill_mode.fill(bounds.height);
-            let line_y = bounds.y + offset;
-
-            Rectangle {
-                x: line_x,
-                y: line_y,
-                width: style.width as f32,
-                height: line_height,
-            }
-        };
-
-        renderer.fill_quad(
-            renderer::Quad {
-                bounds,
-                border_radius: style.radius,
-                border_width: 0.0,
-                border_color: Color::TRANSPARENT,
-            },
-            style.color,
-        );
+        self.width.hash(state);
+        self.height.hash(state);
     }
 }
 
-impl<'a, Message, Renderer> From<Rule<'a>> for Element<'a, Message, Renderer>
+/// The renderer of a [`Rule`].
+pub trait Renderer: crate::Renderer {
+    /// The style supported by this renderer.
+    type Style: Default;
+
+    /// Draws a [`Rule`].
+    ///
+    /// It receives:
+    ///   * the bounds of the [`Rule`]
+    ///   * the style of the [`Rule`]
+    ///   * whether the [`Rule`] is horizontal (true) or vertical (false)
+    fn draw(
+        &mut self,
+        bounds: Rectangle,
+        style: &Self::Style,
+        is_horizontal: bool,
+    ) -> Self::Output;
+}
+
+impl<'a, Message, Renderer> From<Rule<Renderer>>
+    for Element<'a, Message, Renderer>
 where
-    Renderer: 'a + crate::Renderer,
+    Renderer: 'a + self::Renderer,
     Message: 'a,
 {
-    fn from(rule: Rule<'a>) -> Element<'a, Message, Renderer> {
+    fn from(rule: Rule<Renderer>) -> Element<'a, Message, Renderer> {
         Element::new(rule)
     }
 }

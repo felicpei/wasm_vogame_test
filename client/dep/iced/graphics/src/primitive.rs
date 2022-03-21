@@ -1,10 +1,9 @@
-use iced_native::image;
-use iced_native::svg;
-use iced_native::{Background, Color, Font, Rectangle, Size, Vector};
+use iced_native::{
+    image, svg, Background, Color, Font, Horizontal, Rectangle, Size,
+    Vector, Vertical,
+};
 
-use crate::alignment;
 use crate::triangle;
-
 use std::sync::Arc;
 
 /// A rendering primitive.
@@ -30,9 +29,9 @@ pub enum Primitive {
         /// The font of the text
         font: Font,
         /// The horizontal alignment of the text
-        horizontal_alignment: alignment::Horizontal,
+        horizontal_alignment: Horizontal,
         /// The vertical alignment of the text
-        vertical_alignment: alignment::Vertical,
+        vertical_alignment: Vertical,
     },
     /// A quad primitive
     Quad {
@@ -66,6 +65,8 @@ pub enum Primitive {
     Clip {
         /// The bounds of the clip
         bounds: Rectangle,
+        /// The offset transformation of the clip
+        offset: Vector<u32>,
         /// The content of the clip
         content: Box<Primitive>,
     },

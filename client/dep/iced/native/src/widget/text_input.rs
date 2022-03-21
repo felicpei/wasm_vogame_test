@@ -11,31 +11,26 @@ pub use value::Value;
 
 use editor::Editor;
 
-use crate::alignment;
 use crate::event::{self, Event};
 use crate::keyboard;
 use crate::layout;
 use crate::mouse::{self, click};
-use crate::renderer;
-use crate::text::{self, Text};
+use crate::text;
 use crate::touch;
 use crate::{
-    Clipboard, Color, Element, Layout, Length, Padding, Point, Rectangle,
-    Shell, Size, Vector, Widget,
+    Clipboard, Element, Hasher, Layout, Length, Padding, Point, Rectangle,
+    Size, Widget,
 };
 
 use std::u32;
-
-pub use iced_style::text_input::{Style, StyleSheet};
 
 /// A field that can be filled with text.
 ///
 /// # Example
 /// ```
-/// # use iced_native::renderer::Null;
-/// # use iced_native::widget::text_input;
+/// # use iced_native::{text_input, renderer::Null};
 /// #
-/// # pub type TextInput<'a, Message> = iced_native::widget::TextInput<'a, Message, Null>;
+/// # pub type TextInput<'a, Message> = iced_native::TextInput<'a, Message, Null>;
 /// #[derive(Debug, Clone)]
 /// enum Message {
 ///     TextInputChanged(String),
@@ -52,9 +47,9 @@ pub use iced_style::text_input::{Style, StyleSheet};
 /// )
 /// .padding(10);
 /// ```
-/// ![Text input drawn by `iced_wgpu`](https://github.com/iced-rs/iced/blob/7760618fb112074bc40b148944521f312152012a/docs/images/text_input.png?raw=true)
+/// ![Text input drawn by `iced_wgpu`](https://github.com/hecrj/iced/blob/7760618fb112074bc40b148944521f312152012a/docs/images/text_input.png?raw=true)
 #[allow(missing_debug_implementations)]
-pub struct TextInput<'a, Message, Renderer: text::Renderer> {
+pub struct TextInput<'a, Message, Renderer: self::Renderer> {
     state: &'a mut State,
     placeholder: String,
     value: Value,
@@ -66,13 +61,13 @@ pub struct TextInput<'a, Message, Renderer: text::Renderer> {
     size: Option<u16>,
     on_change: Box<dyn Fn(String) -> Message>,
     on_submit: Option<Message>,
-    style_sheet: Box<dyn StyleSheet + 'a>,
+    style: Renderer::Style,
 }
 
 impl<'a, Message, Renderer> TextInput<'a, Message, Renderer>
 where
     Message: Clone,
-    Renderer: text::Renderer,
+    Renderer: self::Renderer,
 {
     /// Creates a new [`TextInput`].
     ///
@@ -102,7 +97,7 @@ where
             size: None,
             on_change: Box::new(on_change),
             on_submit: None,
-            style_sheet: Default::default(),
+            style: Renderer::Style::default(),
         }
     }
 
@@ -152,11 +147,8 @@ where
     }
 
     /// Sets the style of the [`TextInput`].
-    pub fn style(
-        mut self,
-        style_sheet: impl Into<Box<dyn StyleSheet + 'a>>,
-    ) -> Self {
-        self.style_sheet = style_sheet.into();
+    pub fn style(mut self, style: impl Into<Renderer::Style>) -> Self {
+        self.style = style.into();
         self
     }
 
@@ -168,7 +160,7 @@ where
 
 impl<'a, Message, Renderer> TextInput<'a, Message, Renderer>
 where
-    Renderer: text::Renderer,
+    Renderer: self::Renderer,
 {
     /// Draws the [`TextInput`] with the given [`Renderer`], overriding its
     /// [`Value`] if provided.
@@ -178,165 +170,37 @@ where
         layout: Layout<'_>,
         cursor_position: Point,
         value: Option<&Value>,
-    ) {
+    ) -> Renderer::Output {
         let value = value.unwrap_or(&self.value);
-        let secure_value = self.is_secure.then(|| value.secure());
-        let value = secure_value.as_ref().unwrap_or(&value);
-
         let bounds = layout.bounds();
         let text_bounds = layout.children().next().unwrap().bounds();
 
-        let is_mouse_over = bounds.contains(cursor_position);
-
-        let style = if self.state.is_focused() {
-            self.style_sheet.focused()
-        } else if is_mouse_over {
-            self.style_sheet.hovered()
-        } else {
-            self.style_sheet.active()
-        };
-
-        renderer.fill_quad(
-            renderer::Quad {
+        if self.is_secure {
+            self::Renderer::draw(
+                renderer,
                 bounds,
-                border_radius: style.border_radius,
-                border_width: style.border_width,
-                border_color: style.border_color,
-            },
-            style.background,
-        );
-
-        let text = value.to_string();
-        let size = self.size.unwrap_or(renderer.default_size());
-
-        let (cursor, offset) = if self.state.is_focused() {
-            match self.state.cursor.state(&value) {
-                cursor::State::Index(position) => {
-                    let (text_value_width, offset) =
-                        measure_cursor_and_scroll_offset(
-                            renderer,
-                            text_bounds,
-                            &value,
-                            size,
-                            position,
-                            self.font.clone(),
-                        );
-
-                    (
-                        Some((
-                            renderer::Quad {
-                                bounds: Rectangle {
-                                    x: text_bounds.x + text_value_width,
-                                    y: text_bounds.y,
-                                    width: 1.0,
-                                    height: text_bounds.height,
-                                },
-                                border_radius: 0.0,
-                                border_width: 0.0,
-                                border_color: Color::TRANSPARENT,
-                            },
-                            self.style_sheet.value_color(),
-                        )),
-                        offset,
-                    )
-                }
-                cursor::State::Selection { start, end } => {
-                    let left = start.min(end);
-                    let right = end.max(start);
-
-                    let (left_position, left_offset) =
-                        measure_cursor_and_scroll_offset(
-                            renderer,
-                            text_bounds,
-                            &value,
-                            size,
-                            left,
-                            self.font.clone(),
-                        );
-
-                    let (right_position, right_offset) =
-                        measure_cursor_and_scroll_offset(
-                            renderer,
-                            text_bounds,
-                            &value,
-                            size,
-                            right,
-                            self.font.clone(),
-                        );
-
-                    let width = right_position - left_position;
-
-                    (
-                        Some((
-                            renderer::Quad {
-                                bounds: Rectangle {
-                                    x: text_bounds.x + left_position,
-                                    y: text_bounds.y,
-                                    width,
-                                    height: text_bounds.height,
-                                },
-                                border_radius: 0.0,
-                                border_width: 0.0,
-                                border_color: Color::TRANSPARENT,
-                            },
-                            self.style_sheet.selection_color(),
-                        )),
-                        if end == right {
-                            right_offset
-                        } else {
-                            left_offset
-                        },
-                    )
-                }
-            }
+                text_bounds,
+                cursor_position,
+                self.font,
+                self.size.unwrap_or(renderer.default_size()),
+                &self.placeholder,
+                &value.secure(),
+                &self.state,
+                &self.style,
+            )
         } else {
-            (None, 0.0)
-        };
-
-        let text_width = renderer.measure_width(
-            if text.is_empty() {
-                &self.placeholder
-            } else {
-                &text
-            },
-            size,
-            self.font.clone(),
-        );
-
-        let render = |renderer: &mut Renderer| {
-            if let Some((cursor, color)) = cursor {
-                renderer.fill_quad(cursor, color);
-            }
-
-            renderer.fill_text(Text {
-                content: if text.is_empty() {
-                    &self.placeholder
-                } else {
-                    &text
-                },
-                color: if text.is_empty() {
-                    self.style_sheet.placeholder_color()
-                } else {
-                    self.style_sheet.value_color()
-                },
-                font: self.font.clone(),
-                bounds: Rectangle {
-                    y: text_bounds.center_y(),
-                    width: f32::INFINITY,
-                    ..text_bounds
-                },
-                size: f32::from(size),
-                horizontal_alignment: alignment::Horizontal::Left,
-                vertical_alignment: alignment::Vertical::Center,
-            });
-        };
-
-        if text_width > text_bounds.width {
-            renderer.with_layer(text_bounds, |renderer| {
-                renderer.with_translation(Vector::new(-offset, 0.0), render)
-            });
-        } else {
-            render(renderer);
+            self::Renderer::draw(
+                renderer,
+                bounds,
+                text_bounds,
+                cursor_position,
+                self.font,
+                self.size.unwrap_or(renderer.default_size()),
+                &self.placeholder,
+                value,
+                &self.state,
+                &self.style,
+            )
         }
     }
 }
@@ -345,7 +209,7 @@ impl<'a, Message, Renderer> Widget<Message, Renderer>
     for TextInput<'a, Message, Renderer>
 where
     Message: Clone,
-    Renderer: text::Renderer,
+    Renderer: self::Renderer,
 {
     fn width(&self) -> Length {
         self.width
@@ -384,7 +248,7 @@ where
         cursor_position: Point,
         renderer: &Renderer,
         clipboard: &mut dyn Clipboard,
-        shell: &mut Shell<'_, Message>,
+        messages: &mut Vec<Message>,
     ) -> event::Status {
         match event {
             Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left))
@@ -404,43 +268,41 @@ where
 
                     match click.kind() {
                         click::Kind::Single => {
-                            let position = if target > 0.0 {
+                            if target > 0.0 {
                                 let value = if self.is_secure {
                                     self.value.secure()
                                 } else {
                                     self.value.clone()
                                 };
 
-                                find_cursor_position(
-                                    renderer,
+                                let position = renderer.find_cursor_position(
                                     text_layout.bounds(),
-                                    self.font.clone(),
+                                    self.font,
                                     self.size,
                                     &value,
                                     &self.state,
                                     target,
-                                )
-                            } else {
-                                None
-                            };
+                                );
 
-                            self.state.cursor.move_to(position.unwrap_or(0));
+                                self.state.cursor.move_to(position);
+                            } else {
+                                self.state.cursor.move_to(0);
+                            }
+
                             self.state.is_dragging = true;
                         }
                         click::Kind::Double => {
                             if self.is_secure {
                                 self.state.cursor.select_all(&self.value);
                             } else {
-                                let position = find_cursor_position(
-                                    renderer,
+                                let position = renderer.find_cursor_position(
                                     text_layout.bounds(),
-                                    self.font.clone(),
+                                    self.font,
                                     self.size,
                                     &self.value,
                                     &self.state,
                                     target,
-                                )
-                                .unwrap_or(0);
+                                );
 
                                 self.state.cursor.select_range(
                                     self.value.previous_start_of_word(position),
@@ -472,27 +334,27 @@ where
                     let text_layout = layout.children().next().unwrap();
                     let target = position.x - text_layout.bounds().x;
 
-                    let value = if self.is_secure {
-                        self.value.secure()
-                    } else {
-                        self.value.clone()
-                    };
+                    if target > 0.0 {
+                        let value = if self.is_secure {
+                            self.value.secure()
+                        } else {
+                            self.value.clone()
+                        };
 
-                    let position = find_cursor_position(
-                        renderer,
-                        text_layout.bounds(),
-                        self.font.clone(),
-                        self.size,
-                        &value,
-                        &self.state,
-                        target,
-                    )
-                    .unwrap_or(0);
+                        let position = renderer.find_cursor_position(
+                            text_layout.bounds(),
+                            self.font,
+                            self.size,
+                            &value,
+                            &self.state,
+                            target,
+                        );
 
-                    self.state.cursor.select_range(
-                        self.state.cursor.start(&value),
-                        position,
-                    );
+                        self.state.cursor.select_range(
+                            self.state.cursor.start(&value),
+                            position,
+                        );
+                    }
 
                     return event::Status::Captured;
                 }
@@ -509,7 +371,7 @@ where
                 editor.insert(c);
 
                 let message = (self.on_change)(editor.contents());
-                shell.publish(message);
+                messages.push(message);
 
                 return event::Status::Captured;
             }
@@ -519,10 +381,9 @@ where
                 let modifiers = self.state.keyboard_modifiers;
 
                 match key_code {
-                    keyboard::KeyCode::Enter
-                    | keyboard::KeyCode::NumpadEnter => {
+                    keyboard::KeyCode::Enter => {
                         if let Some(on_submit) = self.on_submit.clone() {
-                            shell.publish(on_submit);
+                            messages.push(on_submit);
                         }
                     }
                     keyboard::KeyCode::Backspace => {
@@ -552,7 +413,7 @@ where
                         editor.backspace();
 
                         let message = (self.on_change)(editor.contents());
-                        shell.publish(message);
+                        messages.push(message);
                     }
                     keyboard::KeyCode::Delete => {
                         if platform::is_jump_modifier_pressed(modifiers)
@@ -583,7 +444,7 @@ where
                         editor.delete();
 
                         let message = (self.on_change)(editor.contents());
-                        shell.publish(message);
+                        messages.push(message);
                     }
                     keyboard::KeyCode::Left => {
                         if platform::is_jump_modifier_pressed(modifiers)
@@ -644,7 +505,10 @@ where
                         }
                     }
                     keyboard::KeyCode::C
-                        if self.state.keyboard_modifiers.command() =>
+                        if self
+                            .state
+                            .keyboard_modifiers
+                            .command() =>
                     {
                         match self.state.cursor.selection(&self.value) {
                             Some((start, end)) => {
@@ -656,7 +520,10 @@ where
                         }
                     }
                     keyboard::KeyCode::X
-                        if self.state.keyboard_modifiers.command() =>
+                        if self
+                            .state
+                            .keyboard_modifiers
+                            .command() =>
                     {
                         match self.state.cursor.selection(&self.value) {
                             Some((start, end)) => {
@@ -675,7 +542,7 @@ where
                         editor.delete();
 
                         let message = (self.on_change)(editor.contents());
-                        shell.publish(message);
+                        messages.push(message);
                     }
                     keyboard::KeyCode::V => {
                         if self.state.keyboard_modifiers.command() {
@@ -701,7 +568,7 @@ where
                             editor.paste(content.clone());
 
                             let message = (self.on_change)(editor.contents());
-                            shell.publish(message);
+                            messages.push(message);
 
                             self.state.is_pasting = Some(content);
                         } else {
@@ -709,7 +576,10 @@ where
                         }
                     }
                     keyboard::KeyCode::A
-                        if self.state.keyboard_modifiers.command() =>
+                        if self
+                            .state
+                            .keyboard_modifiers
+                            .command() =>
                     {
                         self.state.cursor.select_all(&self.value);
                     }
@@ -720,11 +590,6 @@ where
 
                         self.state.keyboard_modifiers =
                             keyboard::Modifiers::default();
-                    }
-                    keyboard::KeyCode::Tab
-                    | keyboard::KeyCode::Up
-                    | keyboard::KeyCode::Down => {
-                        return event::Status::Ignored;
                     }
                     _ => {}
                 }
@@ -737,11 +602,6 @@ where
                 match key_code {
                     keyboard::KeyCode::V => {
                         self.state.is_pasting = None;
-                    }
-                    keyboard::KeyCode::Tab
-                    | keyboard::KeyCode::Up
-                    | keyboard::KeyCode::Down => {
-                        return event::Status::Ignored;
                     }
                     _ => {}
                 }
@@ -759,29 +619,102 @@ where
         event::Status::Ignored
     }
 
-    fn mouse_interaction(
-        &self,
-        layout: Layout<'_>,
-        cursor_position: Point,
-        _viewport: &Rectangle,
-        _renderer: &Renderer,
-    ) -> mouse::Interaction {
-        if layout.bounds().contains(cursor_position) {
-            mouse::Interaction::Text
-        } else {
-            mouse::Interaction::default()
-        }
-    }
-
     fn draw(
         &self,
         renderer: &mut Renderer,
-        _style: &renderer::Style,
+        _defaults: &Renderer::Defaults,
         layout: Layout<'_>,
         cursor_position: Point,
         _viewport: &Rectangle,
-    ) {
+    ) -> Renderer::Output {
         self.draw(renderer, layout, cursor_position, None)
+    }
+
+    fn hash_layout(&self, state: &mut Hasher) {
+        use std::{any::TypeId, hash::Hash};
+        struct Marker;
+        TypeId::of::<Marker>().hash(state);
+
+        self.width.hash(state);
+        self.max_width.hash(state);
+        self.padding.hash(state);
+        self.size.hash(state);
+    }
+}
+
+/// The renderer of a [`TextInput`].
+///
+/// Your [renderer] will need to implement this trait before being
+/// able to use a [`TextInput`] in your user interface.
+///
+/// [renderer]: crate::renderer
+pub trait Renderer: text::Renderer + Sized {
+    /// The style supported by this renderer.
+    type Style: Default;
+
+    /// Returns the width of the value of the [`TextInput`].
+    fn measure_value(&self, value: &str, size: u16, font: Self::Font) -> f32;
+
+    /// Returns the current horizontal offset of the value of the
+    /// [`TextInput`].
+    ///
+    /// This is the amount of horizontal scrolling applied when the [`Value`]
+    /// does not fit the [`TextInput`].
+    fn offset(
+        &self,
+        text_bounds: Rectangle,
+        font: Self::Font,
+        size: u16,
+        value: &Value,
+        state: &State,
+    ) -> f32;
+
+    /// Draws a [`TextInput`].
+    ///
+    /// It receives:
+    /// - the bounds of the [`TextInput`]
+    /// - the bounds of the text (i.e. the current value)
+    /// - the cursor position
+    /// - the placeholder to show when the value is empty
+    /// - the current [`Value`]
+    /// - the current [`State`]
+    fn draw(
+        &mut self,
+        bounds: Rectangle,
+        text_bounds: Rectangle,
+        cursor_position: Point,
+        font: Self::Font,
+        size: u16,
+        placeholder: &str,
+        value: &Value,
+        state: &State,
+        style: &Self::Style,
+    ) -> Self::Output;
+
+    /// Computes the position of the text cursor at the given X coordinate of
+    /// a [`TextInput`].
+    fn find_cursor_position(
+        &self,
+        text_bounds: Rectangle,
+        font: Self::Font,
+        size: Option<u16>,
+        value: &Value,
+        state: &State,
+        x: f32,
+    ) -> usize {
+        let size = size.unwrap_or(self.default_size());
+
+        let offset = self.offset(text_bounds, font, size, &value, &state);
+
+        find_cursor_position(
+            self,
+            &value,
+            font,
+            size,
+            x + offset,
+            0,
+            value.len(),
+        )
     }
 }
 
@@ -789,7 +722,7 @@ impl<'a, Message, Renderer> From<TextInput<'a, Message, Renderer>>
     for Element<'a, Message, Renderer>
 where
     Message: 'a + Clone,
-    Renderer: 'a + text::Renderer,
+    Renderer: 'a + self::Renderer,
 {
     fn from(
         text_input: TextInput<'a, Message, Renderer>,
@@ -862,10 +795,61 @@ impl State {
     pub fn move_cursor_to(&mut self, position: usize) {
         self.cursor.move_to(position);
     }
+}
 
-    /// Selects all the content of the [`TextInput`].
-    pub fn select_all(&mut self) {
-        self.cursor.select_range(0, usize::MAX);
+// TODO: Reduce allocations
+fn find_cursor_position<Renderer: self::Renderer>(
+    renderer: &Renderer,
+    value: &Value,
+    font: Renderer::Font,
+    size: u16,
+    target: f32,
+    start: usize,
+    end: usize,
+) -> usize {
+    if start >= end {
+        if start == 0 {
+            return 0;
+        }
+
+        let prev = value.until(start - 1);
+        let next = value.until(start);
+
+        let prev_width = renderer.measure_value(&prev.to_string(), size, font);
+        let next_width = renderer.measure_value(&next.to_string(), size, font);
+
+        if next_width - target > target - prev_width {
+            return start - 1;
+        } else {
+            return start;
+        }
+    }
+
+    let index = (end - start) / 2;
+    let subvalue = value.until(start + index);
+
+    let width = renderer.measure_value(&subvalue.to_string(), size, font);
+
+    if width > target {
+        find_cursor_position(
+            renderer,
+            value,
+            font,
+            size,
+            target,
+            start,
+            start + index,
+        )
+    } else {
+        find_cursor_position(
+            renderer,
+            value,
+            font,
+            size,
+            target,
+            start + index + 1,
+            end,
+        )
     }
 }
 
@@ -879,90 +863,4 @@ mod platform {
             modifiers.control()
         }
     }
-}
-
-fn offset<Renderer>(
-    renderer: &Renderer,
-    text_bounds: Rectangle,
-    font: Renderer::Font,
-    size: u16,
-    value: &Value,
-    state: &State,
-) -> f32
-where
-    Renderer: text::Renderer,
-{
-    if state.is_focused() {
-        let cursor = state.cursor();
-
-        let focus_position = match cursor.state(value) {
-            cursor::State::Index(i) => i,
-            cursor::State::Selection { end, .. } => end,
-        };
-
-        let (_, offset) = measure_cursor_and_scroll_offset(
-            renderer,
-            text_bounds,
-            value,
-            size,
-            focus_position,
-            font,
-        );
-
-        offset
-    } else {
-        0.0
-    }
-}
-
-fn measure_cursor_and_scroll_offset<Renderer>(
-    renderer: &Renderer,
-    text_bounds: Rectangle,
-    value: &Value,
-    size: u16,
-    cursor_index: usize,
-    font: Renderer::Font,
-) -> (f32, f32)
-where
-    Renderer: text::Renderer,
-{
-    let text_before_cursor = value.until(cursor_index).to_string();
-
-    let text_value_width =
-        renderer.measure_width(&text_before_cursor, size, font);
-
-    let offset = ((text_value_width + 5.0) - text_bounds.width).max(0.0);
-
-    (text_value_width, offset)
-}
-
-/// Computes the position of the text cursor at the given X coordinate of
-/// a [`TextInput`].
-fn find_cursor_position<Renderer>(
-    renderer: &Renderer,
-    text_bounds: Rectangle,
-    font: Renderer::Font,
-    size: Option<u16>,
-    value: &Value,
-    state: &State,
-    x: f32,
-) -> Option<usize>
-where
-    Renderer: text::Renderer,
-{
-    let size = size.unwrap_or(renderer.default_size());
-
-    let offset =
-        offset(renderer, text_bounds, font.clone(), size, &value, &state);
-
-    renderer
-        .hit_test(
-            &value.to_string(),
-            size.into(),
-            font.clone(),
-            Size::INFINITY,
-            Point::new(x + offset, text_bounds.height / 2.0),
-            true,
-        )
-        .map(text::Hit::cursor)
 }

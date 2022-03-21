@@ -30,7 +30,7 @@ use crate::{
     error::Error,
     render::{
         create_ui_quad, create_ui_tri, DynamicModel, Mesh, RenderError, Renderer, UiBoundLocals,
-        UiDrawer, UiLocals, UiMode, UiVertex,
+        ThirdPassDrawer, UiLocals, UiMode, UiVertex,
     },
     window::Window,
 };
@@ -1052,16 +1052,16 @@ impl Ui {
         renderer.update_model(&self.model, &self.mesh, 0);
     }
 
-    pub fn render<'pass, 'data: 'pass>(&'data self, drawer: &mut UiDrawer<'_, 'pass>) {
+    pub fn render<'pass, 'data: 'pass>(&'data self, drawer: &mut ThirdPassDrawer<'pass>) {
         
-        let mut drawer = drawer.prepare(&self.interface_locals, &self.model, self.window_scissor);
+        drawer.ui_prepare(&self.interface_locals, &self.model, self.window_scissor);
         for draw_command in self.draw_commands.iter() {
             match draw_command {
                 DrawCommand::Scissor(new_scissor) => {
-                    drawer.set_scissor(*new_scissor);
+                    drawer.ui_set_scissor(*new_scissor);
                 },
                 DrawCommand::WorldPos(index) => {
-                    drawer.set_locals(
+                    drawer.ui_set_locals(
                         index.map_or(&self.interface_locals, |i| &self.ingame_locals[i]),
                     );
                 },
@@ -1070,7 +1070,7 @@ impl Ui {
                         DrawKind::Image(tex_id) => self.cache.graphic_cache().get_tex(*tex_id),
                         DrawKind::Plain => self.cache.glyph_cache_tex(),
                     };
-                    drawer.draw(&tex.1, verts.clone()); // Note: trivial clone
+                    drawer.ui_draw(&tex.1, verts.clone()); // Note: trivial clone
                 },
             }
         }

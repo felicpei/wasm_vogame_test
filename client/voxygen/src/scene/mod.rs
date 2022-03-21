@@ -1080,12 +1080,13 @@ impl Scene {
             if is_daylight {
                 if let Some(mut shadow_pass) = drawer.shadow_pass() {
                     // Render terrain directed shadows.
-                    self.terrain
-                        .render_shadows(&mut shadow_pass.draw_terrain_shadows(), focus_pos);
+                    shadow_pass.init_terrain_shadows();
+                    self.terrain.render_shadows(&mut shadow_pass, focus_pos);
 
+                    shadow_pass.init_figure_shadows();
                     // Render figure directed shadows.
                     self.figure_mgr.render_shadows(
-                        &mut shadow_pass.draw_figure_shadows(),
+                        &mut shadow_pass,
                         state,
                         tick,
                         camera_data,
@@ -1104,8 +1105,10 @@ impl Scene {
 
         
         if let Some(mut first_pass) = drawer.first_pass() {
+
+            first_pass.init_figures();
             self.figure_mgr.render_player(
-                &mut first_pass.draw_figures(),
+                &mut first_pass,
                 state,
                 player_entity,
                 tick,
@@ -1114,8 +1117,9 @@ impl Scene {
 
             self.terrain.render(&mut first_pass, focus_pos);
 
+            first_pass.init_figures();
             self.figure_mgr.render(
-                &mut first_pass.draw_figures(),
+                &mut first_pass,
                 state,
                 player_entity,
                 tick,
@@ -1136,11 +1140,12 @@ impl Scene {
             );
 
             // Render particle effects.
-            self.particle_mgr
-                .render(&mut first_pass.draw_particles(), scene_data);
+            first_pass.init_particles();
+            self.particle_mgr.render(&mut first_pass, scene_data);
 
             // Render debug shapes
-            self.debug.render(&mut first_pass.draw_debug());
+            first_pass.init_debug();
+            self.debug.render(&mut first_pass);
         }
         
     }

@@ -19,17 +19,27 @@
 //! [`text::Renderer`]: crate::widget::text::Renderer
 //! [`Checkbox`]: crate::widget::Checkbox
 //! [`checkbox::Renderer`]: crate::widget::checkbox::Renderer
+
 #[cfg(debug_assertions)]
 mod null;
 #[cfg(debug_assertions)]
 pub use null::Null;
 
-use crate::layout;
-use crate::{Background, Color, Element, Rectangle, Vector};
+use crate::{layout, Element, Rectangle};
 
 /// A component that can take the state of a user interface and produce an
 /// output for its users.
 pub trait Renderer: Sized {
+    /// The type of output of the [`Renderer`].
+    ///
+    /// If you are implementing a graphical renderer, your output will most
+    /// likely be a tree of visual primitives.
+    type Output;
+
+    /// The default styling attributes of the [`Renderer`].
+    ///
+    /// This type can be leveraged to implement style inheritance.
+    type Defaults: Default;
 
     /// Lays out the elements of a user interface.
     ///
@@ -43,52 +53,12 @@ pub trait Renderer: Sized {
         element.layout(self, limits)
     }
 
-    /// Draws the primitives recorded in the given closure in a new layer.
-    ///
-    /// The layer will clip its contents to the provided `bounds`.
-    fn with_layer(&mut self, bounds: Rectangle, f: impl FnOnce(&mut Self));
-
-    /// Applies a `translation` to the primitives recorded in the given closure.
-    fn with_translation(
+    /// Overlays the `overlay` output with the given bounds on top of the `base`
+    /// output.
+    fn overlay(
         &mut self,
-        translation: Vector,
-        f: impl FnOnce(&mut Self),
-    );
-
-    /// Clears all of the recorded primitives in the [`Renderer`].
-    fn clear(&mut self);
-
-    /// Fills a [`Quad`] with the provided [`Background`].
-    fn fill_quad(&mut self, quad: Quad, background: impl Into<Background>);
-}
-
-/// A polygon with four sides.
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct Quad {
-    /// The bounds of the [`Quad`].
-    pub bounds: Rectangle,
-
-    /// The border radius of the [`Quad`].
-    pub border_radius: f32,
-
-    /// The border width of the [`Quad`].
-    pub border_width: f32,
-
-    /// The border color of the [`Quad`].
-    pub border_color: Color,
-}
-
-/// The styling attributes of a [`Renderer`].
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct Style {
-    /// The text color
-    pub text_color: Color,
-}
-
-impl Default for Style {
-    fn default() -> Self {
-        Style {
-            text_color: Color::BLACK,
-        }
-    }
+        base: Self::Output,
+        overlay: Self::Output,
+        overlay_bounds: Rectangle,
+    ) -> Self::Output;
 }

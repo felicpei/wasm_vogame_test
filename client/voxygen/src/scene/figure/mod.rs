@@ -10,8 +10,8 @@ use crate::{
     ecs::comp::Interpolated,
     render::{
         pipelines::{self, ColLights},
-        ColLightInfo, FigureBoneData, FigureDrawer, FigureLocals, FigureModel, FigureShadowDrawer,
-        Mesh, RenderError, Renderer, SubModel, TerrainVertex,
+        ColLightInfo, FigureBoneData, FirstPassDrawer, FigureLocals, FigureModel, 
+        Mesh, RenderError, Renderer, SubModel, TerrainVertex, ShadowPassDrawer
     },
     scene::{
         camera::{Camera, CameraMode, Dependents},
@@ -5499,7 +5499,7 @@ impl FigureMgr {
 
     pub fn render_shadows<'a>(
         &'a self,
-        drawer: &mut FigureShadowDrawer<'_, 'a>,
+        drawer: &mut ShadowPassDrawer<'a>,
         state: &State,
         tick: u64,
         (camera, figure_lod_render_distance): CameraData,
@@ -5508,16 +5508,16 @@ impl FigureMgr {
         let ecs = state.ecs();
         let items = ecs.read_storage::<Item>();
 
-        (
-                &ecs.entities(),
-                &ecs.read_storage::<Pos>(),
-                ecs.read_storage::<Ori>().maybe(),
-                &ecs.read_storage::<Body>(),
-                ecs.read_storage::<Health>().maybe(),
-                ecs.read_storage::<Inventory>().maybe(),
-                ecs.read_storage::<Scale>().maybe(),
-                ecs.read_storage::<Collider>().maybe(),
-            )
+    (
+            &ecs.entities(),
+            &ecs.read_storage::<Pos>(),
+            ecs.read_storage::<Ori>().maybe(),
+            &ecs.read_storage::<Body>(),
+            ecs.read_storage::<Health>().maybe(),
+            ecs.read_storage::<Inventory>().maybe(),
+            ecs.read_storage::<Scale>().maybe(),
+            ecs.read_storage::<Collider>().maybe(),
+        )
             .join()
             // Don't render dead entities
             .filter(|(_, _, _, _, health, _, _, _)| health.map_or(true, |h| !h.is_dead))
@@ -5539,14 +5539,14 @@ impl FigureMgr {
                     |state| state.can_shadow_sun(),
                     if matches!(body, Body::ItemDrop(_)) { items.get(entity).map(ItemKey::from) } else { None },
                 ) {
-                    drawer.draw(model, bound);
+                    drawer.draw_figure_shadows(model, bound);
                 }
             });
     }
 
     pub fn render<'a>(
         &'a self,
-        drawer: &mut FigureDrawer<'_, 'a>,
+        drawer: &mut FirstPassDrawer<'a>,
         state: &State,
         player_entity: EcsEntity,
         tick: u64,
@@ -5594,14 +5594,14 @@ impl FigureMgr {
                     None
                 },
             ) {
-                drawer.draw(model, bound, col_lights);
+                drawer.draw_figures(model, bound, col_lights);
             }
         }
     }
 
     pub fn render_player<'a>(
         &'a self,
-        drawer: &mut FigureDrawer<'_, 'a>,
+        drawer: &mut FirstPassDrawer<'a>,
         state: &State,
         player_entity: EcsEntity,
         tick: u64,
@@ -5645,7 +5645,7 @@ impl FigureMgr {
                     None
                 },
             ) {
-                drawer.draw(model, bound, col_lights);
+                drawer.draw_figures(model, bound, col_lights);
                 /*renderer.render_player_shadow(
                     model,
                     &col_lights,

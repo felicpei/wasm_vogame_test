@@ -361,7 +361,8 @@ impl Scene {
         body: Option<humanoid::Body>,
         inventory: Option<&Inventory>,
     ) {
-        let mut figure_drawer = drawer.draw_figures();
+        drawer.init_figures();
+
         if let Some(body) = body {
             let model = &self.figure_model_cache.get_model(
                 &self.col_lights,
@@ -375,18 +376,17 @@ impl Scene {
 
             if let Some((model, figure_state)) = model.zip(self.figure_state.as_ref()) {
                 if let Some(lod) = model.lod_model(0) {
-                    figure_drawer.draw(lod, figure_state.bound(), self.col_lights.texture(model));
+                    drawer.draw_figures(lod, figure_state.bound(), self.col_lights.texture(model));
                 }
             }
         }
 
         if let Some((model, state)) = &self.backdrop {
             if let Some(lod) = model.lod_model(0) {
-                figure_drawer.draw(lod, state.bound(), self.col_lights.texture(model));
+                drawer.draw_figures(lod, state.bound(), self.col_lights.texture(model));
             }
         }
-        drop(figure_drawer);
-
+        drawer.drop_figures();
         drawer.draw_skybox(&self.skybox.model);
     }
 }

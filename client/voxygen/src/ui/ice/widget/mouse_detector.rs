@@ -1,7 +1,8 @@
 use iced::{
-    layout, mouse, Element, Event, Layout, Length, Point, Rectangle, Size,
+    layout, mouse, Element, Event, Hasher, Layout, Length, Point, Rectangle, Size,
     Widget,
 };
+use std::hash::Hash;
 
 #[derive(Debug, Default)]
 pub struct State {
@@ -53,13 +54,13 @@ where
         renderer.draw(layout.bounds())
     }
 
-    // fn hash_layout(&self, state: &mut Hasher) {
-    //     struct Marker;
-    //     std::any::TypeId::of::<Marker>().hash(state);
+    fn hash_layout(&self, state: &mut Hasher) {
+        struct Marker;
+        std::any::TypeId::of::<Marker>().hash(state);
 
-    //     self.width.hash(state);
-    //     self.height.hash(state);
-    // }
+        self.width.hash(state);
+        self.height.hash(state);
+    }
 
     fn on_event(
         &mut self,

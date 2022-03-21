@@ -1,7 +1,8 @@
 use iced::{
-    layout, Element, Event, Layout, Length, Point, Rectangle, Size, Widget,
+    layout, Element, Event, Hasher, Layout, Length, Point, Rectangle, Size, Widget,
 };
 use std::{
+    hash::Hash,
     sync::Mutex,
     time::{Duration, Instant},
 };
@@ -208,11 +209,11 @@ where
             .draw(renderer, defaults, layout, cursor_position, viewport)
     }
 
-    // fn hash_layout(&self, state: &mut Hasher) {
-    //     struct Marker;
-    //     std::any::TypeId::of::<Marker>().hash(state);
-    //     self.content.hash_layout(state);
-    // }
+    fn hash_layout(&self, state: &mut Hasher) {
+        struct Marker;
+        std::any::TypeId::of::<Marker>().hash(state);
+        self.content.hash_layout(state);
+    }
 
     fn on_event(
         &mut self,
@@ -221,7 +222,7 @@ where
         cursor_position: Point,
         renderer: &R,
         clipboard: &mut dyn iced::native::Clipboard,
-        shell: &mut iced::Shell<'_, M>,
+        messages: &mut Vec<M>,
     ) -> iced::event::Status {
         self.content.on_event(
             event,
@@ -229,7 +230,7 @@ where
             cursor_position,
             renderer,
             clipboard,
-            shell,
+            messages,
         )
     }
 
@@ -348,19 +349,19 @@ where
         )
     }
 
-    // fn hash_layout(&self, state: &mut Hasher, position: Point) {
-    //     struct Marker;
-    //     std::any::TypeId::of::<Marker>().hash(state);
+    fn hash_layout(&self, state: &mut Hasher, position: Point) {
+        struct Marker;
+        std::any::TypeId::of::<Marker>().hash(state);
 
-    //     (position.x as u32).hash(state);
-    //     (position.y as u32).hash(state);
-    //     (self.cursor_position.x as u32).hash(state);
-    //     (self.avoid.x as u32).hash(state);
-    //     (self.avoid.y as u32).hash(state);
-    //     (self.avoid.height as u32).hash(state);
-    //     (self.avoid.width as u32).hash(state);
-    //     self.content.hash_layout(state);
-    // }
+        (position.x as u32).hash(state);
+        (position.y as u32).hash(state);
+        (self.cursor_position.x as u32).hash(state);
+        (self.avoid.x as u32).hash(state);
+        (self.avoid.y as u32).hash(state);
+        (self.avoid.height as u32).hash(state);
+        (self.avoid.width as u32).hash(state);
+        self.content.hash_layout(state);
+    }
 }
 
 pub trait Renderer: iced::Renderer {

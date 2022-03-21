@@ -265,12 +265,9 @@ impl PlayState for MainMenuState {
     fn render<'a>(&'a self, drawer: &mut Drawer<'a>, _: &Settings) {
         // Draw the UI to the screen.
         let mut third_pass = drawer.third_pass();
-        if let Some(mut ui_drawer) = third_pass.draw_ui() {
-            self.main_menu_ui.render(&mut ui_drawer);
-        };
+        third_pass.init_ui();
+        self.main_menu_ui.render(&mut third_pass);
     }
-
-    fn egui_enabled(&self) -> bool { false }
 }
 
 fn get_client_msg_error(

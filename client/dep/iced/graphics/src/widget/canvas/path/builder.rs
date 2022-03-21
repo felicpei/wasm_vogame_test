@@ -1,14 +1,14 @@
 use crate::canvas::path::{arc, Arc, Path};
 
 use iced_native::{Point, Size};
-use lyon::path::builder::SvgPathBuilder;
+use lyon::path::builder::{Build, FlatPathBuilder, PathBuilder, SvgBuilder};
 
 /// A [`Path`] builder.
 ///
 /// Once a [`Path`] is built, it can no longer be mutated.
 #[allow(missing_debug_implementations)]
 pub struct Builder {
-    raw: lyon::path::builder::WithSvg<lyon::path::path::Builder>,
+    raw: lyon::path::builder::SvgPathBuilder<lyon::path::Builder>,
 }
 
 impl Builder {

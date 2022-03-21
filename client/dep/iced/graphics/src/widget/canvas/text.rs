@@ -1,5 +1,4 @@
-use crate::alignment;
-use crate::{Color, Font, Point};
+use iced_native::{Color, Font, HorizontalAlignment, Point, VerticalAlignment};
 
 /// A bunch of text that can be drawn to a canvas
 #[derive(Debug, Clone)]
@@ -15,9 +14,9 @@ pub struct Text {
     /// The font of the text
     pub font: Font,
     /// The horizontal alignment of the text
-    pub horizontal_alignment: alignment::Horizontal,
+    pub horizontal_alignment: HorizontalAlignment,
     /// The vertical alignment of the text
-    pub vertical_alignment: alignment::Vertical,
+    pub vertical_alignment: VerticalAlignment,
 }
 
 impl Default for Text {
@@ -28,8 +27,8 @@ impl Default for Text {
             color: Color::BLACK,
             size: 16.0,
             font: Font::Default,
-            horizontal_alignment: alignment::Horizontal::Left,
-            vertical_alignment: alignment::Vertical::Top,
+            horizontal_alignment: HorizontalAlignment::Left,
+            vertical_alignment: VerticalAlignment::Top,
         }
     }
 }

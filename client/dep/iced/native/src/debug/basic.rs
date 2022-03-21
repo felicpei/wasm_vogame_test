@@ -1,7 +1,5 @@
 #![allow(missing_docs)]
-use crate::time;
-
-use std::collections::VecDeque;
+use std::{collections::VecDeque, time};
 
 /// A bunch of time measurements for debugging purposes.
 #[derive(Debug)]

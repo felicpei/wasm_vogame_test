@@ -1,5 +1,5 @@
 use iced::{
-    layout, Element, Event,  Layout, Length, Point, Rectangle, Size, Widget,
+    layout, Element, Event, Hasher, Layout, Length, Point, Rectangle, Size, Widget,
 };
 use std::{hash::Hash, u32};
 
@@ -136,17 +136,17 @@ where
         )
     }
 
-    // fn hash_layout(&self, state: &mut Hasher) {
-    //     struct Marker;
-    //     std::any::TypeId::of::<Marker>().hash(state);
+    fn hash_layout(&self, state: &mut Hasher) {
+        struct Marker;
+        std::any::TypeId::of::<Marker>().hash(state);
 
-    //     self.max_width.hash(state);
-    //     self.max_height.hash(state);
-    //     self.aspect_ratio.hash(state);
-    //     // TODO: add pixel dims (need renderer)
+        self.max_width.hash(state);
+        self.max_height.hash(state);
+        self.aspect_ratio.hash(state);
+        // TODO: add pixel dims (need renderer)
 
-    //     self.content.hash_layout(state);
-    // }
+        self.content.hash_layout(state);
+    }
 
     fn on_event(
         &mut self,
@@ -167,8 +167,8 @@ where
         )
     }
 
-    fn overlay(&mut self, layout: Layout<'_>, renderer: &R) -> Option<iced::overlay::Element<'_, M, R>> {
-        self.content.overlay(layout.children().next().unwrap(), renderer)
+    fn overlay(&mut self, layout: Layout<'_>) -> Option<iced::overlay::Element<'_, M, R>> {
+        self.content.overlay(layout.children().next().unwrap())
     }
 }
 

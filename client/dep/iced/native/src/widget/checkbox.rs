@@ -1,25 +1,23 @@
 //! Show toggle controls using checkboxes.
-use crate::alignment;
+use std::hash::Hash;
+
 use crate::event::{self, Event};
 use crate::layout;
 use crate::mouse;
-use crate::renderer;
+use crate::row;
 use crate::text;
 use crate::touch;
-use crate::widget::{self, Row, Text};
 use crate::{
-    Alignment, Clipboard, Element, Layout, Length, Point, Rectangle, Shell,
-    Widget,
+    Alignment, Clipboard, Color, Element, Hasher, Horizontal, Layout,
+    Length, Point, Rectangle, Row, Text, Vertical, Widget,
 };
-
-pub use iced_style::checkbox::{Style, StyleSheet};
 
 /// A box that can be checked.
 ///
 /// # Example
 ///
 /// ```
-/// # type Checkbox<'a, Message> = iced_native::widget::Checkbox<'a, Message, iced_native::renderer::Null>;
+/// # type Checkbox<Message> = iced_native::Checkbox<Message, iced_native::renderer::Null>;
 /// #
 /// pub enum Message {
 ///     CheckboxToggled(bool),
@@ -30,9 +28,9 @@ pub use iced_style::checkbox::{Style, StyleSheet};
 /// Checkbox::new(is_checked, "Toggle me!", Message::CheckboxToggled);
 /// ```
 ///
-/// ![Checkbox drawn by `iced_wgpu`](https://github.com/iced-rs/iced/blob/7760618fb112074bc40b148944521f312152012a/docs/images/checkbox.png?raw=true)
+/// ![Checkbox drawn by `iced_wgpu`](https://github.com/hecrj/iced/blob/7760618fb112074bc40b148944521f312152012a/docs/images/checkbox.png?raw=true)
 #[allow(missing_debug_implementations)]
-pub struct Checkbox<'a, Message, Renderer: text::Renderer> {
+pub struct Checkbox<Message, Renderer: self::Renderer + text::Renderer> {
     is_checked: bool,
     on_toggle: Box<dyn Fn(bool) -> Message>,
     label: String,
@@ -41,16 +39,13 @@ pub struct Checkbox<'a, Message, Renderer: text::Renderer> {
     spacing: u16,
     text_size: Option<u16>,
     font: Renderer::Font,
-    style_sheet: Box<dyn StyleSheet + 'a>,
+    text_color: Option<Color>,
+    style: Renderer::Style,
 }
 
-impl<'a, Message, Renderer: text::Renderer> Checkbox<'a, Message, Renderer> {
-    /// The default size of a [`Checkbox`].
-    const DEFAULT_SIZE: u16 = 20;
-
-    /// The default spacing of a [`Checkbox`].
-    const DEFAULT_SPACING: u16 = 15;
-
+impl<Message, Renderer: self::Renderer + text::Renderer>
+    Checkbox<Message, Renderer>
+{
     /// Creates a new [`Checkbox`].
     ///
     /// It expects:
@@ -68,11 +63,12 @@ impl<'a, Message, Renderer: text::Renderer> Checkbox<'a, Message, Renderer> {
             on_toggle: Box::new(f),
             label: label.into(),
             width: Length::Shrink,
-            size: Self::DEFAULT_SIZE,
-            spacing: Self::DEFAULT_SPACING,
+            size: <Renderer as self::Renderer>::DEFAULT_SIZE,
+            spacing: Renderer::DEFAULT_SPACING,
             text_size: None,
             font: Renderer::Font::default(),
-            style_sheet: Default::default(),
+            text_color: None,
+            style: Renderer::Style::default(),
         }
     }
 
@@ -108,20 +104,23 @@ impl<'a, Message, Renderer: text::Renderer> Checkbox<'a, Message, Renderer> {
         self
     }
 
+    /// Sets the text color of the [`Checkbox`] button.
+    pub fn text_color(mut self, color: Color) -> Self {
+        self.text_color = Some(color);
+        self
+    }
+
     /// Sets the style of the [`Checkbox`].
-    pub fn style(
-        mut self,
-        style_sheet: impl Into<Box<dyn StyleSheet + 'a>>,
-    ) -> Self {
-        self.style_sheet = style_sheet.into();
+    pub fn style(mut self, style: impl Into<Renderer::Style>) -> Self {
+        self.style = style.into();
         self
     }
 }
 
-impl<'a, Message, Renderer> Widget<Message, Renderer>
-    for Checkbox<'a, Message, Renderer>
+impl<Message, Renderer> Widget<Message, Renderer>
+    for Checkbox<Message, Renderer>
 where
-    Renderer: text::Renderer,
+    Renderer: self::Renderer + text::Renderer + row::Renderer,
 {
     fn width(&self) -> Length {
         self.width
@@ -147,7 +146,7 @@ where
             )
             .push(
                 Text::new(&self.label)
-                    .font(self.font.clone())
+                    .font(self.font)
                     .width(self.width)
                     .size(self.text_size.unwrap_or(renderer.default_size())),
             )
@@ -161,7 +160,7 @@ where
         cursor_position: Point,
         _renderer: &Renderer,
         _clipboard: &mut dyn Clipboard,
-        shell: &mut Shell<'_, Message>,
+        messages: &mut Vec<Message>,
     ) -> event::Status {
         match event {
             Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left))
@@ -169,7 +168,7 @@ where
                 let mouse_over = layout.bounds().contains(cursor_position);
 
                 if mouse_over {
-                    shell.publish((self.on_toggle)(!self.is_checked));
+                    messages.push((self.on_toggle)(!self.is_checked));
 
                     return event::Status::Captured;
                 }
@@ -180,96 +179,94 @@ where
         event::Status::Ignored
     }
 
-    fn mouse_interaction(
-        &self,
-        layout: Layout<'_>,
-        cursor_position: Point,
-        _viewport: &Rectangle,
-        _renderer: &Renderer,
-    ) -> mouse::Interaction {
-        if layout.bounds().contains(cursor_position) {
-            mouse::Interaction::Pointer
-        } else {
-            mouse::Interaction::default()
-        }
-    }
-
     fn draw(
         &self,
         renderer: &mut Renderer,
-        style: &renderer::Style,
+        defaults: &Renderer::Defaults,
         layout: Layout<'_>,
         cursor_position: Point,
         _viewport: &Rectangle,
-    ) {
+    ) -> Renderer::Output {
         let bounds = layout.bounds();
-        let is_mouse_over = bounds.contains(cursor_position);
-
         let mut children = layout.children();
 
-        let custom_style = if is_mouse_over {
-            self.style_sheet.hovered(self.is_checked)
-        } else {
-            self.style_sheet.active(self.is_checked)
-        };
+        let checkbox_layout = children.next().unwrap();
+        let label_layout = children.next().unwrap();
+        let checkbox_bounds = checkbox_layout.bounds();
 
-        {
-            let layout = children.next().unwrap();
-            let bounds = layout.bounds();
+        let label = text::Renderer::draw(
+            renderer,
+            defaults,
+            label_layout.bounds(),
+            &self.label,
+            self.text_size.unwrap_or(renderer.default_size()),
+            self.font,
+            self.text_color,
+            Horizontal::Left,
+            Vertical::Center,
+        );
 
-            renderer.fill_quad(
-                renderer::Quad {
-                    bounds,
-                    border_radius: custom_style.border_radius,
-                    border_width: custom_style.border_width,
-                    border_color: custom_style.border_color,
-                },
-                custom_style.background,
-            );
+        let is_mouse_over = bounds.contains(cursor_position);
 
-            if self.is_checked {
-                renderer.fill_text(text::Text {
-                    content: &Renderer::CHECKMARK_ICON.to_string(),
-                    font: Renderer::ICON_FONT,
-                    size: bounds.height * 0.7,
-                    bounds: Rectangle {
-                        x: bounds.center_x(),
-                        y: bounds.center_y(),
-                        ..bounds
-                    },
-                    color: custom_style.checkmark_color,
-                    horizontal_alignment: alignment::Horizontal::Center,
-                    vertical_alignment: alignment::Vertical::Center,
-                });
-            }
-        }
+        self::Renderer::draw(
+            renderer,
+            checkbox_bounds,
+            self.is_checked,
+            is_mouse_over,
+            label,
+            &self.style,
+        )
+    }
 
-        {
-            let label_layout = children.next().unwrap();
+    fn hash_layout(&self, state: &mut Hasher) {
+        struct Marker;
+        std::any::TypeId::of::<Marker>().hash(state);
 
-            widget::text::draw(
-                renderer,
-                style,
-                label_layout,
-                &self.label,
-                self.font.clone(),
-                self.text_size,
-                custom_style.text_color,
-                alignment::Horizontal::Left,
-                alignment::Vertical::Center,
-            );
-        }
+        self.label.hash(state);
     }
 }
 
-impl<'a, Message, Renderer> From<Checkbox<'a, Message, Renderer>>
+/// The renderer of a [`Checkbox`].
+///
+/// Your [renderer] will need to implement this trait before being
+/// able to use a [`Checkbox`] in your user interface.
+///
+/// [renderer]: crate::Renderer
+pub trait Renderer: crate::Renderer {
+    /// The style supported by this renderer.
+    type Style: Default;
+
+    /// The default size of a [`Checkbox`].
+    const DEFAULT_SIZE: u16;
+
+    /// The default spacing of a [`Checkbox`].
+    const DEFAULT_SPACING: u16;
+
+    /// Draws a [`Checkbox`].
+    ///
+    /// It receives:
+    ///   * the bounds of the [`Checkbox`]
+    ///   * whether the [`Checkbox`] is selected or not
+    ///   * whether the mouse is over the [`Checkbox`] or not
+    ///   * the drawn label of the [`Checkbox`]
+    fn draw(
+        &mut self,
+        bounds: Rectangle,
+        is_checked: bool,
+        is_mouse_over: bool,
+        label: Self::Output,
+        style: &Self::Style,
+    ) -> Self::Output;
+}
+
+impl<'a, Message, Renderer> From<Checkbox<Message, Renderer>>
     for Element<'a, Message, Renderer>
 where
-    Renderer: 'a + text::Renderer,
+    Renderer: 'a + self::Renderer + text::Renderer + row::Renderer,
     Message: 'a,
 {
     fn from(
-        checkbox: Checkbox<'a, Message, Renderer>,
+        checkbox: Checkbox<Message, Renderer>,
     ) -> Element<'a, Message, Renderer> {
         Element::new(checkbox)
     }

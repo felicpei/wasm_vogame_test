@@ -1,5 +1,5 @@
 use crate::{
-    render::UiDrawer,
+    render::ThirdPassDrawer,
     ui::{
         self,
         fonts::IcedFonts as Fonts,
@@ -1734,7 +1734,7 @@ impl CharSelectionUi {
         events
     }
 
-    pub fn render<'a>(&'a self, drawer: &mut UiDrawer<'_, 'a>) { self.ui.render(drawer); }
+    pub fn render<'a>(&'a self, drawer:  &mut ThirdPassDrawer<'a>) { self.ui.render(drawer); }
 }
 
 #[derive(Default)]

@@ -1,38 +1,35 @@
 //! Decorate content and apply alignment.
-use crate::alignment::{self, Alignment};
+use std::hash::Hash;
+
 use crate::event::{self, Event};
 use crate::layout;
-use crate::mouse;
 use crate::overlay;
-use crate::renderer;
 use crate::{
-    Background, Clipboard, Color, Element, Layout, Length, Padding, Point,
-    Rectangle, Shell, Widget,
+    Alignment, Clipboard, Element, Hasher, Layout, Length, Padding, Point,
+    Rectangle, Widget,
 };
 
 use std::u32;
-
-pub use iced_style::container::{Style, StyleSheet};
 
 /// An element decorating some content.
 ///
 /// It is normally used for alignment purposes.
 #[allow(missing_debug_implementations)]
-pub struct Container<'a, Message, Renderer> {
+pub struct Container<'a, Message, Renderer: self::Renderer> {
     padding: Padding,
     width: Length,
     height: Length,
     max_width: u32,
     max_height: u32,
-    horizontal_alignment: alignment::Horizontal,
-    vertical_alignment: alignment::Vertical,
-    style_sheet: Box<dyn StyleSheet + 'a>,
+    horizontal_alignment: Alignment,
+    vertical_alignment: Alignment,
+    style: Renderer::Style,
     content: Element<'a, Message, Renderer>,
 }
 
 impl<'a, Message, Renderer> Container<'a, Message, Renderer>
 where
-    Renderer: crate::Renderer,
+    Renderer: self::Renderer,
 {
     /// Creates an empty [`Container`].
     pub fn new<T>(content: T) -> Self
@@ -45,9 +42,9 @@ where
             height: Length::Shrink,
             max_width: u32::MAX,
             max_height: u32::MAX,
-            horizontal_alignment: alignment::Horizontal::Left,
-            vertical_alignment: alignment::Vertical::Top,
-            style_sheet: Default::default(),
+            horizontal_alignment: Alignment::Start,
+            vertical_alignment: Alignment::Start,
+            style: Renderer::Style::default(),
             content: content.into(),
         }
     }
@@ -83,35 +80,32 @@ where
     }
 
     /// Sets the content alignment for the horizontal axis of the [`Container`].
-    pub fn align_x(mut self, alignment: alignment::Horizontal) -> Self {
+    pub fn align_x(mut self, alignment: Alignment) -> Self {
         self.horizontal_alignment = alignment;
         self
     }
 
     /// Sets the content alignment for the vertical axis of the [`Container`].
-    pub fn align_y(mut self, alignment: alignment::Vertical) -> Self {
+    pub fn align_y(mut self, alignment: Alignment) -> Self {
         self.vertical_alignment = alignment;
         self
     }
 
     /// Centers the contents in the horizontal axis of the [`Container`].
     pub fn center_x(mut self) -> Self {
-        self.horizontal_alignment = alignment::Horizontal::Center;
+        self.horizontal_alignment = Alignment::Center;
         self
     }
 
     /// Centers the contents in the vertical axis of the [`Container`].
     pub fn center_y(mut self) -> Self {
-        self.vertical_alignment = alignment::Vertical::Center;
+        self.vertical_alignment = Alignment::Center;
         self
     }
 
     /// Sets the style of the [`Container`].
-    pub fn style(
-        mut self,
-        style_sheet: impl Into<Box<dyn StyleSheet + 'a>>,
-    ) -> Self {
-        self.style_sheet = style_sheet.into();
+    pub fn style(mut self, style: impl Into<Renderer::Style>) -> Self {
+        self.style = style.into();
         self
     }
 }
@@ -119,7 +113,7 @@ where
 impl<'a, Message, Renderer> Widget<Message, Renderer>
     for Container<'a, Message, Renderer>
 where
-    Renderer: crate::Renderer,
+    Renderer: self::Renderer,
 {
     fn width(&self) -> Length {
         self.width
@@ -149,11 +143,7 @@ where
             self.padding.left.into(),
             self.padding.top.into(),
         ));
-        content.align(
-            Alignment::from(self.horizontal_alignment),
-            Alignment::from(self.vertical_alignment),
-            size,
-        );
+        content.align(self.horizontal_alignment, self.vertical_alignment, size);
 
         layout::Node::with_children(size.pad(self.padding), vec![content])
     }
@@ -165,7 +155,7 @@ where
         cursor_position: Point,
         renderer: &Renderer,
         clipboard: &mut dyn Clipboard,
-        shell: &mut Shell<'_, Message>,
+        messages: &mut Vec<Message>,
     ) -> event::Status {
         self.content.widget.on_event(
             event,
@@ -173,87 +163,77 @@ where
             cursor_position,
             renderer,
             clipboard,
-            shell,
-        )
-    }
-
-    fn mouse_interaction(
-        &self,
-        layout: Layout<'_>,
-        cursor_position: Point,
-        viewport: &Rectangle,
-        renderer: &Renderer,
-    ) -> mouse::Interaction {
-        self.content.widget.mouse_interaction(
-            layout.children().next().unwrap(),
-            cursor_position,
-            viewport,
-            renderer,
+            messages,
         )
     }
 
     fn draw(
         &self,
         renderer: &mut Renderer,
-        renderer_style: &renderer::Style,
+        defaults: &Renderer::Defaults,
         layout: Layout<'_>,
         cursor_position: Point,
         viewport: &Rectangle,
-    ) {
-        let style = self.style_sheet.style();
-
-        draw_background(renderer, &style, layout.bounds());
-
-        self.content.draw(
-            renderer,
-            &renderer::Style {
-                text_color: style
-                    .text_color
-                    .unwrap_or(renderer_style.text_color),
-            },
-            layout.children().next().unwrap(),
+    ) -> Renderer::Output {
+        renderer.draw(
+            defaults,
+            layout.bounds(),
             cursor_position,
             viewport,
-        );
+            &self.style,
+            &self.content,
+            layout.children().next().unwrap(),
+        )
+    }
+
+    fn hash_layout(&self, state: &mut Hasher) {
+        struct Marker;
+        std::any::TypeId::of::<Marker>().hash(state);
+
+        self.padding.hash(state);
+        self.width.hash(state);
+        self.height.hash(state);
+        self.max_width.hash(state);
+        self.max_height.hash(state);
+
+        self.content.hash_layout(state);
     }
 
     fn overlay(
         &mut self,
         layout: Layout<'_>,
-        renderer: &Renderer,
     ) -> Option<overlay::Element<'_, Message, Renderer>> {
-        self.content
-            .overlay(layout.children().next().unwrap(), renderer)
+        self.content.overlay(layout.children().next().unwrap())
     }
 }
 
-/// Draws the background of a [`Container`] given its [`Style`] and its `bounds`.
-pub fn draw_background<Renderer>(
-    renderer: &mut Renderer,
-    style: &Style,
-    bounds: Rectangle,
-) where
-    Renderer: crate::Renderer,
-{
-    if style.background.is_some() || style.border_width > 0.0 {
-        renderer.fill_quad(
-            renderer::Quad {
-                bounds,
-                border_radius: style.border_radius,
-                border_width: style.border_width,
-                border_color: style.border_color,
-            },
-            style
-                .background
-                .unwrap_or(Background::Color(Color::TRANSPARENT)),
-        );
-    }
+/// The renderer of a [`Container`].
+///
+/// Your [renderer] will need to implement this trait before being
+/// able to use a [`Container`] in your user interface.
+///
+/// [renderer]: crate::renderer
+pub trait Renderer: crate::Renderer {
+    /// The style supported by this renderer.
+    type Style: Default;
+
+    /// Draws a [`Container`].
+    fn draw<Message>(
+        &mut self,
+        defaults: &Self::Defaults,
+        bounds: Rectangle,
+        cursor_position: Point,
+        viewport: &Rectangle,
+        style: &Self::Style,
+        content: &Element<'_, Message, Self>,
+        content_layout: Layout<'_>,
+    ) -> Self::Output;
 }
 
 impl<'a, Message, Renderer> From<Container<'a, Message, Renderer>>
     for Element<'a, Message, Renderer>
 where
-    Renderer: 'a + crate::Renderer,
+    Renderer: 'a + self::Renderer,
     Message: 'a,
 {
     fn from(

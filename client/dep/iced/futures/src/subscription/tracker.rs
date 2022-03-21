@@ -1,4 +1,4 @@
-use crate::{BoxFuture, MaybeSend, Subscription};
+use crate::{BoxFuture, Subscription};
 
 use futures::{channel::mpsc, sink::Sink};
 use std::{collections::HashMap, marker::PhantomData};
@@ -57,11 +57,11 @@ where
         receiver: Receiver,
     ) -> Vec<BoxFuture<()>>
     where
-        Message: 'static + MaybeSend,
+        Message: 'static + Send,
         Receiver: 'static
             + Sink<Message, Error = mpsc::SendError>
             + Unpin
-            + MaybeSend
+            + Send
             + Clone,
     {
         use futures::{future::FutureExt, stream::StreamExt};

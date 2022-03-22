@@ -202,7 +202,7 @@ fn handle_main_events_cleared(
                 //self.swap_chain = self.device.create_swap_chain(&self.surface, &self.sc_desc);
                 renderer_mut.surface.configure(&renderer_mut.device, &renderer_mut.sc_desc);
             },
-            Err(err @ wgpu::SurfaceError::OutOfMemory) => {
+            Err(_err @ wgpu::SurfaceError::OutOfMemory) => {
                 panic!("Swapchain error: OutOfMemory. Rendering cannot continue.");
             }
         };

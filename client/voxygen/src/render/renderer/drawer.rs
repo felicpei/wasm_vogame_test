@@ -50,8 +50,6 @@ impl<'frame> Pipelines<'frame> {
 // Borrow the fields we need from the renderer so that the GpuProfiler can be
 // disjointly borrowed mutably
 struct RendererBorrow<'frame> {
-    queue: &'frame wgpu::Queue,
-    device: &'frame wgpu::Device,
     shadow: Option<&'frame super::Shadow>,
     pipelines: Pipelines<'frame>,
     locals: &'frame super::locals::Locals,
@@ -85,8 +83,6 @@ impl<'frame> Drawer<'frame> {
         };
 
         let borrow = RendererBorrow {
-            queue: &renderer.queue,
-            device: &renderer.device,
             shadow,
             pipelines,
             locals: &renderer.locals,

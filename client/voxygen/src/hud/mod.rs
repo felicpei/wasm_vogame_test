@@ -102,7 +102,7 @@ use common_net::{
 };
 use conrod_core::{
     text::cursor::Index,
-    widget::{self, Button, Image, Rectangle, Text},
+    widget::{self, Button, Image, Text},
     widget_ids, Color, Colorable, Labelable, Positionable, Sizeable, Widget,
 };
 use hashbrown::{HashMap, HashSet};

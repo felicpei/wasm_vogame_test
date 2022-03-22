@@ -1,9 +1,0 @@
-ItemDef(
-    name: "Dragon Scale",
-    description: "Tough scale from a legendary beast.",
-    kind: Ingredient(
-        kind: "DragonScale",
-    ),
-    quality: Legendary,
-    tags: [],
-)

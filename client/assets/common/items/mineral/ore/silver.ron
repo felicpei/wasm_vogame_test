@@ -1,9 +1,0 @@
-ItemDef(
-    name: "Silver Ore",
-    description: "A precious shiny greyish-white metal.",
-    kind: Ingredient(
-        kind: "SilverOre",
-    ),
-    quality: Epic,
-    tags: [],
-)

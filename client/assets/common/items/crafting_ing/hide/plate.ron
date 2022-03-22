@@ -1,9 +1,0 @@
-ItemDef(
-    name: "Plate",
-    description: "Durable plate from an armored animal.",
-    kind: Ingredient(
-        kind: "Plate",
-    ),
-    quality: Epic,
-    tags: [],
-)

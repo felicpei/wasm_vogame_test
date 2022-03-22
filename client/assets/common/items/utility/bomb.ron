@@ -1,9 +1,0 @@
-ItemDef(
-    name: "Bomb",
-    description: "Boom!",
-    kind: Throwable(
-        kind: Bomb,
-    ),
-    quality: Common,
-    tags: [Utility],
-)

@@ -1,9 +1,0 @@
-ItemDef(
-    name: "Honey",
-    description: "From a beehive.",
-    kind: Ingredient(
-        kind: "Honey",
-    ),
-    quality: Common,
-    tags: [],
-)

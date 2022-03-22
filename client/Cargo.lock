@@ -753,6 +753,16 @@ version = "0.63.0"
 source = "git+https://gitlab.com/veloren/conrod.git?branch=copypasta_0.7#ca9fd429ca7db854e018acc6dcb2cd8abd9e070d"
 
 [[package]]
+name = "console_error_panic_hook"
+version = "0.1.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a06aeb73f470f66dcdbf7223caeebb85984942f22f1adb2a088cf9668146bbbc"
+dependencies = [
+ "cfg-if 1.0.0",
+ "wasm-bindgen",
+]
+
+[[package]]
 name = "copyless"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2303,6 +2313,12 @@ checksum = "5aa361d4faea93603064a027415f07bd8e1d5c88c9fbf68bf56a285428fd79ce"
 dependencies = [
  "autocfg",
 ]
+
+[[package]]
+name = "memory_units"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8452105ba047068f40ff7093dd1d9da90898e63dd61736462e9cdda6a90ad3c3"
 
 [[package]]
 name = "metal"
@@ -4264,6 +4280,7 @@ dependencies = [
  "byteorder",
  "hashbrown",
  "image",
+ "instant",
  "log",
  "num 0.4.0",
  "rayon",
@@ -4295,6 +4312,7 @@ dependencies = [
  "getrandom",
  "hashbrown",
  "indexmap",
+ "instant",
  "lazy_static",
  "log",
  "num-derive",
@@ -4413,6 +4431,7 @@ dependencies = [
  "futures-core",
  "futures-util",
  "hashbrown",
+ "instant",
  "log",
  "lz-fear",
  "prometheus",
@@ -4448,6 +4467,7 @@ dependencies = [
  "chumsky",
  "conrod_core",
  "conrod_winit",
+ "console_error_panic_hook",
  "crossbeam-channel",
  "crossbeam-utils 0.8.7",
  "directories-next",
@@ -4462,7 +4482,9 @@ dependencies = [
  "iced_winit",
  "image",
  "inline-spirv",
+ "instant",
  "itertools",
+ "js-sys",
  "keyboard-keynames",
  "lazy_static",
  "log",
@@ -4484,6 +4506,7 @@ dependencies = [
  "vek",
  "veloren-client",
  "veloren-common",
+ "veloren-common-assets",
  "veloren-common-base",
  "veloren-common-ecs",
  "veloren-common-net",
@@ -4492,8 +4515,10 @@ dependencies = [
  "veloren-voxygen-anim",
  "veloren-voxygen-i18n",
  "wasm-bindgen",
+ "wasm-bindgen-futures",
  "wasm-logger",
  "web-sys",
+ "wee_alloc",
  "wgpu",
  "winit",
 ]
@@ -4776,6 +4801,18 @@ checksum = "c060b319f29dd25724f09a2ba1418f142f539b2be99fbf4d2d5a8f7330afb8eb"
 dependencies = [
  "js-sys",
  "wasm-bindgen",
+]
+
+[[package]]
+name = "wee_alloc"
+version = "0.4.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dbb3b5a6b2bb17cb6ad44a2e68a43e8d2722c997da10e928665c72ec6c0a0b8e"
+dependencies = [
+ "cfg-if 0.1.10",
+ "libc",
+ "memory_units",
+ "winapi",
 ]
 
 [[package]]

@@ -1,9 +1,0 @@
-ItemDef(
-    name: "Scale",
-    description: "Shiny scale from an animal.",
-    kind: Ingredient(
-        kind: "Scale",
-    ),
-    quality: Moderate,
-    tags: [],
-)

@@ -1,9 +1,0 @@
-ItemDef(
-    name: "Seashells",
-    description: "Shells from a sea creature.",
-    kind: Ingredient(
-        kind: "Seashells",
-    ),
-    quality: Common,
-    tags: [],
-)

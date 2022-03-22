@@ -1,9 +1,0 @@
-ItemDef(
-    name: "Leather Strips",
-    description: "Simple and versatile.",
-    kind: Ingredient(
-        kind: "LeatherStrips",
-    ),
-    quality: Common,
-    tags: [BaseMaterial],
-)

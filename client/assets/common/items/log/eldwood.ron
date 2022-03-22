@@ -1,9 +1,0 @@
-ItemDef(
-    name: "Eldwood Logs",
-    description: "Old logs that emanate magic.",
-    kind: Ingredient(
-        kind: "EldwoodLogs",
-    ),
-    quality: Common,
-    tags: [],
-)

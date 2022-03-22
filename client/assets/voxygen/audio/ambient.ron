@@ -1,9 +1,0 @@
-(
-    tracks: [
-        (
-            path: "voxygen.audio.ambient.wind",
-            length: 14.2,
-            tag: Wind,
-        ),        
-    ]
-)

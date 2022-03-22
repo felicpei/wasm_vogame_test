@@ -1,8 +1,0 @@
-(
-    name: Name("Cultist Husk"),
-    body: RandomWith("husk"),
-    alignment: Alignment(Enemy),
-    loadout: Asset(Loadout("common.loadout.dungeon.tier-5.husk")),
-    loot: LootTable("common.loot_tables.dungeon.tier-5.minion"),
-    meta: [],
-)

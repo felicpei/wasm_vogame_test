@@ -5,7 +5,14 @@ use crate::{
 use serde::{Deserialize, Serialize};
 use specs::Component;
 use specs_idvs::IdvStorage;
-use std::time::{Duration, Instant};
+use std::time::{Duration};
+
+#[cfg(target_arch = "wasm32")]
+pub use instant::Instant;
+
+#[cfg(not(target_arch = "wasm32"))]
+pub use std::time::Instant;
+
 
 /// A player's current chat mode. These are chat types that can only be sent by
 /// the player.

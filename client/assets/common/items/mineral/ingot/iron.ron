@@ -1,9 +1,0 @@
-ItemDef(
-    name: "Iron Ingot",
-    description: "An incredibly commonplace metal.",
-    kind: Ingredient(
-        kind: "IronIngot",
-    ),
-    quality: Common,
-    tags: [MetalIngot],
-)

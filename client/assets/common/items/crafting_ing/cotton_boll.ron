@@ -1,9 +1,0 @@
-ItemDef(
-    name: "Cotton Boll",
-    description: "Plucked from a common cotton plant.",
-    kind: Ingredient(
-        kind: "CottonBoll",
-    ),
-    quality: Common,
-    tags: [],
-)

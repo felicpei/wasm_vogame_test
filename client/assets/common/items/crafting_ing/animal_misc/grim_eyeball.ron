@@ -1,9 +1,0 @@
-ItemDef(
-    name: "Grim Eyeball",
-    description: "Casts a petrifying gaze.",
-    kind: Ingredient(
-        kind: "GrimEyeball",
-    ),
-    quality: Common,
-    tags: [],
-)

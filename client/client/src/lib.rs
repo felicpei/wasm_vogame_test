@@ -70,8 +70,15 @@ use std::{
     collections::{BTreeMap, VecDeque},
     mem,
     sync::Arc,
-    time::{Duration, Instant},
+    time::{Duration},
 };
+
+#[cfg(target_arch = "wasm32")]
+pub use instant::Instant;
+
+#[cfg(not(target_arch = "wasm32"))]
+pub use std::time::Instant;
+
 use tokio::runtime::Runtime;
 use vek::*;
 
@@ -161,7 +168,7 @@ pub struct Client {
 
     max_group_size: u32,
     // Client has received an invite (inviter uid, time out instant)
-    invite: Option<(Uid, std::time::Instant, std::time::Duration, InviteKind)>,
+    invite: Option<(Uid, Instant, std::time::Duration, InviteKind)>,
     group_leader: Option<Uid>,
     // Note: potentially representable as a client only component
     group_members: HashMap<Uid, group::Role>,
@@ -1034,7 +1041,7 @@ impl Client {
 
     pub fn max_group_size(&self) -> u32 { self.max_group_size }
 
-    pub fn invite(&self) -> Option<(Uid, std::time::Instant, std::time::Duration, InviteKind)> {
+    pub fn invite(&self) -> Option<(Uid, Instant, std::time::Duration, InviteKind)> {
         self.invite
     }
 
@@ -1905,7 +1912,7 @@ impl Client {
                 timeout,
                 kind,
             } => {
-                self.invite = Some((inviter, std::time::Instant::now(), timeout, kind));
+                self.invite = Some((inviter, Instant::now(), timeout, kind));
             },
             ServerGeneral::InvitePending(uid) => {
                 if !self.pending_invites.insert(uid) {

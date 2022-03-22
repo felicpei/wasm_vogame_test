@@ -1,10 +1,14 @@
-//#![warn(clippy::pedantic)]
-//! Load assets (images or voxel data) from files
-
 use dot_vox::DotVoxData;
 use image::DynamicImage;
 use lazy_static::lazy_static;
-use std::{borrow::Cow, path::PathBuf, sync::Arc};
+
+use std::{
+    borrow::Cow,
+    sync::Arc,
+    collections::HashMap,
+    sync::Mutex,
+    fmt,
+};
 
 pub use assets_manager::{
     asset::{DirLoadable, Ron},
@@ -14,19 +18,81 @@ pub use assets_manager::{
     source::{self, Source},
     Asset, AssetCache, BoxedError, Compound, Error, SharedString,
 };
-
 mod fs;
 
+
 lazy_static! {
-    /// The HashMap where all loaded assets are stored in.
-    static ref ASSETS: AssetCache<fs::FileSystem> =
-        AssetCache::with_source(fs::FileSystem::new().unwrap());
+    static ref ASSETS: AssetCache<fs::ResSystem> =
+        AssetCache::with_source(fs::ResSystem::new().unwrap());
+
+    static ref ASSET_MAP: Mutex<HashMap<String, Vec<u8>>> = Mutex::new({
+        HashMap::new()
+    });
 }
+
+pub enum ResourceError {
+    GetMapError,
+    NotExists(String),
+}
+
+impl fmt::Debug for ResourceError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::GetMapError => {
+                f.debug_tuple("Get Resources => GetMapError").finish()
+            },
+
+            Self::NotExists(err) => {
+                f.debug_tuple("Get Resources => File Not Exists").field(err).finish()
+            },
+        }
+    }
+}
+
+
+//缓存data, 通过js传入
+pub fn set_cache_data(name: &str, data: &[u8]) {
+    let vec = data.to_vec();
+    let name_str = name.to_string();
+    ASSET_MAP.lock().unwrap().insert(name_str, vec);
+}
+
+//获取缓存data
+pub fn get_cache_data<'a,'b>(id: &'a str, ext: &'a str) -> Result<Cow<'b, [u8]>,ResourceError>  {
+    let mut name = String::from(id);
+    name.push_str(&".");
+    name.push_str(ext);
+
+    let map = match ASSET_MAP.lock() {
+        Ok(map) => map,
+        Err(err) =>{
+            log::error!("get_cache_data error, get map error: {:?}", err);
+            return Err(ResourceError::GetMapError);
+        }
+    };
+
+    let bytes = match map.get(&name) {
+        Some(bytes) =>{
+            bytes
+        },
+        None =>{
+            return Err(ResourceError::NotExists(name));
+        }
+    };
+
+    let len = bytes.len();
+    let mut ret = vec![0; len];
+    for index in 0..len {
+        ret[index] = bytes[index];
+    }
+    Ok(Cow::Owned(ret))
+}
+
 
 pub type AssetHandle<T> = assets_manager::Handle<'static, T>;
 pub type AssetGuard<T> = assets_manager::AssetGuard<'static, T>;
-pub type AssetDirHandle<T> = assets_manager::DirHandle<'static, T, fs::FileSystem>;
-pub type ReloadWatcher = assets_manager::ReloadWatcher<'static>;
+pub type AssetDirHandle<T> = assets_manager::DirHandle<'static, T, fs::ResSystem>;
+
 
 /// The Asset trait, which is implemented by all structures that have their data
 /// stored in the filesystem.
@@ -112,34 +178,6 @@ pub fn load_dir<T: DirLoadable>(
     let specifier = specifier.strip_suffix(".*").unwrap_or(specifier);
     ASSETS.load_dir(specifier, recursive)
 }
-
-/// Loads directory and all files in it
-///
-/// # Panics
-/// 1) If can't load directory (filesystem errors)
-/// 2) If file can't be loaded (parsing problem)
-#[track_caller]
-pub fn read_expect_dir<T: DirLoadable>(
-    specifier: &str,
-    recursive: bool,
-) -> impl Iterator<Item = AssetGuard<T>> {
-    #[track_caller]
-    #[cold]
-    fn expect_failed(err: Error) -> ! {
-        panic!(
-            "Failed loading directory: {} (error={:?})",
-            err.id(),
-            err.reason()
-        )
-    }
-
-    // Avoid using `unwrap_or_else` to avoid breaking `#[track_caller]`
-    match load_dir::<T>(specifier, recursive) {
-        Ok(dir) => dir.ids().map(|entry| T::load_expect(entry).read()),
-        Err(err) => expect_failed(err),
-    }
-}
-
 impl<T: Compound> AssetExt for T {
     fn load(specifier: &str) -> Result<AssetHandle<Self>, Error> { ASSETS.load(specifier) }
 
@@ -168,8 +206,7 @@ impl Loader<Image> for ImageLoader {
 
 impl Asset for Image {
     type Loader = ImageLoader;
-
-    const EXTENSIONS: &'static [&'static str] = &["png", "jpg"];
+    const EXTENSIONS: &'static [&'static str] = &["png"];
 }
 
 pub struct DotVoxAsset(pub DotVoxData);
@@ -184,108 +221,5 @@ impl Loader<DotVoxAsset> for DotVoxLoader {
 
 impl Asset for DotVoxAsset {
     type Loader = DotVoxLoader;
-
     const EXTENSION: &'static str = "vox";
 }
-
-/// Return path to repository root by searching 10 directories back
-pub fn find_root() -> Option<PathBuf> {
-    std::env::current_dir().map_or(None, |path| {
-        // If we are in the root, push path
-        if path.join(".git").exists() {
-            return Some(path);
-        }
-        // Search .git directory in parent directries
-        for ancestor in path.ancestors().take(10) {
-            if ancestor.join(".git").exists() {
-                return Some(ancestor.to_path_buf());
-            }
-        }
-        None
-    })
-}
-
-lazy_static! {
-    /// Lazy static to find and cache where the asset directory is.
-    /// Cases we need to account for:
-    /// 1. Running through airshipper (`assets` next to binary)
-    /// 2. Install with package manager and run (assets probably in `/usr/share/veloren/assets` while binary in `/usr/bin/`)
-    /// 3. Download & hopefully extract zip (`assets` next to binary)
-    /// 4. Running through cargo (`assets` in workspace root but not always in cwd in case you `cd voxygen && cargo r`)
-    /// 5. Running executable in the target dir (`assets` in workspace)
-    /// 6. Running tests (`assets` in workspace root)
-    pub static ref ASSETS_PATH: PathBuf = {
-        let mut paths = Vec::new();
-
-        // Note: Ordering matters here!
-
-        // 1. VELOREN_ASSETS environment variable
-        if let Ok(var) = std::env::var("VELOREN_ASSETS") {
-            paths.push(var.into());
-           
-        }
-
-        // 2. Executable path
-        if let Ok(mut path) = std::env::current_exe() {
-            path.pop();
-            paths.push(path);
-            
-        }
-
-        // 3. Root of the repository
-        if let Some(path) = find_root() {
-            paths.push(path);
-        }
-
-        // 3. Root of the repository server
-        if let Some(path) = find_root() {
-            let s_path = path.join("server");
-            let c_path = path.join("client");
-            paths.push(s_path);
-            paths.push(c_path);
-        }
-
-        // 4. System paths
-        #[cfg(all(unix, not(target_os = "macos"), not(target_os = "ios"), not(target_os = "android")))]
-        {
-            if let Ok(result) = std::env::var("XDG_DATA_HOME") {
-                paths.push(format!("{}/veloren/", result).into());
-            } else if let Ok(result) = std::env::var("HOME") {
-                paths.push(format!("{}/.local/share/veloren/", result).into());
-            }
-
-            if let Ok(result) = std::env::var("XDG_DATA_DIRS") {
-                result.split(':').for_each(|x| paths.push(format!("{}/veloren/", x).into()));
-            } else {
-                // Fallback
-                let fallback_paths = vec!["/usr/local/share", "/usr/share"];
-                for fallback_path in fallback_paths {
-                    paths.push(format!("{}/veloren/", fallback_path).into());
-                }
-            }
-        }
-
-        log::trace!("Possible asset locations paths={:?}", paths);
-
-        for mut path in paths.clone() {
-            if !path.ends_with("assets") {
-                path = path.join("assets");
-            }
-
-            if path.is_dir() {
-                log::info!("Assets found path={}", path.display());
-                return path;
-            }
-        }
-
-        panic!(
-            "Asset directory not found. In attempting to find it, we searched:\n{})",
-            paths.iter().fold(String::new(), |mut a, path| {
-                a += &path.to_string_lossy();
-                a += "\n";
-                a
-            }),
-        );
-    };
-}
-

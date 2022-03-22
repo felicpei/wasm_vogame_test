@@ -1,8 +1,0 @@
-(
-    name: Name("Training Dummy"),
-    body: Exact(Object(TrainingDummy)),
-    alignment: Alignment(Passive),
-    loadout: FromBody,
-    loot: Nothing,
-    meta: [],
-)

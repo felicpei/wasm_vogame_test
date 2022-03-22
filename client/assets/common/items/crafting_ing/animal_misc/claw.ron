@@ -1,9 +1,0 @@
-ItemDef(
-    name: "Predator Claw",
-    description: "Incredibly sharp claw from a predatory animal.",
-    kind: Ingredient(
-        kind: "Claw",
-    ),
-    quality: Common,
-    tags: [],
-)

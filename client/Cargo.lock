@@ -4301,7 +4301,6 @@ dependencies = [
  "veloren-common-state",
  "veloren-common-systems",
  "veloren-network",
- "wasm-bindgen-rayon",
 ]
 
 [[package]]
@@ -4345,7 +4344,6 @@ dependencies = [
  "vek",
  "veloren-common-assets",
  "veloren-common-base",
- "wasm-bindgen-rayon",
 ]
 
 [[package]]

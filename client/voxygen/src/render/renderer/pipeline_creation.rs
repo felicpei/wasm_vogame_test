@@ -10,9 +10,6 @@ use super::{
     ImmutableLayouts, Layouts,
 };
 use std::sync::Arc;
-use rayon::prelude::*;
-use rayon;
-
 
 /// All the pipelines
 pub struct Pipelines {
@@ -350,7 +347,7 @@ struct PipelineNeeds<'a> {
 /// Creates InterfacePipelines in parallel
 fn create_interface_pipelines(
     needs: PipelineNeeds,
-    pool: &ThreadPool,
+    pool: &rayon::ThreadPool,
     tasks: [Task; 2],
 ) -> InterfacePipelines {
     
@@ -396,7 +393,7 @@ fn create_interface_pipelines(
 /// Create IngamePipelines and shadow pipelines in parallel
 fn create_ingame_and_shadow_pipelines(
     needs: PipelineNeeds,
-    pool: &ThreadPool,
+    pool: &rayon::ThreadPool,
     tasks: [Task; 14],
 ) -> IngameAndShadowPipelines {
     
@@ -729,7 +726,7 @@ pub(super) fn initial_create_pipelines(
     let shader_modules = ShaderModules::new(&device)?;
 
     // Create threadpool for parallel portion
-    let pool = ThreadPoolBuilder::new()
+    let pool = rayon::ThreadPoolBuilder::new()
         .thread_name(|n| format!("pipeline-creation-{}", n))
         .build()
         .unwrap();
@@ -798,7 +795,7 @@ pub(super) fn recreate_pipelines(
     >,
 > {
     // Create threadpool for parallel portion
-    let pool = ThreadPoolBuilder::new()
+    let pool = rayon::ThreadPoolBuilder::new()
         .thread_name(|n| format!("pipeline-recreation-{}", n))
         .build()
         .unwrap();

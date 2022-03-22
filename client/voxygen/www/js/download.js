@@ -152,13 +152,12 @@ function readRes(path, md5, cb) {
 
     request.onsuccess = function (event) {
         if (request.result) {
-            // if (request.result.md5 != md5) {
-            //     console.error('md5不一致 重新获取')
-            //     var req = objectStore.delete(path)
-            //     cb()
-            // }
-            // else
-            {
+            if (request.result.md5 != md5) {
+                console.error('md5不一致 重新获取')
+                var req = objectStore.delete(path)
+                cb()
+            }
+            else {
                 cb(request.result.res)
             }
         } else {

@@ -1,20 +1,39 @@
 {
-  "private": true,
-  "scripts": {
-    "build:wasm-st": "wasm-pack build --target web",
-    "build:wasm-mt": "cross-env RUSTFLAGS=\"-C target-feature=+atomics,+bulk-memory,+mutable-globals\" rustup run nightly-2021-07-29 wasm-pack build --target web --out-dir pkg-parallel -- --features parallel -Z build-std=panic_abort,std",
-    "build:wasm": "run-p build:wasm-st build:wasm-mt",
-    "build": "npm run build:wasm && webpack build ./index.js --mode production -o dist --output-filename index.js && cp index.html dist/"
+  "name": "create-wasm-app",
+  "version": "0.1.0",
+  "description": "create an app to consume rust-generated wasm packages",
+  "main": "index.js",
+  "bin": {
+    "create-wasm-app": ".bin/create-wasm-app.js"
   },
+  "scripts": {
+    "build": "webpack --config webpack.config.js",
+    "start": "webpack-dev-server"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rustwasm/create-wasm-app.git"
+  },
+  "keywords": [
+    "webassembly",
+    "wasm",
+    "rust",
+    "webpack"
+  ],
+  "author": "Ashley Williams <ashley666ashley@gmail.com>",
+  "license": "(MIT OR Apache-2.0)",
+  "bugs": {
+    "url": "https://github.com/rustwasm/create-wasm-app/issues"
+  },
+  "homepage": "https://github.com/rustwasm/create-wasm-app#readme",
   "devDependencies": {
-    "cross-env": "^7.0.3",
-    "npm-run-all": "^4.1.5",
-    "wasm-pack": "^0.9.1",
-    "webpack": "^5.25.1",
-    "webpack-cli": "^4.5.0"
+    "hello-wasm-pack": "^0.1.0",
+    "webpack": "^4.29.3",
+    "webpack-cli": "^3.1.0",
+    "webpack-dev-server": "^3.1.5",
+    "copy-webpack-plugin": "^5.0.0"
   },
   "dependencies": {
-    "veloren_voxygen": "^4.3.1",
-    "wasm-feature-detect": "^1.2.10"
+    "wasm_test": "file:../pkg"
   }
 }

@@ -21,9 +21,9 @@
 
 #include <globals.glsl>
 // Note: The sampler uniform is declared here because it differs for MSAA
-#include <anti-aliasing.glsl>
+#include <antialias-none.glsl>
 #include <srgb.glsl>
-#include <cloud.glsl>
+#include <cloud_regular.glsl>
 #include <light.glsl>
 // This *MUST* come after `cloud.glsl`: it contains a function that depends on `cloud.glsl` when clouds are enabled
 #include <point_glow.glsl>

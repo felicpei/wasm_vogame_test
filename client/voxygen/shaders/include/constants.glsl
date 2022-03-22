@@ -54,18 +54,15 @@
 /* Constants expected to be defined automatically by configuration: */
 
 
+//原先动态生成的配置
 #define VOXYGEN_COMPUTATION_PREFERENCE VOXYGEN_COMPUTATION_PREFERENCE_FRAGMENT
 #define FLUID_MODE FLUID_MODE_SHINY
-#define CLOUD_MODE CLOUD_MODE_MEDIUM
-#define LIGHTING_ALGORITHM LIGHTING_ALGORITHM_LAMBERTIAN
+#define CLOUD_MODE CLOUD_MODE_HIGH
+#define LIGHTING_ALGORITHM LIGHTING_ALGORITHM_BLINN_PHONG
 #define SHADOW_MODE SHADOW_MODE_MAP
-
-
-/* Constants possibly defined automatically by configuration: */
 #define POINT_GLOW_FACTOR 0.35
 #define BLOOM_FACTOR 0.2
-#define BLOOM_UNIFORM_BLUR 1
-
+#define BLOOM_UNIFORM_BLUR false
 
 /* Constants expected to be defined by any shader that needs to perform lighting calculations
  * (but whose values may take automatically defined constants into account): */

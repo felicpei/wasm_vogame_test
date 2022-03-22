@@ -48,7 +48,7 @@ uniform u_locals {
 
 layout(location = 0) out vec4 tgt_color;
 
-#include <cloud.glsl>
+#include <cloud_regular.glsl>
 #include <light.glsl>
 #include <lod.glsl>
 

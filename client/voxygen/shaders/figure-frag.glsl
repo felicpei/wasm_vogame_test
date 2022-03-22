@@ -22,7 +22,7 @@
 
 #include <globals.glsl>
 #include <light.glsl>
-#include <cloud.glsl>
+#include <cloud_regular.glsl>
 #include <lod.glsl>
 
 layout(location = 0) in vec3 f_pos;

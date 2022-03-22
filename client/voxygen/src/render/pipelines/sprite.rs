@@ -175,8 +175,10 @@ pub struct SpriteLayout {
 
 impl SpriteLayout {
     pub fn new(device: &wgpu::Device) -> Self {
+        
         let mut entries = GlobalsLayouts::base_globals_layout();
         debug_assert_eq!(12, entries.len()); // To remember to adjust the bindings below
+
         entries.extend_from_slice(&[
             // sprite_verts
             wgpu::BindGroupLayoutEntry {

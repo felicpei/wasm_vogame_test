@@ -20,7 +20,7 @@
 #define HAS_LOD_FULL_INFO
 
 #include <globals.glsl>
-#include <cloud.glsl>
+#include <cloud_regular.glsl>
 #include <lod.glsl>
 
 layout(location = 0) in vec3 f_pos;

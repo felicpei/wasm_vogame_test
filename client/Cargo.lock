@@ -284,7 +284,7 @@ dependencies = [
  "memchr",
  "num_cpus",
  "once_cell",
- "pin-project-lite 0.2.8",
+ "pin-project-lite",
  "pin-utils",
  "slab",
  "wasm-bindgen-futures",
@@ -457,12 +457,6 @@ name = "byteorder"
 version = "1.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "14c189c53d098945499cdfa7ecc63567cf3886b3332b312a5b4585d8d3a6a610"
-
-[[package]]
-name = "bytes"
-version = "0.5.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0e4cec68f03f32e44924783795810fa50a7035d8c8ebe78580ad7e6c703fba38"
 
 [[package]]
 name = "bytes"
@@ -715,7 +709,7 @@ version = "4.6.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "50b727aacc797f9fc28e355d21f34709ac4fc9adecfe470ad07b8f4464f53062"
 dependencies = [
- "bytes 1.1.0",
+ "bytes",
  "memchr",
 ]
 
@@ -1507,7 +1501,7 @@ dependencies = [
  "futures-io",
  "memchr",
  "parking",
- "pin-project-lite 0.2.8",
+ "pin-project-lite",
  "waker-fn",
 ]
 
@@ -1547,7 +1541,7 @@ dependencies = [
  "futures-sink",
  "futures-task",
  "memchr",
- "pin-project-lite 0.2.8",
+ "pin-project-lite",
  "pin-utils",
  "slab",
 ]
@@ -1836,9 +1830,9 @@ dependencies = [
  "futures",
  "log",
  "smol",
- "tokio 0.2.25",
- "tokio 1.17.0",
+ "tokio",
  "wasm-bindgen-futures",
+ "wasm-timer",
 ]
 
 [[package]]
@@ -1935,11 +1929,11 @@ dependencies = [
 [[package]]
 name = "inline-spirv"
 version = "0.1.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d94edd18603b2b62d435e208952342f8d03d1ede1cc9b8d99d3688ae9e677022"
 dependencies = [
+ "naga 0.5.0",
  "quote 1.0.15",
  "shaderc",
+ "spirq",
  "syn 1.0.86",
 ]
 
@@ -2376,6 +2370,22 @@ name = "mopa"
 version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a785740271256c230f57462d3b83e52f998433a7062fc18f96d5999474a9f915"
+
+[[package]]
+name = "naga"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ef670817eef03d356d5a509ea275e7dd3a78ea9e24261ea3cb2dfed1abb08f64"
+dependencies = [
+ "bit-set",
+ "bitflags",
+ "codespan-reporting",
+ "fxhash",
+ "log",
+ "num-traits",
+ "spirv_headers",
+ "thiserror",
+]
 
 [[package]]
 name = "naga"
@@ -3055,12 +3065,6 @@ dependencies = [
  "siphasher",
  "uncased",
 ]
-
-[[package]]
-name = "pin-project-lite"
-version = "0.1.12"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "257b64915a082f7811703966789728173279bdebb956b143dbcd23f6f970a777"
 
 [[package]]
 name = "pin-project-lite"
@@ -3811,10 +3815,32 @@ dependencies = [
 ]
 
 [[package]]
+name = "spirq"
+version = "0.4.18"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3ab78013e383c9ddb19e6de66e429a46ec3b22298868c758f1233979f2290b7a"
+dependencies = [
+ "fnv",
+ "num-derive",
+ "num-traits",
+ "spirv_headers",
+]
+
+[[package]]
 name = "spirv"
 version = "0.2.0+1.5.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "246bfa38fe3db3f1dfc8ca5a2cdeb7348c78be2112740cc0ec8ef18b6d94f830"
+dependencies = [
+ "bitflags",
+ "num-traits",
+]
+
+[[package]]
+name = "spirv_headers"
+version = "1.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1f5b132530b1ac069df335577e3581765995cba5a13995cdbbdbc8fb057c532c"
 dependencies = [
  "bitflags",
  "num-traits",
@@ -4032,32 +4058,13 @@ checksum = "cda74da7e1a664f795bb1f8a87ec406fb89a02522cf6e50620d016add6dbbf5c"
 
 [[package]]
 name = "tokio"
-version = "0.2.25"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6703a273949a90131b290be1fe7b039d0fc884aa1935860dfcbe056f28cd8092"
-dependencies = [
- "bytes 0.5.6",
- "futures-core",
- "num_cpus",
- "pin-project-lite 0.1.12",
- "slab",
-]
-
-[[package]]
-name = "tokio"
 version = "1.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2af73ac49756f3f7c01172e34a23e5d0216f6c32333757c2c61feb2bbff5a5ee"
 dependencies = [
- "bytes 1.1.0",
- "libc",
- "memchr",
- "mio",
  "num_cpus",
- "pin-project-lite 0.2.8",
- "socket2",
+ "pin-project-lite",
  "tokio-macros",
- "winapi",
 ]
 
 [[package]]
@@ -4078,8 +4085,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "50145484efff8818b5ccd256697f36863f587da82cf8b409c53adf1e840798e3"
 dependencies = [
  "futures-core",
- "pin-project-lite 0.2.8",
- "tokio 1.17.0",
+ "pin-project-lite",
+ "tokio",
 ]
 
 [[package]]
@@ -4261,7 +4268,7 @@ dependencies = [
  "num 0.4.0",
  "rayon",
  "specs",
- "tokio 1.17.0",
+ "tokio",
  "vek",
  "veloren-common",
  "veloren-common-base",
@@ -4401,7 +4408,7 @@ dependencies = [
  "async-trait",
  "bincode",
  "bitflags",
- "bytes 1.1.0",
+ "bytes",
  "crossbeam-channel",
  "futures-core",
  "futures-util",
@@ -4411,8 +4418,7 @@ dependencies = [
  "prometheus",
  "rand",
  "serde",
- "socket2",
- "tokio 1.17.0",
+ "tokio",
  "tokio-stream",
  "veloren-network-protocol",
 ]
@@ -4423,7 +4429,7 @@ version = "0.6.0"
 dependencies = [
  "async-trait",
  "bitflags",
- "bytes 1.1.0",
+ "bytes",
  "getrandom",
  "hashbrown",
  "log",
@@ -4440,7 +4446,6 @@ dependencies = [
  "bytemuck",
  "chrono",
  "chumsky",
- "cmake",
  "conrod_core",
  "conrod_winit",
  "crossbeam-channel",
@@ -4469,13 +4474,12 @@ dependencies = [
  "rodio",
  "ron",
  "serde",
- "shaderc",
  "slab",
  "specs",
  "specs-idvs",
  "strum",
  "strum_macros",
- "tokio 1.17.0",
+ "tokio",
  "treeculler",
  "vek",
  "veloren-client",
@@ -4792,7 +4796,7 @@ dependencies = [
  "arrayvec 0.7.2",
  "js-sys",
  "log",
- "naga",
+ "naga 0.8.5",
  "parking_lot",
  "raw-window-handle 0.4.2",
  "smallvec",
@@ -4817,7 +4821,7 @@ dependencies = [
  "copyless",
  "fxhash",
  "log",
- "naga",
+ "naga 0.8.5",
  "parking_lot",
  "profiling",
  "raw-window-handle 0.4.2",
@@ -4851,7 +4855,7 @@ dependencies = [
  "libloading",
  "log",
  "metal",
- "naga",
+ "naga 0.8.5",
  "objc",
  "parking_lot",
  "profiling",

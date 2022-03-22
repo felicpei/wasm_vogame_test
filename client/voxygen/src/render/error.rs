@@ -7,7 +7,6 @@ pub enum RenderError {
     CustomError(String),
     CouldNotFindAdapter,
     ErrorInitializingCompiler,
-    ShaderError(String, shaderc::Error),
 }
 
 use std::fmt;
@@ -26,11 +25,6 @@ impl fmt::Debug for RenderError {
             Self::CustomError(err) => f.debug_tuple("CustomError").field(err).finish(),
             Self::CouldNotFindAdapter => f.debug_tuple("CouldNotFindAdapter").finish(),
             Self::ErrorInitializingCompiler => f.debug_tuple("ErrorInitializingCompiler").finish(),
-            Self::ShaderError(shader_name, err) => write!(
-                f,
-                "\"{}\" shader failed to compile due to the following error: {}",
-                shader_name, err
-            ),
         }
     }
 }
@@ -47,8 +41,3 @@ impl From<wgpu::SurfaceError> for RenderError {
     fn from(err: wgpu::SurfaceError) -> Self { Self::SurfaceError(err) }
 }
 
-impl From<(&str, shaderc::Error)> for RenderError {
-    fn from((shader_name, err): (&str, shaderc::Error)) -> Self {
-        Self::ShaderError(shader_name.into(), err)
-    }
-}

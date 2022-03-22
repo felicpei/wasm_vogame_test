@@ -3,14 +3,12 @@ pub(super) mod drawer;
 // Consts and bind groups for post-process and clouds
 mod locals;
 mod pipeline_creation;
-mod shaders;
 mod shadow_map;
 
 use locals::Locals;
 use pipeline_creation::{
     IngameAndShadowPipelines, InterfacePipelines, PipelineCreation, Pipelines, ShadowPipelines,
 };
-use shaders::Shaders;
 use shadow_map::{ShadowMap, ShadowMapRenderer};
 
 use super::{
@@ -149,9 +147,6 @@ pub struct Renderer {
     quad_index_buffer_u16: Buffer<u16>,
     quad_index_buffer_u32: Buffer<u32>,
 
-    shaders: AssetHandle<Shaders>,
-    shaders_watcher: ReloadWatcher,
-
     pipeline_modes: PipelineModes,
     other_modes: OtherModes,
     pub resolution: Vec2<u32>,
@@ -159,9 +154,6 @@ pub struct Renderer {
     // This checks is added because windows resizes the window to 0,0 when
     // minimizing and this causes a bunch of validation errors
     is_minimized: bool,
-
-    // To remember the backend info after initialization for debug purposes
-    graphics_backend: String,
 }
 
 impl Renderer {
@@ -173,15 +165,7 @@ impl Renderer {
         runtime: &tokio::runtime::Runtime,
     ) -> Result<Self, RenderError> {
         let (pipeline_modes, other_modes) = mode.split();
-        // Enable seamless cubemaps globally, where available--they are essentially a
-        // strict improvement on regular cube maps.
-        //
-        // Note that since we only have to enable this once globally, there is no point
-        // in doing this on rerender.
-        // Self::enable_seamless_cube_maps(&mut device);
-
-        // TODO: fix panic on wayland with opengl?
-        // TODO: fix backend defaulting to opengl on wayland.
+       
         let backend_bit = std::env::var("WGPU_BACKEND")
             .ok()
             .and_then(|backend| match backend.to_lowercase().as_str() {
@@ -336,29 +320,43 @@ impl Renderer {
         })
         .ok();
 
-        let shaders = Shaders::load_expect("");
-        let shaders_watcher = shaders.reload_watcher();
-
         let layouts = {
+
+            log::info!("init global layout");
             let global = GlobalsLayouts::new(&device);
 
+            log::info!("init debug layout");
             let debug = debug::DebugLayout::new(&device);
+
+            log::info!("init figure layout");
             let figure = figure::FigureLayout::new(&device);
+
+            log::info!("init shadow layout");
             let shadow = shadow::ShadowLayout::new(&device);
+
+            log::info!("init sprite layout");
             let sprite = sprite::SpriteLayout::new(&device);
+
+            log::info!("init terrain layout");
             let terrain = terrain::TerrainLayout::new(&device);
+
+            log::info!("init clouds layout");
             let clouds = clouds::CloudsLayout::new(&device);
+
+            log::info!("init bloom layout");
             let bloom = bloom::BloomLayout::new(&device);
-            let postprocess = Arc::new(postprocess::PostProcessLayout::new(
-                &device,
-                &pipeline_modes,
-            ));
+
+            log::info!("init postprocess layout");
+            let postprocess = Arc::new(postprocess::PostProcessLayout::new(&device, &pipeline_modes));
+
+            log::info!("init ui layout");
             let ui = ui::UiLayout::new(&device);
+
+            log::info!("init blit layout");
             let blit = blit::BlitLayout::new(&device);
 
             let immutable = Arc::new(ImmutableLayouts {
                 global,
-
                 debug,
                 figure,
                 shadow,
@@ -385,7 +383,6 @@ impl Renderer {
                 immutable: Arc::clone(&layouts.immutable),
                 postprocess: Arc::clone(&layouts.postprocess),
             },
-            shaders.cloned(),
             pipeline_modes.clone(),
             sc_desc.clone(), // Note: cheap clone
             shadow_views.is_some(),
@@ -478,21 +475,13 @@ impl Renderer {
             quad_index_buffer_u16,
             quad_index_buffer_u32,
 
-            shaders,
-            shaders_watcher,
-
             pipeline_modes,
             other_modes,
             resolution: Vec2::new(dims.width, dims.height),
 
             is_minimized: false,
-
-            graphics_backend,
         })
     }
-
-    /// Get the graphics backend being used
-    pub fn graphics_backend(&self) -> &str { &self.graphics_backend }
 
     /// Check the status of the intial pipeline creation
     /// Returns `None` if complete
@@ -967,12 +956,6 @@ impl Renderer {
         if trigger_on_resize {
             self.on_resize(self.resolution);
         }
-
-        // If the shaders files were changed attempt to recreate the shaders
-        if self.shaders_watcher.reloaded() {
-            self.recreate_pipelines(self.pipeline_modes.clone());
-        }
-
         // Or if we have a recreation pending
         if matches!(&self.state, State::Complete {
             recreating: None,
@@ -1003,7 +986,6 @@ impl Renderer {
                     pipeline_creation::recreate_pipelines(
                         Arc::clone(&self.device),
                         Arc::clone(&self.layouts.immutable),
-                        self.shaders.cloned(),
                         pipeline_modes,
                         // NOTE: if present_mode starts to be used to configure pipelines then it
                         // needs to become a part of the pipeline modes

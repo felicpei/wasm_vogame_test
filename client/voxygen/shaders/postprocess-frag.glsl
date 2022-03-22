@@ -18,9 +18,9 @@
 
 #include <globals.glsl>
 // Note: The sampler uniform is declared here because it differs for MSAA
-#include <anti-aliasing.glsl>
+#include <antialias-none.glsl>
 #include <srgb.glsl>
-#include <cloud.glsl>
+#include <cloud_regular.glsl>
 #include <random.glsl>
 
 layout(set = 1, binding = 0)

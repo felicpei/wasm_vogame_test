@@ -11,21 +11,21 @@ metrics = ["prometheus", "network-protocol/metrics"]
 compression = ["lz-fear"]   #压缩
 
 #需要用websocket的情况
-#default = ["metrics", "compression"]
+default = ["metrics", "compression"]
 
 #需要用cargo的tcp情况
-client_tcp = ["socket2", "tokio"]   #切换 客户端 和 wasm
-default = ["metrics", "compression","client_tcp"]
+# client_tcp = ["socket2", "tokio"]   #切换 客户端 和 wasm
+# default = ["metrics", "compression","client_tcp"]
 
 
 [dependencies]
 
 #需要用websocket的情况
-#tokio = { version = "=1.17.0", default-features = false, features = ["macros", "rt", "time"] }
+tokio = { version = "=1.17.0", default-features = false, features = ["macros", "rt", "time"] }
 
-#需要用cargo的tcp情况
-socket2 = { version = "0.4.4", default-features = false, optional = true }
-tokio = { version = "=1.17.0", default-features = false, optional = true, features = ["io-util", "macros", "rt", "net", "time"] }
+# #需要用cargo的tcp情况
+# socket2 = { version = "0.4.4", default-features = false, optional = true }
+# tokio = { version = "=1.17.0", default-features = false, optional = true, features = ["io-util", "macros", "rt", "net", "time"] }
 
 
 network-protocol = { package = "veloren-network-protocol", path = "protocol" }

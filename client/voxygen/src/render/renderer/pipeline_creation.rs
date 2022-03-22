@@ -7,7 +7,6 @@ use super::{
         AaMode, BloomMode, CloudMode, FluidMode, LightingMode, PipelineModes, RenderError,
         ShadowMode,
     },
-    shaders::Shaders,
     ImmutableLayouts, Layouts,
 };
 use std::sync::Arc;
@@ -125,224 +124,215 @@ struct ShaderModules {
 impl ShaderModules {
     pub fn new(
         device: &wgpu::Device,
-        shaders: &Shaders,
         pipeline_modes: &PipelineModes,
         has_shadow_views: bool,
     ) -> Result<Self, RenderError> {
         
-        use shaderc::{CompileOptions, Compiler, OptimizationLevel, ResolvedInclude, ShaderKind};
 
-        let constants = shaders.get("include.constants").unwrap();
-        let globals = shaders.get("include.globals").unwrap();
-        let sky = shaders.get("include.sky").unwrap();
-        let light = shaders.get("include.light").unwrap();
-        let srgb = shaders.get("include.srgb").unwrap();
-        let random = shaders.get("include.random").unwrap();
-        let lod = shaders.get("include.lod").unwrap();
-        let shadows = shaders.get("include.shadows").unwrap();
-        let point_glow = shaders.get("include.point_glow").unwrap();
 
-        // We dynamically add extra configuration settings to the constants file.
-        let mut constants = format!(
-            r#"
-{}
+        //配置改为在shader中写死
+        //  cloud：
+        //      #include <cloud_regular.glsl> 
+        //               <cloud_none.glsl>
+        //
+        //  FluidMode 为加载不同shader 
+        //      shaders/fluid-frag/shiny.glsl
+        //      shaders/fluid-frag/cheap.glsl
+        //
+        //  anti_alias:
+        //      #include <antialias-fxaa.glsl> 
+        //               <antialias-msaa-x4.glsl> 
+        //               <antialias-msaa-x8.glsl> 
+        //               <antialias-<msaa-x16.glsl> 
+        //               <antialias-none.glsl>
 
-#define VOXYGEN_COMPUTATION_PREFERENCE {}
-#define FLUID_MODE {}
-#define CLOUD_MODE {}
-#define LIGHTING_ALGORITHM {}
-#define SHADOW_MODE {}
 
-"#,
-            &constants.0,
-            // TODO: Configurable vertex/fragment shader preference.
-            "VOXYGEN_COMPUTATION_PREFERENCE_FRAGMENT",
-            match pipeline_modes.fluid {
-                FluidMode::Cheap => "FLUID_MODE_CHEAP",
-                FluidMode::Shiny => "FLUID_MODE_SHINY",
-            },
-            match pipeline_modes.cloud {
-                CloudMode::None => "CLOUD_MODE_NONE",
-                CloudMode::Minimal => "CLOUD_MODE_MINIMAL",
-                CloudMode::Low => "CLOUD_MODE_LOW",
-                CloudMode::Medium => "CLOUD_MODE_MEDIUM",
-                CloudMode::High => "CLOUD_MODE_HIGH",
-                CloudMode::Ultra => "CLOUD_MODE_ULTRA",
-            },
-            match pipeline_modes.lighting {
-                LightingMode::Ashikhmin => "LIGHTING_ALGORITHM_ASHIKHMIN",
-                LightingMode::BlinnPhong => "LIGHTING_ALGORITHM_BLINN_PHONG",
-                LightingMode::Lambertian => "LIGHTING_ALGORITHM_LAMBERTIAN",
-            },
-            match pipeline_modes.shadow {
-                ShadowMode::None => "SHADOW_MODE_NONE",
-                ShadowMode::Map(_) if has_shadow_views => "SHADOW_MODE_MAP",
-                ShadowMode::Cheap | ShadowMode::Map(_) => "SHADOW_MODE_CHEAP",
-            },
-        );
-
-        if pipeline_modes.point_glow > f32::EPSILON {
-            constants += &format!(
-                "\n#define POINT_GLOW_FACTOR {}\n",
-                pipeline_modes.point_glow
-            );
-        }
-
-        for shader in pipeline_modes.experimental_shaders.iter() {
-            constants += &format!(
-                "#define EXPERIMENTAL_{}\n",
-                format!("{:?}", shader).to_uppercase()
-            );
-        }
-
-        let constants = match pipeline_modes.bloom {
-            BloomMode::Off => constants,
-            BloomMode::On(config) => {
-                format!(
-                    r#"
-{}
-
-#define BLOOM_FACTOR {}
-#define BLOOM_UNIFORM_BLUR {}
-
-"#,
-                    constants,
-                    config.factor.fraction(),
-                    config.uniform_blur,
-                )
-            },
-        };
-
-        let anti_alias = shaders
-            .get(match pipeline_modes.aa {
-                AaMode::None => "antialias.none",
-                AaMode::Fxaa => "antialias.fxaa",
-                AaMode::MsaaX4 => "antialias.msaa-x4",
-                AaMode::MsaaX8 => "antialias.msaa-x8",
-                AaMode::MsaaX16 => "antialias.msaa-x16",
-            })
-            .unwrap();
-
-        let cloud = shaders
-            .get(match pipeline_modes.cloud {
-                CloudMode::None => "include.cloud.none",
-                _ => "include.cloud.regular",
-            })
-            .unwrap();
-
-        let mut compiler = Compiler::new().ok_or(RenderError::ErrorInitializingCompiler)?;
-        let mut options = CompileOptions::new().ok_or(RenderError::ErrorInitializingCompiler)?;
-        options.set_optimization_level(OptimizationLevel::Performance);
-        options.set_forced_version_profile(430, shaderc::GlslProfile::Core);
-        options.set_include_callback(move |name, _, shader_name, _| {
-            Ok(ResolvedInclude {
-                resolved_name: name.to_string(),
-                content: match name {
-                    "constants.glsl" => constants.clone(),
-                    "globals.glsl" => globals.0.to_owned(),
-                    "shadows.glsl" => shadows.0.to_owned(),
-                    "sky.glsl" => sky.0.to_owned(),
-                    "light.glsl" => light.0.to_owned(),
-                    "srgb.glsl" => srgb.0.to_owned(),
-                    "random.glsl" => random.0.to_owned(),
-                    "lod.glsl" => lod.0.to_owned(),
-                    "anti-aliasing.glsl" => anti_alias.0.to_owned(),
-                    "cloud.glsl" => cloud.0.to_owned(),
-                    "point_glow.glsl" => point_glow.0.to_owned(),
-                    other => {
-                        return Err(format!(
-                            "Include {} in {} is not defined",
-                            other, shader_name
-                        ));
-                    },
-                },
-            })
+        use inline_spirv::include_spirv;
+        use std::borrow::Cow;
+        let skybox_vert = device.create_shader_module(&wgpu::ShaderModuleDescriptor {
+            label: Some("skybox_vert"),
+            source: wgpu::ShaderSource::SpirV(Cow::Borrowed(include_spirv!("shaders/skybox-vert.glsl", vert, I "shaders/include/"))),
         });
 
-        let mut create_shader = |name, kind| {
-            let glsl = &shaders
-                .get(name)
-                .unwrap_or_else(|| panic!("Can't retrieve shader: {}", name))
-                .0;
-            let file_name = format!("{}.glsl", name);
-            create_shader_module(device, &mut compiler, glsl, kind, &file_name, &options)
-        };
+        let skybox_frag = device.create_shader_module(&wgpu::ShaderModuleDescriptor {
+            label: Some("skybox_frag"),
+            source: wgpu::ShaderSource::SpirV(Cow::Borrowed(include_spirv!("shaders/skybox-frag.glsl", frag, I "shaders/include/"))),
+        });
 
-        let selected_fluid_shader = ["fluid-frag.", match pipeline_modes.fluid {
-            FluidMode::Cheap => "cheap",
-            FluidMode::Shiny => "shiny",
-        }]
-        .concat();
+        let debug_vert = device.create_shader_module(&wgpu::ShaderModuleDescriptor {
+            label: Some("debug_vert"),
+            source: wgpu::ShaderSource::SpirV(Cow::Borrowed(include_spirv!("shaders/debug-vert.glsl", vert, I "shaders/include/"))),
+        });
+
+        let debug_frag = device.create_shader_module(&wgpu::ShaderModuleDescriptor {
+            label: Some("debug_frag"),
+            source: wgpu::ShaderSource::SpirV(Cow::Borrowed(include_spirv!("shaders/debug-frag.glsl", frag, I "shaders/include/"))),
+        });
+
+        let figure_vert = device.create_shader_module(&wgpu::ShaderModuleDescriptor {
+            label: Some("figure_vert"),
+            source: wgpu::ShaderSource::SpirV(Cow::Borrowed(include_spirv!("shaders/figure-vert.glsl", vert, I "shaders/include/"))),
+        });
+
+        let figure_frag = device.create_shader_module(&wgpu::ShaderModuleDescriptor {
+            label: Some("figure_frag"),
+            source: wgpu::ShaderSource::SpirV(Cow::Borrowed(include_spirv!("shaders/figure-frag.glsl", frag, I "shaders/include/"))),
+        });
+
+        let terrain_vert = device.create_shader_module(&wgpu::ShaderModuleDescriptor {
+            label: Some("terrain_vert"),
+            source: wgpu::ShaderSource::SpirV(Cow::Borrowed(include_spirv!("shaders/terrain-vert.glsl", vert, I "shaders/include/"))),
+        });
+
+        let terrain_frag = device.create_shader_module(&wgpu::ShaderModuleDescriptor {
+            label: Some("terrain_frag"),
+            source: wgpu::ShaderSource::SpirV(Cow::Borrowed(include_spirv!("shaders/terrain-frag.glsl", frag, I "shaders/include/"))),
+        });
+
+        let fluid_vert = device.create_shader_module(&wgpu::ShaderModuleDescriptor {
+            label: Some("fluid_vert"),
+            source: wgpu::ShaderSource::SpirV(Cow::Borrowed(include_spirv!("shaders/fluid-vert.glsl", vert, I "shaders/include/"))),
+        });
+
+        let fluid_frag = device.create_shader_module(&wgpu::ShaderModuleDescriptor {
+            label: Some("fluid_frag"),
+            //todo use shiny? cheap
+            source: wgpu::ShaderSource::SpirV(Cow::Borrowed(include_spirv!("shaders/fluid-frag/shiny.glsl", frag, I "shaders/include/"))),
+        });
+
+        let sprite_vert = device.create_shader_module(&wgpu::ShaderModuleDescriptor {
+            label: Some("sprite_vert"),
+            source: wgpu::ShaderSource::SpirV(Cow::Borrowed(include_spirv!("shaders/sprite-vert.glsl", vert, I "shaders/include/"))),
+        });
+
+        let sprite_frag = device.create_shader_module(&wgpu::ShaderModuleDescriptor {
+            label: Some("sprite_frag"),
+            source: wgpu::ShaderSource::SpirV(Cow::Borrowed(include_spirv!("shaders/sprite-frag.glsl", frag, I "shaders/include/"))),
+        });
+
+        let particle_vert = device.create_shader_module(&wgpu::ShaderModuleDescriptor {
+            label: Some("particle_vert"),
+            source: wgpu::ShaderSource::SpirV(Cow::Borrowed(include_spirv!("shaders/particle-vert.glsl", vert, I "shaders/include/"))),
+        });
+
+        let particle_frag = device.create_shader_module(&wgpu::ShaderModuleDescriptor {
+            label: Some("particle_frag"),
+            source: wgpu::ShaderSource::SpirV(Cow::Borrowed(include_spirv!("shaders/particle-frag.glsl", frag, I "shaders/include/"))),
+        });
+
+        let ui_vert = device.create_shader_module(&wgpu::ShaderModuleDescriptor {
+            label: Some("ui_vert"),
+            source: wgpu::ShaderSource::SpirV(Cow::Borrowed(include_spirv!("shaders/ui-vert.glsl", vert, I "shaders/include/"))),
+        });
+
+        let ui_frag = device.create_shader_module(&wgpu::ShaderModuleDescriptor {
+            label: Some("ui_frag"),
+            source: wgpu::ShaderSource::SpirV(Cow::Borrowed(include_spirv!("shaders/ui-frag.glsl", frag, I "shaders/include/"))),
+        });
+
+        let lod_terrain_vert = device.create_shader_module(&wgpu::ShaderModuleDescriptor {
+            label: Some("lod_terrain_vert"),
+            source: wgpu::ShaderSource::SpirV(Cow::Borrowed(include_spirv!("shaders/lod-terrain-vert.glsl", vert, I "shaders/include/"))),
+        });
+
+        let lod_terrain_frag = device.create_shader_module(&wgpu::ShaderModuleDescriptor {
+            label: Some("lod_terrain_frag"),
+            source: wgpu::ShaderSource::SpirV(Cow::Borrowed(include_spirv!("shaders/lod-terrain-frag.glsl", frag, I "shaders/include/"))),
+        });
+
+        let clouds_vert = device.create_shader_module(&wgpu::ShaderModuleDescriptor {
+            label: Some("clouds_vert"),
+            source: wgpu::ShaderSource::SpirV(Cow::Borrowed(include_spirv!("shaders/clouds-vert.glsl", vert, I "shaders/include/"))),
+        });
+
+        let clouds_frag = device.create_shader_module(&wgpu::ShaderModuleDescriptor {
+            label: Some("clouds_frag"),
+            source: wgpu::ShaderSource::SpirV(Cow::Borrowed(include_spirv!("shaders/clouds-frag.glsl", frag, I "shaders/include/", I "shaders/antialias/"))),
+        });
+
+        let dual_downsample_filtered_frag = device.create_shader_module(&wgpu::ShaderModuleDescriptor {
+            label: Some("dual_downsample_filtered_frag"),
+            source: wgpu::ShaderSource::SpirV(Cow::Borrowed(include_spirv!("shaders/dual-downsample-filtered-frag.glsl", frag, I "shaders/include/"))),
+        });
+
+        let dual_downsample_frag = device.create_shader_module(&wgpu::ShaderModuleDescriptor {
+            label: Some("dual_downsample_frag"),
+            source: wgpu::ShaderSource::SpirV(Cow::Borrowed(include_spirv!("shaders/dual-downsample-frag.glsl", frag, I "shaders/include/"))),
+        });
+
+        let dual_upsample_frag = device.create_shader_module(&wgpu::ShaderModuleDescriptor {
+            label: Some("dual_upsample_frag"),
+            source: wgpu::ShaderSource::SpirV(Cow::Borrowed(include_spirv!("shaders/dual-upsample-frag.glsl", frag, I "shaders/include/"))),
+        });
+
+        let postprocess_vert = device.create_shader_module(&wgpu::ShaderModuleDescriptor {
+            label: Some("postprocess_vert"),
+            source: wgpu::ShaderSource::SpirV(Cow::Borrowed(include_spirv!("shaders/postprocess-vert.glsl", vert, I "shaders/include/"))),
+        });
+
+        let postprocess_frag = device.create_shader_module(&wgpu::ShaderModuleDescriptor {
+            label: Some("postprocess_frag"),
+            source: wgpu::ShaderSource::SpirV(Cow::Borrowed(include_spirv!("shaders/postprocess-frag.glsl", frag, I "shaders/include/", I "shaders/antialias/"))),
+        });
+
+        let blit_vert = device.create_shader_module(&wgpu::ShaderModuleDescriptor {
+            label: Some("blit_vert"),
+            source: wgpu::ShaderSource::SpirV(Cow::Borrowed(include_spirv!("shaders/blit-vert.glsl", vert, I "shaders/include/"))),
+        });
+
+        let blit_frag = device.create_shader_module(&wgpu::ShaderModuleDescriptor {
+            label: Some("blit_frag"),
+            source: wgpu::ShaderSource::SpirV(Cow::Borrowed(include_spirv!("shaders/blit-frag.glsl", frag, I "shaders/include/"))),
+        });
+
+        let point_light_shadows_vert = device.create_shader_module(&wgpu::ShaderModuleDescriptor {
+            label: Some("point_light_shadows_vert"),
+            source: wgpu::ShaderSource::SpirV(Cow::Borrowed(include_spirv!("shaders/point-light-shadows-vert.glsl", vert, I "shaders/include/"))),
+        });
+
+        let light_shadows_directed_vert = device.create_shader_module(&wgpu::ShaderModuleDescriptor {
+            label: Some("light_shadows_directed_vert"),
+            source: wgpu::ShaderSource::SpirV(Cow::Borrowed(include_spirv!("shaders/light-shadows-directed-vert.glsl", vert, I "shaders/include/"))),
+        });
+
+        let light_shadows_figure_vert = device.create_shader_module(&wgpu::ShaderModuleDescriptor {
+            label: Some("light_shadows_figure_vert"),
+            source: wgpu::ShaderSource::SpirV(Cow::Borrowed(include_spirv!("shaders/light-shadows-figure-vert.glsl", vert, I "shaders/include/"))),
+        });
 
         Ok(Self {
-            skybox_vert: create_shader("skybox-vert", ShaderKind::Vertex)?,
-            skybox_frag: create_shader("skybox-frag", ShaderKind::Fragment)?,
-            debug_vert: create_shader("debug-vert", ShaderKind::Vertex)?,
-            debug_frag: create_shader("debug-frag", ShaderKind::Fragment)?,
-            figure_vert: create_shader("figure-vert", ShaderKind::Vertex)?,
-            figure_frag: create_shader("figure-frag", ShaderKind::Fragment)?,
-            terrain_vert: create_shader("terrain-vert", ShaderKind::Vertex)?,
-            terrain_frag: create_shader("terrain-frag", ShaderKind::Fragment)?,
-            fluid_vert: create_shader("fluid-vert", ShaderKind::Vertex)?,
-            fluid_frag: create_shader(&selected_fluid_shader, ShaderKind::Fragment)?,
-            sprite_vert: create_shader("sprite-vert", ShaderKind::Vertex)?,
-            sprite_frag: create_shader("sprite-frag", ShaderKind::Fragment)?,
-            particle_vert: create_shader("particle-vert", ShaderKind::Vertex)?,
-            particle_frag: create_shader("particle-frag", ShaderKind::Fragment)?,
-            ui_vert: create_shader("ui-vert", ShaderKind::Vertex)?,
-            ui_frag: create_shader("ui-frag", ShaderKind::Fragment)?,
-            lod_terrain_vert: create_shader("lod-terrain-vert", ShaderKind::Vertex)?,
-            lod_terrain_frag: create_shader("lod-terrain-frag", ShaderKind::Fragment)?,
-            clouds_vert: create_shader("clouds-vert", ShaderKind::Vertex)?,
-            clouds_frag: create_shader("clouds-frag", ShaderKind::Fragment)?,
-            dual_downsample_filtered_frag: create_shader(
-                "dual-downsample-filtered-frag",
-                ShaderKind::Fragment,
-            )?,
-            dual_downsample_frag: create_shader("dual-downsample-frag", ShaderKind::Fragment)?,
-            dual_upsample_frag: create_shader("dual-upsample-frag", ShaderKind::Fragment)?,
-            postprocess_vert: create_shader("postprocess-vert", ShaderKind::Vertex)?,
-            postprocess_frag: create_shader("postprocess-frag", ShaderKind::Fragment)?,
-            blit_vert: create_shader("blit-vert", ShaderKind::Vertex)?,
-            blit_frag: create_shader("blit-frag", ShaderKind::Fragment)?,
-            point_light_shadows_vert: create_shader(
-                "point-light-shadows-vert",
-                ShaderKind::Vertex,
-            )?,
-            light_shadows_directed_vert: create_shader(
-                "light-shadows-directed-vert",
-                ShaderKind::Vertex,
-            )?,
-            light_shadows_figure_vert: create_shader(
-                "light-shadows-figure-vert",
-                ShaderKind::Vertex,
-            )?,
+            skybox_vert, 
+            skybox_frag, 
+            debug_vert, 
+            debug_frag, 
+            figure_vert, 
+            figure_frag,
+            terrain_vert, 
+            terrain_frag, 
+            fluid_vert, 
+            fluid_frag, 
+            sprite_vert, 
+            sprite_frag,
+            particle_vert,
+            particle_frag, 
+            ui_vert, 
+            ui_frag, 
+            lod_terrain_vert, 
+            lod_terrain_frag, 
+            clouds_vert, 
+            clouds_frag,
+            dual_downsample_filtered_frag,
+            dual_downsample_frag,
+            dual_upsample_frag,
+            postprocess_vert,
+            postprocess_frag,
+            blit_vert,
+            blit_frag,
+            point_light_shadows_vert,
+            light_shadows_directed_vert,
+            light_shadows_figure_vert,
         })
     }
-}
-
-fn create_shader_module(
-    device: &wgpu::Device,
-    compiler: &mut shaderc::Compiler,
-    source: &str,
-    kind: shaderc::ShaderKind,
-    file_name: &str,
-    options: &shaderc::CompileOptions,
-) -> Result<wgpu::ShaderModule, RenderError> {
-    
-    use std::borrow::Cow;
-
-    let spv = compiler
-        .compile_into_spirv(source, kind, file_name, "main", Some(options))
-        .map_err(|e| (file_name, e))?;
-
-    let label = [file_name, "\n\n", source].concat();
-    Ok(device.create_shader_module(&wgpu::ShaderModuleDescriptor {
-        label: Some(&label),
-        source: wgpu::ShaderSource::SpirV(Cow::Borrowed(spv.as_binary())),
-        //flags: wgpu::ShaderFlags::empty(),
-        // TODO: renable // flags: wgpu::ShaderFlags::VALIDATION,
-    }))
 }
 
 /// Things needed to create a pipeline
@@ -748,7 +738,6 @@ fn create_ingame_and_shadow_pipelines(
 pub(super) fn initial_create_pipelines(
     device: Arc<wgpu::Device>,
     layouts: Layouts,
-    shaders: Shaders,
     pipeline_modes: PipelineModes,
     sc_desc: wgpu::SurfaceConfiguration,
     has_shadow_views: bool,
@@ -762,7 +751,7 @@ pub(super) fn initial_create_pipelines(
     
 
     // Process shaders into modules
-    let shader_modules = ShaderModules::new(&device, &shaders, &pipeline_modes, has_shadow_views)?;
+    let shader_modules = ShaderModules::new(&device, &pipeline_modes, has_shadow_views)?;
 
     // Create threadpool for parallel portion
     let pool = rayon::ThreadPoolBuilder::new()
@@ -820,7 +809,6 @@ pub(super) fn initial_create_pipelines(
 pub(super) fn recreate_pipelines(
     device: Arc<wgpu::Device>,
     immutable_layouts: Arc<ImmutableLayouts>,
-    shaders: Shaders,
     pipeline_modes: PipelineModes,
     sc_desc: wgpu::SurfaceConfiguration,
     has_shadow_views: bool,
@@ -834,8 +822,6 @@ pub(super) fn recreate_pipelines(
         RenderError,
     >,
 > {
-    
-
     // Create threadpool for parallel portion
     let pool = rayon::ThreadPoolBuilder::new()
         .thread_name(|n| format!("pipeline-recreation-{}", n))
@@ -862,7 +848,7 @@ pub(super) fn recreate_pipelines(
         // Process shaders into modules
         let guard = shader_task.start("process shaders");
         let shader_modules =
-            match ShaderModules::new(&device, &shaders, &pipeline_modes, has_shadow_views) {
+            match ShaderModules::new(&device, &pipeline_modes, has_shadow_views) {
                 Ok(modules) => modules,
                 Err(err) => {
                     result_send.send(Err(err)).expect("Channel disconnected");

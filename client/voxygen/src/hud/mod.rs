@@ -2600,8 +2600,7 @@ impl Hud {
 
             // Graphics backend
             Text::new(&format!(
-                "Graphics backend: {}",
-                global_state.window.renderer().graphics_backend(),
+                "Graphics backend: todo",
             ))
             .color(TEXT_COLOR)
             .down_from(self.ids.num_particles, V_PAD)

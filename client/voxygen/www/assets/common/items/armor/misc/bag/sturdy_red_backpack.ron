@@ -1,0 +1,14 @@
+ItemDef(
+    name: "Sturdy Red Saddlebag",
+    description: "Made from a large amount of dyed cloth patches.",
+    kind: Armor(
+        (
+            kind: Bag("RedLarge"),
+            stats: (
+            ),
+        )
+    ),
+    quality: High,
+    tags: [Bag],
+    slots: 18,
+)

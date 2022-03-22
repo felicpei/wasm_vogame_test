@@ -52,6 +52,12 @@ use skillbar::Skillbar;
 use social::Social;
 use trade::Trade;
 
+#[cfg(target_arch = "wasm32")]
+pub use instant::Instant;
+
+#[cfg(not(target_arch = "wasm32"))]
+pub use std::time::Instant;
+
 use crate::{
     ecs::{comp as vcomp, comp::HpFloaterList},
     game_input::GameInput,
@@ -113,7 +119,7 @@ use std::{
     borrow::Cow,
     collections::VecDeque,
     sync::Arc,
-    time::{Duration, Instant},
+    time::{Duration},
 };
 use vek::*;
 
@@ -490,7 +496,7 @@ pub struct HudInfo {
     pub is_aiming: bool,
     pub is_first_person: bool,
     pub target_entity: Option<specs::Entity>,
-    pub selected_entity: Option<(specs::Entity, std::time::Instant)>,
+    pub selected_entity: Option<(specs::Entity, Instant)>,
 }
 
 #[derive(Clone)]
@@ -4110,8 +4116,6 @@ impl Hud {
         } = camera.dependents();
         let focus_off = camera.get_focus_pos().map(f32::trunc);
 
-        // Check if item images need to be reloaded
-        self.item_imgs.reload_if_changed(&mut self.ui);
         // TODO: using a thread pool in the obvious way for speeding up map zoom results
         // in flickering artifacts, figure out a better way to make use of the
         // thread pool

@@ -25,7 +25,7 @@ use super::{
     AaMode, AddressMode, FilterMode, OtherModes, PipelineModes, RenderError, RenderMode,
     ShadowMapMode, ShadowMode, Vertex,
 };
-use common::assets::{self, AssetExt, AssetHandle, ReloadWatcher};
+use common::assets::{self, AssetExt};
 use core::convert::TryFrom;
 use std::sync::Arc;
 use vek::*;
@@ -166,25 +166,8 @@ impl Renderer {
     ) -> Result<Self, RenderError> {
         let (pipeline_modes, other_modes) = mode.split();
        
-        let backend_bit = std::env::var("WGPU_BACKEND")
-            .ok()
-            .and_then(|backend| match backend.to_lowercase().as_str() {
-                "vulkan" => Some(wgpu::Backends::VULKAN),
-                "metal" => Some(wgpu::Backends::METAL),
-                "dx12" => Some(wgpu::Backends::DX12),
-                "primary" => Some(wgpu::Backends::PRIMARY),
-                "opengl" | "gl" => Some(wgpu::Backends::GL),
-                "dx11" => Some(wgpu::Backends::DX11),
-                "secondary" => Some(wgpu::Backends::SECONDARY),
-                "all" => Some(wgpu::Backends::all()),
-                _ => None,
-            })
-            .unwrap_or(
-                (wgpu::Backends::PRIMARY | wgpu::Backends::SECONDARY) & !wgpu::Backends::GL,
-            );
 
-        let instance = wgpu::Instance::new(backend_bit);
-
+        let instance = wgpu::Instance::new(wgpu::Backends::GL);
         let dims = window.inner_size();
 
         // This is unsafe because the window handle must be valid, if you find a way to
@@ -192,110 +175,31 @@ impl Renderer {
         #[allow(unsafe_code)]
         let surface = unsafe { instance.create_surface(window) };
 
-        let adapters = instance
-            .enumerate_adapters(backend_bit)
-            .enumerate()
-            .collect::<Vec<_>>();
+        let adapter = runtime.block_on(instance
+            .request_adapter(&wgpu::RequestAdapterOptions {
+            power_preference: wgpu::PowerPreference::default(),
+            force_fallback_adapter: false,
+            // Request an adapter which can render to our surface
+            compatible_surface: Some(&surface),
+        }))
+        .expect("Failed to find an appropriate adapter");
 
-        for (i, adapter) in adapters.iter() {
-            let info = adapter.get_info();
-            log::info!(
-                "{:?} {:?} {:?} {:?} {:?} graphics device #{}",
-                info.name,
-                info.vendor,
-                info.backend,
-                info.device,
-                info.device_type, 
-                i,
-            );
-        }
-
-        let adapter = match std::env::var("WGPU_ADAPTER").ok() {
-            Some(filter) if !filter.is_empty() => adapters.into_iter().find_map(|(i, adapter)| {
-                let info = adapter.get_info();
-
-                let full_name = format!("#{} {} {:?}", i, info.name, info.device_type,);
-
-                full_name.contains(&filter).then(|| adapter)
-            }),
-            Some(_) | None => {
-                runtime.block_on(instance.request_adapter(&wgpu::RequestAdapterOptionsBase {
-                    power_preference: wgpu::PowerPreference::HighPerformance,
-                    compatible_surface: Some(&surface),
-                    force_fallback_adapter: false,
-                }))
-            },
-        }
-        .ok_or(RenderError::CouldNotFindAdapter)?;
-
-        let info = adapter.get_info();
-        log::info!(
-            "{:?}  {:?}  {:?}  {:?}  {:?}  selected graphics device",
-            info.name,
-            info.vendor,
-            info.backend,
-            info.device,
-            info.device_type,
-        );
-        let graphics_backend = format!("{:?}", &info.backend);
-
-        let limits = wgpu::Limits {
-            max_push_constant_size: 64,
-            ..Default::default()
-        };
-
-        let trace_env = std::env::var_os("WGPU_TRACE_DIR");
-        let trace_path = trace_env.as_ref().map(|v| {
-            let path = std::path::Path::new(v);
-            // We don't want to continue if we can't actually collect the api trace
-            assert!(
-                path.exists(),
-                "WGPU_TRACE_DIR is set to the path \"{}\" which doesn't exist",
-                path.display()
-            );
-            assert!(
-                path.is_dir(),
-                "WGPU_TRACE_DIR is set to the path \"{}\" which is not a directory",
-                path.display()
-            );
-            assert!(
-                path.read_dir()
-                    .expect("Could not read the directory that is specified by WGPU_TRACE_DIR")
-                    .next()
-                    .is_none(),
-                "WGPU_TRACE_DIR is set to the path \"{}\" which already contains other files",
-                path.display()
-            );
-
-            path
-        });
 
         let (device, queue) = runtime.block_on(adapter.request_device(
             &wgpu::DeviceDescriptor {
-                // TODO
                 label: None,
-                features: wgpu::Features::DEPTH_CLIP_CONTROL
+                features: /*  wasm 不支持
+                      wgpu::Features::DEPTH_CLIP_CONTROL
                     | wgpu::Features::ADDRESS_MODE_CLAMP_TO_BORDER
                     | wgpu::Features::PUSH_CONSTANTS
-                    | adapter.features(),
-                limits,
+                    | */adapter.features(),
+                limits: wgpu::Limits::downlevel_webgl2_defaults().using_resolution(adapter.limits()),
             },
-            trace_path,
+            None,
         ))?;
 
-        // Set error handler for wgpu errors
-        // This is better for use than their default because it includes the error in
-        // the panic message
-        device.on_uncaptured_error(move |error| {
-            log::error!("{}", &error);
-            panic!(
-                "wgpu error (handling all wgpu errors as fatal):\n{:?}\n{:?}",
-                &error, &info,
-            );
-        });
-
         let format = surface.get_preferred_format(&adapter)
-            .expect("No supported swap chain format found");
+                .expect("No supported swap chain format found");
         log::info!("Using {:?} as the swapchain format", format);
 
         let sc_desc = wgpu::SurfaceConfiguration {
@@ -308,7 +212,8 @@ impl Renderer {
 
         surface.configure(&device, &sc_desc);
 
-        //let swap_chain = device.create_swap_chain(&surface, &sc_desc);
+        log::info!("downlevel_properties:{:?}", &adapter.get_downlevel_properties());
+
 
         let shadow_views = ShadowMap::create_shadow_views(
             &device,

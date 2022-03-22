@@ -1,0 +1,15 @@
+ItemDef(
+    name: "Bonerattler Chausses",
+    description: "Assorted bones and hide from a bonerattler provide protection around the wearer's legs.",
+    kind: Armor((
+        kind: Pants("Bonerattler"),
+        stats: (
+            protection: Some(Normal(20.0)),
+        ),
+    )),
+    quality: High,
+    tags: [
+        Material(Leather),
+        SalvageInto(Leather),
+    ],
+)

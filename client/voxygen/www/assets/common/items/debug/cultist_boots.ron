@@ -1,0 +1,13 @@
+ItemDef(
+    name: "Velorite Boots",
+    description: "",
+    kind: Armor(
+        (
+            kind: Foot("VeloriteMage"),
+            stats: (
+            ),
+        )
+    ),
+    quality: Debug,
+    tags: [],
+)

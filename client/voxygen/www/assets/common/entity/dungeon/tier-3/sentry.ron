@@ -1,0 +1,8 @@
+(
+    name: Name("Haniwa Sentry"),
+    body: Exact(Object(HaniwaSentry)),
+    alignment: Alignment(Enemy),
+    loadout: FromBody,
+    loot: Item("common.items.crafting_ing.stones"),
+    meta: [],
+)

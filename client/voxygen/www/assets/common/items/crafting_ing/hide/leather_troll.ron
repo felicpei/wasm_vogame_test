@@ -1,0 +1,9 @@
+ItemDef(
+    name: "Troll Hide",
+    description: "Looted from cave trolls.",
+    kind: Ingredient(
+        kind: "TrollLeather",
+    ),
+    quality: High,
+    tags: [BaseMaterial],
+)

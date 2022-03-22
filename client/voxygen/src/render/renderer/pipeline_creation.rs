@@ -4,8 +4,8 @@ use super::{
             blit, bloom, clouds, debug, figure, fluid, lod_terrain, particle, postprocess, shadow,
             skybox, sprite, terrain, ui,
         },
-        AaMode, BloomMode, CloudMode, FluidMode, LightingMode, PipelineModes, RenderError,
-        ShadowMode,
+        BloomMode, PipelineModes, RenderError,
+        //AaMode, ShadowMode, CloudMode, FluidMode, LightingMode, 
     },
     ImmutableLayouts, Layouts,
 };
@@ -122,15 +122,12 @@ struct ShaderModules {
 }
 
 impl ShaderModules {
-    pub fn new(
-        device: &wgpu::Device,
-        pipeline_modes: &PipelineModes,
-        has_shadow_views: bool,
-    ) -> Result<Self, RenderError> {
-        
-
+    pub fn new(device: &wgpu::Device) -> Result<Self, RenderError> {
 
         //配置改为在shader中写死
+        //  contrant:
+        //      ...
+        //
         //  cloud：
         //      #include <cloud_regular.glsl> 
         //               <cloud_none.glsl>
@@ -352,7 +349,6 @@ fn create_interface_pipelines(
     tasks: [Task; 2],
 ) -> InterfacePipelines {
     
-
     let [ui_task, blit_task] = tasks;
     // Construct a pipeline for rendering UI elements
     let create_ui = || {
@@ -399,7 +395,6 @@ fn create_ingame_and_shadow_pipelines(
     tasks: [Task; 14],
 ) -> IngameAndShadowPipelines {
     
-
     let PipelineNeeds {
         device,
         layouts,
@@ -613,29 +608,6 @@ fn create_ingame_and_shadow_pipelines(
         )
     };
 
-    //
-    // // Pipeline for rendering the player silhouette
-    // let player_shadow_pipeline = create_pipeline(
-    //     factory,
-    //     figure::pipe::Init {
-    //         tgt_depth: (gfx::preset::depth::PASS_TEST/*,
-    //         Stencil::new(
-    //             Comparison::Equal,
-    //             0xff,
-    //             (StencilOp::Keep, StencilOp::Keep, StencilOp::Keep),
-    //         ),*/),
-    //         ..figure::pipe::new()
-    //     },
-    //     &figure_vert,
-    //     &Glsl::load_watched(
-    //         "voxygen.shaders.player-shadow-frag",
-    //         shader_reload_indicator,
-    //     )
-    //     .unwrap(),
-    //     &include_ctx,
-    //     gfx::state::CullFace::Back,
-    // )?;
-
     // Pipeline for rendering point light terrain shadow maps.
     let create_point_shadow = || {
         point_shadow_task.run(
@@ -748,10 +720,8 @@ pub(super) fn initial_create_pipelines(
     ),
     RenderError,
 > {
-    
-
     // Process shaders into modules
-    let shader_modules = ShaderModules::new(&device, &pipeline_modes, has_shadow_views)?;
+    let shader_modules = ShaderModules::new(&device)?;
 
     // Create threadpool for parallel portion
     let pool = rayon::ThreadPoolBuilder::new()
@@ -848,7 +818,7 @@ pub(super) fn recreate_pipelines(
         // Process shaders into modules
         let guard = shader_task.start("process shaders");
         let shader_modules =
-            match ShaderModules::new(&device, &pipeline_modes, has_shadow_views) {
+            match ShaderModules::new(&device) {
                 Ok(modules) => modules,
                 Err(err) => {
                     result_send.send(Err(err)).expect("Channel disconnected");

@@ -1,0 +1,17 @@
+ItemDef(
+    name: "Dragonscale Spurs",
+    description: "Power pulses through it.",
+    kind: Armor((
+        kind: Foot("Dragonscale"),
+        stats: (
+            protection: Some(Normal(14.0)),
+            crit_power: Some(0.2),
+            stealth: Some(0.2),
+        ),
+    )),
+    quality: Legendary,
+    tags: [
+        Material(Dragonscale),
+        SalvageInto(Dragonscale),
+    ],
+)

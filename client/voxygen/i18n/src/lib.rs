@@ -11,7 +11,7 @@ pub mod verification;
 pub use path::BasePath;
 
 use crate::path::{LANG_EXTENSION, LANG_MANIFEST_FILE};
-use common_assets::{self, source::DirEntry, AssetExt, AssetGuard, AssetHandle, ReloadWatcher};
+use common_assets::{self, source::DirEntry, AssetExt, AssetGuard, AssetHandle};
 use hashbrown::{HashMap, HashSet};
 use raw::{RawFragment, RawLanguage, RawManifest};
 use serde::{Deserialize, Serialize};
@@ -105,36 +105,38 @@ impl common_assets::Compound for Language {
         cache: &common_assets::AssetCache<S>,
         asset_key: &str,
     ) -> Result<Self, common_assets::BoxedError> {
-        let manifest = cache
-            .load::<RawManifest>(&[asset_key, ".", LANG_MANIFEST_FILE].concat())?
+       
+        log::info!("start load Language");
+        let manifest = cache.load::<RawManifest>(&[asset_key, ".", LANG_MANIFEST_FILE].concat())?
             .cloned();
 
         // Walk through files in the folder, collecting localization fragment to merge
         // inside the asked_localization
         let mut fragments = HashMap::new();
-        for id in cache
-            .load_dir::<RawFragment<String>>(asset_key, true)?
-            .ids()
-        {
-            // Don't try to load manifests
-            if let Some(id) = id.strip_suffix(LANG_MANIFEST_FILE) {
-                if id.ends_with('.') {
-                    continue;
-                }
-            }
 
-            match cache.load(id) {
-                Ok(handle) => {
-                    let fragment: &RawFragment<String> = &*handle.read();
+        log::warn!("todo load language dir!!!");
+        // for id in cache.load_dir::<RawFragment<String>>(asset_key, true)?.ids()
+        // {
+        //     // Don't try to load manifests
+        //     if let Some(id) = id.strip_suffix(LANG_MANIFEST_FILE) {
+        //         if id.ends_with('.') {
+        //             continue;
+        //         }
+        //     }
 
-                    fragments.insert(PathBuf::from(id), fragment.clone());
-                },
-                Err(e) => {
-                    log::warn!("Unable to load asset {}, error={:?}", id, e);
-                },
-            }
-        }
+        //     match cache.load(id) {
+        //         Ok(handle) => {
+        //             let fragment: &RawFragment<String> = &*handle.read();
 
+        //             fragments.insert(PathBuf::from(id), fragment.clone());
+        //         },
+        //         Err(e) => {
+        //             log::warn!("Unable to load asset {}, error={:?}", id, e);
+        //         },
+        //     }
+        // }
+
+        log::info!("end load Language");
         Ok(Language::from(RawLanguage {
             manifest,
             fragments,
@@ -147,7 +149,6 @@ impl common_assets::Compound for Language {
 #[derive(Debug, Copy, Clone)]
 pub struct LocalizationHandle {
     active: AssetHandle<Language>,
-    watcher: ReloadWatcher,
     fallback: Option<AssetHandle<Language>>,
     pub use_english_fallback: bool,
 }
@@ -262,7 +263,6 @@ impl LocalizationHandle {
         let active = Language::load(&language_key)?;
         Ok(Self {
             active,
-            watcher: active.reload_watcher(),
             fallback: if is_default {
                 None
             } else {
@@ -275,8 +275,6 @@ impl LocalizationHandle {
     pub fn load_expect(specifier: &str) -> Self {
         Self::load(specifier).expect("Can't load language files")
     }
-
-    pub fn reloaded(&mut self) -> bool { self.watcher.reloaded() }
 }
 
 struct FindManifests;

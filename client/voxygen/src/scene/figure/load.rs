@@ -1,6 +1,6 @@
 use super::cache::{FigureKey, ToolKey};
 use common::{
-    assets::{self, AssetExt, AssetHandle, DotVoxAsset, ReloadWatcher, Ron},
+    assets::{self, AssetExt, AssetHandle, DotVoxAsset, Ron},
     comp::{
         arthropod::{self, BodyType as ABodyType, Species as ASpecies},
         biped_large::{self, BodyType as BLBodyType, Species as BLSpecies},
@@ -95,9 +95,6 @@ pub trait BodySpec: Sized {
     /// Initialize all the specifications for this Body.
     fn load_spec() -> Result<Self::Manifests, assets::Error>;
 
-    /// Determine whether the cache's manifest was reloaded
-    fn reload_watcher(manifests: &Self::Manifests) -> ReloadWatcher;
-
     /// Mesh bones using the given spec, character state, and mesh generation
     /// function.
     ///
@@ -139,8 +136,6 @@ macro_rules! make_vox_spec {
             fn load_spec() -> Result<Self::Manifests, assets::Error> {
                 Self::Spec::load("")
             }
-
-            fn reload_watcher(manifests: &Self::Manifests) -> ReloadWatcher { manifests.reload_watcher() }
 
             fn bone_meshes(
                 $self_pat: &FigureKey<Self>,
@@ -5031,8 +5026,6 @@ impl BodySpec for ship::Body {
     type Spec = ShipSpec;
 
     fn load_spec() -> Result<Self::Manifests, assets::Error> { Self::Spec::load("") }
-
-    fn reload_watcher(manifests: &Self::Manifests) -> ReloadWatcher { manifests.reload_watcher() }
 
     fn bone_meshes(
         FigureKey { body, .. }: &FigureKey<Self>,

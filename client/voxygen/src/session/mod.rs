@@ -46,8 +46,13 @@ use crate::{
 };
 use hashbrown::HashMap;
 use interactable::{select_interactable, Interactable};
-use settings_change::Language::ChangeLanguage;
 use target::targets_under_cursor;
+
+#[cfg(target_arch = "wasm32")]
+pub use instant::Instant;
+
+#[cfg(not(target_arch = "wasm32"))]
+pub use std::time::Instant;
 
 /// The action to perform after a tick
 enum TickAction {
@@ -73,7 +78,7 @@ pub struct SessionState {
     camera_clamp: bool,
     is_aiming: bool,
     target_entity: Option<specs::Entity>,
-    selected_entity: Option<(specs::Entity, std::time::Instant)>,
+    selected_entity: Option<(specs::Entity, Instant)>,
     interactable: Option<Interactable>,
     hitboxes: HashMap<specs::Entity, DebugShapeId>,
 }
@@ -784,7 +789,7 @@ impl PlayState for SessionState {
                             GameInput::Select => {
                                 if !state {
                                     self.selected_entity =
-                                        self.target_entity.map(|e| (e, std::time::Instant::now()));
+                                        self.target_entity.map(|e| (e, Instant::now()));
                                 }
                             },
                             GameInput::AcceptGroupInvite if state => {
@@ -1053,13 +1058,6 @@ impl PlayState for SessionState {
                 },
                 self.interactable,
             );
-
-            // Look for changes in the localization files
-            if global_state.i18n.reloaded() {
-                hud_events.push(HudEvent::SettingsChange(
-                    ChangeLanguage(Box::new(global_state.i18n.read().metadata().clone())).into(),
-                ));
-            }
 
             // Maintain the UI.
             for event in hud_events {

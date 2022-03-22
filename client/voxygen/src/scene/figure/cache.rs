@@ -6,7 +6,6 @@ use crate::{
 };
 use anim::Skeleton;
 use common::{
-    assets::ReloadWatcher,
     comp::{
         inventory::{
             slot::{ArmorSlot, EquipSlot},
@@ -291,7 +290,6 @@ where
 {
     models: HashMap<FigureKey<Skel::Body>, ((FigureModelEntryFuture<LOD_COUNT>, Skel::Attr), u64)>,
     manifests: <Skel::Body as BodySpec>::Manifests,
-    watcher: ReloadWatcher,
 }
 
 impl<Skel: Skeleton> FigureModelCache<Skel>
@@ -302,12 +300,10 @@ where
     pub fn new() -> Self {
         // NOTE: It might be better to bubble this error up rather than panicking.
         let manifests = <Skel::Body as BodySpec>::load_spec().unwrap();
-        let watcher = <Skel::Body as BodySpec>::reload_watcher(&manifests);
 
         Self {
             models: HashMap::new(),
             manifests,
-            watcher,
         }
     }
 
@@ -572,12 +568,6 @@ where
     where
         <Skel::Body as BodySpec>::Spec: Clone,
     {
-        // Check for reloaded manifests
-        // TODO: maybe do this in a different function, maintain?
-        if self.watcher.reloaded() {
-            col_lights.atlas.clear();
-            self.models.clear();
-        }
         // TODO: Don't hard-code this.
         if tick % 60 == 0 {
             self.models.retain(|_, ((model_entry, _), last_used)| {

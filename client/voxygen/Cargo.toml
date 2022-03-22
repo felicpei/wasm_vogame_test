@@ -17,22 +17,24 @@ crate-type = ["cdylib", "rlib"]
 
 simd = ["vek/platform_intrinsics"]
 default-publish = ["simd"]
-default = ["default-publish"]
-#wasm = ["wasm-bindgen", "web-sys", "wasm-logger"]
+default = ["default-publish", "console_error_panic_hook"]
+
 
 [dependencies]
-
 #wasm 
-wasm-bindgen = {version = "0.2", optional = true}
-web-sys = {version = "0.3", optional = true}
-wasm-logger =  {version ="0.2", optional = true}
+web-sys = "0.3"
+js-sys = { version = "0.3" }
+wasm-bindgen = "0.2"
+wasm-bindgen-futures = "0.4"
+console_error_panic_hook = { version = "0.1.6", optional = true }
+wee_alloc = { version = "0.4.5", optional = true }
 
 #log
-log = "0.4"
-
+log = "0.4.6"
+wasm-logger = "0.2.0"
 
 #时间库 代替标准库的time
-#instant = { version = "0.1", features = [ "wasm-bindgen", "inaccurate" ] }
+instant = { version = "0.1", features = [ "wasm-bindgen", "inaccurate" ] }
 
 client = {package = "veloren-client", path = "../client"}
 common = {package = "veloren-common", path = "../common"}
@@ -41,6 +43,7 @@ common-ecs = {package = "veloren-common-ecs", path = "../common/ecs"}
 common-net = {package = "veloren-common-net", path = "../common/net"}
 common-systems = {package = "veloren-common-systems", path = "../common/systems"}
 common-state = {package = "veloren-common-state", path = "../common/state"}
+common-assets = {package = "veloren-common-assets", path = "../common/assets"}
 anim = {package = "veloren-voxygen-anim", path = "anim"}
 i18n = {package = "veloren-voxygen-i18n", path = "i18n"}
 keyboard-keynames = {package = "keyboard-keynames", path = "../dep/keyboard-keynames"}
@@ -104,7 +107,7 @@ treeculler = "0.2"
 itertools = "0.10.0"
 
 #tokio = { version = "=1.17.0", default-features = false, features = ["rt-multi-thread"] }
-tokio = { version = "=1.17.0", default-features = false, features = ["rt-multi-thread"] }
+tokio = { version = "=1.17.0", default-features = false, features = ["rt"] }
 
 
 # [target.'cfg(target_os = "macos")'.dependencies]

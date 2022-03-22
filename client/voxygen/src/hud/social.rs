@@ -12,7 +12,7 @@ use conrod_core::{
 };
 use i18n::Localization;
 use itertools::Itertools;
-use std::time::Instant;
+use instant::Instant;
 
 widget_ids! {
     pub struct Ids {

@@ -68,10 +68,6 @@ impl BodySpec for VolumeKey {
 
     fn load_spec() -> Result<Self::Manifests, assets::Error> { Ok(()) }
 
-    fn reload_watcher(_: &Self::Manifests) -> assets::ReloadWatcher {
-        assets::ReloadWatcher::default()
-    }
-
     fn bone_meshes(
         _: &FigureKey<Self>,
         _: &Self::Manifests,

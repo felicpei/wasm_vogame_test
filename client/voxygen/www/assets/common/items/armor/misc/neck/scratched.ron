@@ -1,0 +1,12 @@
+ItemDef(
+    name: "Scratched Necklace",
+    description: "The string is about to snap...",
+    kind: Armor((
+        kind: Neck("Scratched"),
+        stats: (
+            protection: Some(Normal(0.5)),
+        ),
+    )),
+    quality: Low,
+    tags: [],
+)

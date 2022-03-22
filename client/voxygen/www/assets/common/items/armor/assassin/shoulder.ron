@@ -1,0 +1,15 @@
+ItemDef(
+    name: "Assassin Shoulder Guard",
+    description: "Only the best for a member of the creed.",
+    kind: Armor((
+        kind: Shoulder("Assassin"),
+        stats: (
+            protection: Some(Normal(8.0)),
+        ),
+    )),
+    quality: Moderate,
+    tags: [
+        Material(Leather),
+        SalvageInto(Leather),
+    ],
+)

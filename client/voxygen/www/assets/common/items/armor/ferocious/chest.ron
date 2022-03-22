@@ -1,0 +1,14 @@
+ItemDef(
+    name: "Ferocious Shirt",
+    description: "The dark side of nature",
+    kind: Armor((
+        kind: Chest("Ferocious"),
+        stats: (
+            protection: Some(Normal(60.0)),
+        ),
+    )),
+    quality: Epic,
+    tags: [
+        Material(Moonweave),
+    ],
+)

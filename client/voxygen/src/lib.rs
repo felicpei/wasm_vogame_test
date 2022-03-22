@@ -39,6 +39,8 @@ use crate::{
     render::{Drawer, GlobalsBindGroup},
     settings::Settings,
     window::{Event, Window},
+    scene::terrain::SpriteRenderContext,
+    settings::{get_fps, AudioOutput},
 };
 use common::clock::Clock;
 use i18n::LocalizationHandle;
@@ -55,20 +57,13 @@ pub struct GlobalState {
     pub audio: AudioFrontend,
     pub info_message: Option<String>,
     pub clock: Clock,
-    // TODO: redo this so that the watcher doesn't have to exist for reloading to occur
     pub i18n: LocalizationHandle,
     pub clipboard: iced::Clipboard,
-    // NOTE: This can be removed from GlobalState if client state behavior is refactored to not
-    // enter the game before confirmation of successful character load
-    /// An error returned by Client that needs to be displayed by the UI
     pub client_error: Option<String>,
-    // Used to clear the shadow textures when entering a PlayState that doesn't utilise shadows
     pub clear_shadows_next_frame: bool,
 }
 
 impl GlobalState {
-    /// Called after a change in play state has occurred (usually used to
-    /// reverse any temporary effects a state may have made).
     pub fn on_play_state_changed(&mut self) {
         self.window.grab_cursor(false);
         self.window.needs_refresh_resize();
@@ -123,3 +118,101 @@ pub trait PlayState {
     /// Draw the play state.
     fn render<'a>(&'a self, drawer: &mut Drawer<'a>, settings: &Settings);
 }
+
+
+
+// ----------------------- wasm start ------------------------//
+use wasm_bindgen::prelude::*;
+use common_assets as res;
+// When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
+// allocator.
+#[cfg(feature = "wee_alloc")]
+#[global_allocator]
+static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
+
+#[wasm_bindgen]
+pub fn set_resource_data(name: &str, data: &[u8]) {
+    res::set_cache_data(name, data);
+}
+
+//canvas_id 来自html的canvas
+#[wasm_bindgen]
+pub fn start() {
+    wasm_logger::init(wasm_logger::Config::new(log::Level::Info));
+    std::panic::set_hook(Box::new(console_error_panic_hook::hook));
+    log::info!("start web");
+    //wasm_bindgen_futures::spawn_local(start_game());
+    start_game();
+}
+
+pub fn start_game() {
+
+    //load setting
+    let mut settings = Settings::load();
+    settings.display_warnings();
+
+    // TODO: evaluate std::thread::available_concurrency as a num_cpus replacement
+    let tokio_runtime = Arc::new(
+        tokio::runtime::Builder::new_current_thread()
+            .build()
+            .unwrap(),
+    );
+
+    log::info!("start init audio");
+    // Setup audio
+    let mut audio = match settings.audio.output {
+        AudioOutput::Off => AudioFrontend::no_audio(),
+        AudioOutput::Automatic => AudioFrontend::new(settings.audio.num_sfx_channels),
+    };
+
+    audio.set_master_volume(settings.audio.master_volume);
+    audio.set_music_volume(settings.audio.music_volume);
+    audio.set_sfx_volume(settings.audio.sfx_volume);
+
+
+    // Load the profile.
+    let profile = Profile::load();
+
+    //i18n
+    let mut i18n =
+        LocalizationHandle::load(&settings.language.selected_language).unwrap_or_else(|error| {
+            let selected_language = &settings.language.selected_language;
+            log::warn!(
+                "Impossible to load language: change to the default language (English) instead. {:?} | {:?}",
+                error,
+                selected_language,
+            );
+            settings.language.selected_language = i18n::REFERENCE_LANG.to_owned();
+            LocalizationHandle::load_expect(&settings.language.selected_language)
+        });
+    i18n.read().log_missing_entries();
+    i18n.set_english_fallback(settings.language.use_english_fallback);
+    
+
+    //创建运行窗体
+    let (mut window, event_loop) = match Window::new(&settings, &tokio_runtime) {
+        Ok(ok) => ok,
+        Err(error) => panic!("Failed to create window!: {:?}", error),
+    };
+
+
+    let clipboard = iced::Clipboard::connect(window.window());
+    let lazy_init = SpriteRenderContext::new(window.renderer_mut());
+    let global_state = GlobalState {
+        audio,
+        profile,
+        window,
+        tokio_runtime,
+        lazy_init,
+        clock: Clock::new(std::time::Duration::from_secs_f64(1.0 / get_fps(settings.graphics.max_fps) as f64)),
+        settings,
+        info_message: None,
+        i18n,
+        clipboard,
+        client_error: None,
+        clear_shadows_next_frame: false,
+    };
+
+    run::run(global_state, event_loop);
+}
+

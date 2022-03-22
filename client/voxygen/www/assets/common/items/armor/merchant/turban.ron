@@ -1,0 +1,16 @@
+ItemDef(
+    name: "Impressive Turban",
+    description: "Fancy.",
+    kind: Armor((
+        kind: Head("Merchant"),
+        stats: (
+            protection: Some(Normal(6.0)),
+            poise_resilience: Some(Normal(4.0)),
+            energy_max: Some(12.0),
+            energy_reward: Some(0.25),
+            crit_power: Some(0.015),
+        ),
+    )),
+    quality: Epic,
+    tags: [],    
+)

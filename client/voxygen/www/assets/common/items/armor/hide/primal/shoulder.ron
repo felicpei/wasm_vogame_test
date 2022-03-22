@@ -1,0 +1,17 @@
+ItemDef(
+    name: "Primal Shoulders",
+    description: "Smithed from hide tougher than steel.",
+    kind: Armor((
+        kind: Shoulder("Primal"),
+        stats: (
+            protection: Some(Normal(24.0)),
+            crit_power: Some(0.334),
+            stealth: Some(0.334),
+        ),
+    )),
+    quality: Epic,
+    tags: [
+        Material(Plate),
+        SalvageInto(Plate),
+    ],
+)

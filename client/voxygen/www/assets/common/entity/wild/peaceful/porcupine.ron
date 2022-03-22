@@ -1,0 +1,8 @@
+(
+    name: Automatic,
+    body: RandomWith("porcupine"),
+    alignment: Alignment(Wild),
+    loadout: FromBody,
+    loot: LootTable("common.loot_tables.creature.quad_small.generic"),
+    meta: [],
+)

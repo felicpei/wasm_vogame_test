@@ -1,0 +1,17 @@
+ItemDef(
+    name: "Rawhide Chestpiece",
+    description: "Tightly packed pieces of leather to endure all weather.",
+    kind: Armor((
+        kind: Chest("Rawhide"),
+        stats: (
+            protection: Some(Normal(7.0)),
+            crit_power: Some(0.099),
+            stealth: Some(0.099),
+        ),
+    )),
+    quality: Low,
+    tags: [
+        Material(Rawhide),
+        SalvageInto(Rawhide),
+    ],
+)

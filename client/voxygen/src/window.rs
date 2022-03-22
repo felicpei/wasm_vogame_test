@@ -14,6 +14,8 @@ use keyboard_keynames::key_layout::KeyLayout;
 use serde::{Deserialize, Serialize};
 use vek::*;
 use winit::monitor::VideoMode;
+use winit::window::WindowBuilder;
+
 
 /// Represents a key that the game menus recognise after input mapping
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Deserialize, Serialize)]
@@ -399,34 +401,46 @@ pub struct Window {
     pub key_layout: Option<KeyLayout>,
 }
 
+#[cfg(target_arch = "wasm32")]
+fn create_render_area(window: &winit::window::Window, canvas_id: &str) {
+
+    use winit::platform::web::WindowExtWebSys;
+
+    //设置画布大小,样式等
+    let canvas = window.canvas();
+    canvas.style().set_css_text("background-color: gray; ");
+    canvas.set_id(canvas_id);
+
+    let web_window = web_sys::window().unwrap();
+    let document = web_window.document().unwrap();
+    let body = document.body().unwrap();
+
+    //html放入画布
+    body.append_child(&canvas).unwrap();
+}
+
 impl Window {
     pub fn new(
         settings: &Settings,
         runtime: &tokio::runtime::Runtime,
     ) -> Result<(Window, EventLoop), Error> {
-        let event_loop = EventLoop::new();
 
-        let size = settings.graphics.window_size;
-
-        let win_builder = winit::window::WindowBuilder::new()
-            .with_title("Veloren")
-            .with_inner_size(winit::dpi::LogicalSize::new(size[0] as f64, size[1] as f64))
-            .with_maximized(true);
-
-        let window = win_builder.build(&event_loop).unwrap();
+        //创建窗体
+        let event_loop = EventLoop::with_user_event();
+        let window = WindowBuilder::new()
+            .with_title("Wasm_test")
+            .build(&event_loop)
+            .unwrap();
         
-        // // Avoid cpal / winit OleInitialize conflict
-        // // See: https://github.com/rust-windowing/winit/pull/1524
-        // #[cfg(target_os = "windows")]
-        // let win_builder = winit::platform::windows::WindowBuilderExtWindows::with_drag_and_drop(
-        //     win_builder,
-        //     false,
-        // );
+        //创建画布
+        #[cfg(target_arch = "wasm32")]
+        {
+            let canvas_id = "canvas_main";
+            create_render_area(&window, canvas_id);
+        }
 
-        // let window = win_builder.build(&event_loop).unwrap();
-
+        //渲染引擎
         let renderer = Renderer::new(&window, settings.graphics.render_mode.clone(), runtime)?;
-
         let keypress_map = HashMap::new();
 
         let gilrs = match Gilrs::new() {

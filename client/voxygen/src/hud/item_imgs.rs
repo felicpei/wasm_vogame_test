@@ -1,6 +1,6 @@
 use crate::ui::{Graphic, SampleStrat, Transform, Ui};
 use common::{
-    assets::{self, AssetExt, AssetHandle, DotVoxAsset, ReloadWatcher},
+    assets::{self, AssetExt, AssetHandle, DotVoxAsset},
     comp::item::item_key::ItemKey,
     figure::Segment,
 };
@@ -64,7 +64,6 @@ impl assets::Asset for ItemImagesSpec {
 pub struct ItemImgs {
     map: HashMap<ItemKey, Id>,
     manifest: AssetHandle<ItemImagesSpec>,
-    watcher: ReloadWatcher,
     not_found: Id,
 }
 
@@ -84,27 +83,7 @@ impl ItemImgs {
         Self {
             map,
             manifest,
-            watcher: manifest.reload_watcher(),
             not_found,
-        }
-    }
-
-    /// Checks if the manifest has been changed and reloads the images if so
-    /// Reuses img ids
-    pub fn reload_if_changed(&mut self, ui: &mut Ui) {
-        if self.watcher.reloaded() {
-            for (kind, spec) in self.manifest.read().0.iter() {
-                // Load new graphic
-                let graphic = spec.create_graphic();
-                // See if we already have an id we can use
-                match self.map.get(kind) {
-                    Some(id) => ui.replace_graphic(*id, graphic),
-                    // Otherwise, generate new id and insert it into our Id -> ItemKey map
-                    None => {
-                        self.map.insert(kind.clone(), ui.add_graphic(graphic));
-                    },
-                }
-            }
         }
     }
 

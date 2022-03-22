@@ -1,0 +1,13 @@
+ItemDef(
+    name: "Velorite Gloves",
+    description: "",
+    kind: Armor(
+        (
+            kind: Hand("VeloriteMage"),
+            stats: (
+            ),
+        )
+    ),
+    quality: Debug,
+    tags: [],
+)

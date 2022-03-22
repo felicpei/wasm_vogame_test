@@ -13,3 +13,5 @@ cargo run --bin veloren-server-cli
 
 cargo build -Z unstable-options --profile debuginfo
 cargo run -Z unstable-options --profile debuginfo
+
+wasm-pack build --target web

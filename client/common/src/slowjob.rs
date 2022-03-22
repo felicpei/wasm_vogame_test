@@ -1,5 +1,6 @@
 use hashbrown::HashMap;
 use rayon::ThreadPool;
+
 use std::{
     collections::VecDeque,
     sync::{Arc, Mutex},
@@ -407,7 +408,7 @@ mod tests {
         bar: u64,
         baz: u64,
     ) -> SlowJobPool {
-        let threadpool = rayon::ThreadPoolBuilder::new()
+        let threadpool = ThreadPoolBuilder::new()
             .num_threads(pool_threads)
             .build()
             .unwrap();

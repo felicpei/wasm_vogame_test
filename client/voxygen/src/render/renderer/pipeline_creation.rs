@@ -10,6 +10,9 @@ use super::{
     ImmutableLayouts, Layouts,
 };
 use std::sync::Arc;
+use rayon::prelude::*;
+use rayon;
+
 
 /// All the pipelines
 pub struct Pipelines {
@@ -282,9 +285,11 @@ impl ShaderModules {
             source: wgpu::ShaderSource::SpirV(Cow::Borrowed(include_spirv!("shaders/blit-frag.glsl", frag, I "shaders/include/"))),
         });
 
+        log::warn!("TODO 不支持的 Shader: shaders/point-light-shadows-vert.glsl");
         let point_light_shadows_vert = device.create_shader_module(&wgpu::ShaderModuleDescriptor {
             label: Some("point_light_shadows_vert"),
-            source: wgpu::ShaderSource::SpirV(Cow::Borrowed(include_spirv!("shaders/point-light-shadows-vert.glsl", vert, I "shaders/include/"))),
+            //source: wgpu::ShaderSource::SpirV(Cow::Borrowed(include_spirv!("shaders/point-light-shadows-vert.glsl", vert, I "shaders/include/"))),
+            source: wgpu::ShaderSource::SpirV(Cow::Borrowed(include_spirv!("shaders/blit-vert.glsl", vert, I "shaders/include/"))),
         });
 
         let light_shadows_directed_vert = device.create_shader_module(&wgpu::ShaderModuleDescriptor {
@@ -345,7 +350,7 @@ struct PipelineNeeds<'a> {
 /// Creates InterfacePipelines in parallel
 fn create_interface_pipelines(
     needs: PipelineNeeds,
-    pool: &rayon::ThreadPool,
+    pool: &ThreadPool,
     tasks: [Task; 2],
 ) -> InterfacePipelines {
     
@@ -391,7 +396,7 @@ fn create_interface_pipelines(
 /// Create IngamePipelines and shadow pipelines in parallel
 fn create_ingame_and_shadow_pipelines(
     needs: PipelineNeeds,
-    pool: &rayon::ThreadPool,
+    pool: &ThreadPool,
     tasks: [Task; 14],
 ) -> IngameAndShadowPipelines {
     
@@ -724,7 +729,7 @@ pub(super) fn initial_create_pipelines(
     let shader_modules = ShaderModules::new(&device)?;
 
     // Create threadpool for parallel portion
-    let pool = rayon::ThreadPoolBuilder::new()
+    let pool = ThreadPoolBuilder::new()
         .thread_name(|n| format!("pipeline-creation-{}", n))
         .build()
         .unwrap();
@@ -793,7 +798,7 @@ pub(super) fn recreate_pipelines(
     >,
 > {
     // Create threadpool for parallel portion
-    let pool = rayon::ThreadPoolBuilder::new()
+    let pool = ThreadPoolBuilder::new()
         .thread_name(|n| format!("pipeline-recreation-{}", n))
         .build()
         .unwrap();

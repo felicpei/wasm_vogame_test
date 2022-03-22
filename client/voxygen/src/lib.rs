@@ -124,6 +124,8 @@ pub trait PlayState {
 // ----------------------- wasm start ------------------------//
 use wasm_bindgen::prelude::*;
 use common_assets as res;
+pub use wasm_bindgen_rayon::init_thread_pool;
+
 // When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
 // allocator.
 #[cfg(feature = "wee_alloc")]

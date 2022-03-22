@@ -179,13 +179,16 @@ impl SpriteLayout {
         let mut entries = GlobalsLayouts::base_globals_layout();
         debug_assert_eq!(12, entries.len()); // To remember to adjust the bindings below
 
+        log::warn!("TODO SpriteLayout::new BufferBindingType::Storage 改为了 Uniform, 不知道会怎样");
         entries.extend_from_slice(&[
             // sprite_verts
             wgpu::BindGroupLayoutEntry {
                 binding: 12,
                 visibility: wgpu::ShaderStages::VERTEX,
                 ty: wgpu::BindingType::Buffer {
-                    ty: wgpu::BufferBindingType::Storage { read_only: true },
+                    //ty: wgpu::BufferBindingType::Storage { read_only: true },
+                    //webgl 不支持 Storage，不知道改了会怎样
+                    ty: wgpu::BufferBindingType::Uniform,
                     has_dynamic_offset: false,
                     min_binding_size: core::num::NonZeroU64::new(
                         core::mem::size_of::<Vertex>() as u64

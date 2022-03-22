@@ -28,7 +28,7 @@ impl assets::Asset for OggSound {
 impl OggSound {
     pub fn empty() -> OggSound {
         SoundLoader::load(
-            Cow::Borrowed(include_bytes!("../../../assets/voxygen/audio/null.ogg")),
+            Cow::Borrowed(include_bytes!("../../www/assets/voxygen/audio/null.ogg")),
             "ogg",
         )
         .unwrap()

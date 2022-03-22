@@ -65,6 +65,7 @@ use image::DynamicImage;
 use network::{ConnectAddr, Network, Participant, Pid, Stream};
 use num::traits::FloatConst;
 use rayon::prelude::*;
+
 use specs::Component;
 use std::{
     collections::{BTreeMap, VecDeque},

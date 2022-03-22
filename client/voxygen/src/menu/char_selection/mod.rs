@@ -271,7 +271,7 @@ impl PlayState for CharSelectionState {
         // PostProcess and UI
         let mut third_pass = drawer.third_pass();
         third_pass.draw_postprocess();
-        
+    
         // Draw the UI to the screen.
         third_pass.init_ui();
         self.char_selection_ui.render(&mut third_pass);

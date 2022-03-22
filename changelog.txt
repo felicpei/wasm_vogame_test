@@ -48,10 +48,37 @@
   -  删除GlobalState中的 userdata_dir 和 config_dir(本地存储的路径信息)
   -  (目前保存在客户端修改的设置不会保存, 以后需要的话需要放到服务器)
   - 删除本地截图功能(Settings.screenshots_path, take_screenshot)(wasm不支持)
--  删除fullscreen功能(wasm不支持)
 
 
 
 todo：
 1. 目前网络部分使用了多线程，这个wasm会有问题，修改 tokio 的 rt-multi-thread 为 rt，wasm不支持 rt-multi-thread。
 2. 网络部分暂时屏蔽了tcpsocket，以后换。
+
+
+-------
+去掉IcedUI相关 和 ShaderC以后， wasm已经可以编译通过了。
+但去掉后就无法运行了。
+
+
+剩下还有几个难关要攻克：
+     UI. 
+	逻辑太混乱，在游戏任何地方都有UI，像很多登录等，都在UI代码中驱动。
+          UI看了下，可能要换底层。设计大量修改。
+          IcedWeb是个实验版本，且已经不维护了，功能几乎没有。
+          目前比较成熟的是egui-web，例子：https://github.com/emilk/eframe_template
+          需要基于这个按照目前的代码逻辑来包装中间层，来适应目前的接口。
+
+     渲染
+	如何在web解析shader，以及shader是否支持web。
+          渲染逻辑目前完全依赖于wgpu，大概看了下有10条左右的管线，还有N个pass。
+          这块要测试怎么在web上跑（初步猜测一些管线的并不能支持在web的渲染引擎中跑）
+
+     网络
+	修改为websocket（不确定服务器要不要一起改）
+          web是否支持单独开个线程跑网络？
+           
+     运行时问题：
+	 一致 std::time(标准时间库) 在wasm上不可用，（这个运行时报错，编译不报错）
+           其他还有一些像std::io 之类的。
+           这个估计也要花一定时间调试。

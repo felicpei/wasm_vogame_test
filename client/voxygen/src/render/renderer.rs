@@ -126,11 +126,10 @@ enum State {
 /// GPU, along with pipeline state objects (PSOs) needed to renderer different
 /// kinds of models to the screen.
 pub struct Renderer {
-    device: Arc<wgpu::Device>,
-    queue: wgpu::Queue,
-    surface: wgpu::Surface,
-    //swap_chain: wgpu::SwapChain,
-    sc_desc: wgpu::SurfaceConfiguration,
+    pub device: Arc<wgpu::Device>,
+    pub queue: wgpu::Queue,
+    pub surface: wgpu::Surface,
+    pub sc_desc: wgpu::SurfaceConfiguration,
 
     sampler: wgpu::Sampler,
     depth_sampler: wgpu::Sampler,
@@ -155,7 +154,7 @@ pub struct Renderer {
 
     pipeline_modes: PipelineModes,
     other_modes: OtherModes,
-    resolution: Vec2<u32>,
+    pub resolution: Vec2<u32>,
 
     // This checks is added because windows resizes the window to 0,0 when
     // minimizing and this causes a bunch of validation errors
@@ -463,7 +462,6 @@ impl Renderer {
             device,
             queue,
             surface,
-            //swap_chain,
             sc_desc,
 
             state,
@@ -843,6 +841,9 @@ impl Renderer {
     pub fn start_recording_frame<'a>(
         &'a mut self,
         globals: &'a GlobalsBindGroup,
+        encoder: &'a mut wgpu::CommandEncoder,
+        view: &'a wgpu::TextureView,
+
     ) -> Result<Option<drawer::Drawer<'a>>, RenderError> {
        
         if self.is_minimized {
@@ -982,39 +983,9 @@ impl Renderer {
             }
         }
 
-        let tex = match self.surface.get_current_texture() {
-            Ok(frame) => {
-                let view = frame.texture.create_view(&wgpu::TextureViewDescriptor::default());
-                view
-            }
-            // If lost recreate the swap chain
-            Err(err @ wgpu::SurfaceError::Lost) => {
-                log::warn!("{}. Recreating swap chain. A frame will be missed", err);
-                self.on_resize(self.resolution);
-                return Ok(None);
-            },
-            Err(wgpu::SurfaceError::Timeout) => {
-                // This will probably be resolved on the next frame
-                // NOTE: we don't log this because it happens very frequently with
-                // PresentMode::Fifo and unlimited FPS on certain machines
-                return Ok(None);
-            },
-            Err(err @ wgpu::SurfaceError::Outdated) => {
-                log::warn!("{}. Recreating the swapchain", err);
-                //self.swap_chain = self.device.create_swap_chain(&self.surface, &self.sc_desc);
-                self.surface.configure(&self.device, &self.sc_desc);
-                return Ok(None);
-            },
-            Err(err @ wgpu::SurfaceError::OutOfMemory) => return Err(err.into()),
-        };
-        let encoder = self
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("A render encoder"),
-            });
-
-        Ok(Some(drawer::Drawer::new(encoder, self, tex, globals)))
+        Ok(Some(drawer::Drawer::new(encoder, self, view, globals)))
     }
+
 
     /// Recreate the pipelines
     fn recreate_pipelines(&mut self, pipeline_modes: PipelineModes) {

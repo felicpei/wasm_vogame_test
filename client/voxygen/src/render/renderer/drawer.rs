@@ -62,17 +62,17 @@ struct RendererBorrow<'frame> {
 }
 
 pub struct Drawer<'frame> {
-    encoder: Box<wgpu::CommandEncoder>,
+    encoder:  &'frame mut wgpu::CommandEncoder,
     borrow: RendererBorrow<'frame>,
-    swap_tex: wgpu::TextureView,
+    swap_tex: &'frame wgpu::TextureView,
     globals: &'frame GlobalsBindGroup,
 }
 
 impl<'frame> Drawer<'frame> {
     pub fn new(
-        encoder: wgpu::CommandEncoder,
+        encoder: &'frame mut wgpu::CommandEncoder,
         renderer: &'frame mut Renderer,
-        swap_tex: wgpu::TextureView,
+        swap_tex: &'frame wgpu::TextureView,
         globals: &'frame GlobalsBindGroup,
     ) -> Self {
        
@@ -98,7 +98,7 @@ impl<'frame> Drawer<'frame> {
 
 
         Self {
-            encoder: Box::new(encoder),
+            encoder,
             borrow,
             swap_tex,
             globals,
@@ -116,9 +116,8 @@ impl<'frame> Drawer<'frame> {
         }
 
         if let ShadowMap::Enabled(ref shadow_renderer) = self.borrow.shadow?.map {
-            let encoder = self.encoder.as_mut();
 
-            let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+            let mut render_pass = self.encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                 label: Some("shadow pass"),
                 color_attachments: &[],
                 depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
@@ -150,8 +149,7 @@ impl<'frame> Drawer<'frame> {
         // are not enabled
         let shadow = self.borrow.shadow.unwrap();
 
-	    let encoder = self.encoder.as_mut();
-        let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+        let mut render_pass = self.encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                 label: Some("first pass"),
                 color_attachments: &[wgpu::RenderPassColorAttachment {
                     view: &self.borrow.views.tgt_color,
@@ -188,8 +186,7 @@ impl<'frame> Drawer<'frame> {
     pub fn second_pass(&mut self) -> Option<SecondPassDrawer> {
         let pipeline = &self.borrow.pipelines.all()?.clouds;
 
-	    let encoder = self.encoder.as_mut();
-        let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+        let mut render_pass = self.encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                 label: Some("second pass (clouds)"),
                 color_attachments: &[wgpu::RenderPassColorAttachment {
                     view: &self.borrow.views.tgt_color_pp,
@@ -231,11 +228,9 @@ impl<'frame> Drawer<'frame> {
                 None => return,
             };
 
-	    let encoder = self.encoder.as_mut();
-        
         let mut run_bloom_pass = |bind, view, label: String, pipeline, load| {
             let pass_label = format!("bloom {} pass", label);
-            let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+            let mut render_pass = self.encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                 label: Some(&pass_label),
                 color_attachments: &[wgpu::RenderPassColorAttachment {
                     resolve_target: None,
@@ -303,13 +298,12 @@ impl<'frame> Drawer<'frame> {
 
     pub fn third_pass(&mut self) -> ThirdPassDrawer {
         
-        let encoder = self.encoder.as_mut();
-        let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+        let mut render_pass = self.encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
             label: Some("third pass (postprocess + ui)"),
             color_attachments: &[wgpu::RenderPassColorAttachment {
                 // If a screenshot was requested render to that as an intermediate texture
                 // instead
-                view: &self.swap_tex,
+                view: self.swap_tex,
                 resolve_target: None,
                 ops: wgpu::Operations {
                     load: wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),
@@ -362,8 +356,7 @@ impl<'frame> Drawer<'frame> {
                         });
 
                 let label = format!("point shadow face-{} pass", face);
-                let encoder = self.encoder.as_mut();
-                let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                let mut render_pass = self.encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                         label: Some(&label),
                         color_attachments: &[],
                         depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
@@ -410,7 +403,7 @@ impl<'frame> Drawer<'frame> {
     pub fn clear_shadows(&mut self) {
         if let Some(ShadowMap::Enabled(ref shadow_renderer)) = self.borrow.shadow.map(|s| &s.map) {
             
-            let _ = self.encoder.as_mut().begin_render_pass(
+            let _ = self.encoder.begin_render_pass(
                 &wgpu::RenderPassDescriptor {
                     label: Some("clear directed shadow pass"),
                     color_attachments: &[],
@@ -443,7 +436,7 @@ impl<'frame> Drawer<'frame> {
                         });
 
                 let label = format!("clear point shadow face-{} pass", face);
-                let _ = self.encoder.as_mut().begin_render_pass(&wgpu::RenderPassDescriptor {
+                let _ = self.encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                     label: Some(&label),
                     color_attachments: &[],
                     depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
@@ -741,6 +734,7 @@ impl<'pass> ThirdPassDrawer<'pass> {
     /// Returns None if the UI pipeline is not available (note: this should
     /// never be the case for now)
     pub fn init_ui(&mut self)  {
+
         let ui = self.borrow.pipelines.ui().unwrap();
 
         let render_pass = self.render_pass.as_mut();
@@ -764,11 +758,14 @@ impl<'pass> ThirdPassDrawer<'pass> {
     }
 
     pub fn ui_set_locals<'data: 'pass>(&mut self, locals: &'data ui::BoundLocals) {
+
         let render_pass = self.render_pass.as_mut();
         render_pass.set_bind_group(1, &locals.bind_group, &[]);
+
     }
 
     pub fn ui_set_model<'data: 'pass>(&mut self, model: &'data DynamicModel<ui::Vertex>) {
+
         let render_pass = self.render_pass.as_mut();
         render_pass.set_vertex_buffer(0, model.buf().slice(..))
     }

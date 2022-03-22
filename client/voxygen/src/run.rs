@@ -158,22 +158,54 @@ fn handle_main_events_cleared(
 
     if let Some(last) = states.last_mut() {
         capped_fps = last.capped_fps();
-        // Render the screen using the global renderer
-        if let Some(mut drawer) = global_state
-            .window
-            .renderer_mut()
-            .start_recording_frame(last.globals_bind_group())
-            .expect("Unrecoverable render error when starting a new frame!")
-        {
-            if global_state.clear_shadows_next_frame {
-                drawer.clear_shadows();
-            }
 
-            last.render(&mut drawer, &global_state.settings);
+        let renderer_mut = global_state.window.renderer_mut();
+
+        match renderer_mut.surface.get_current_texture() {
+
+            Ok(frame) => {
+                let view = frame.texture.create_view(&wgpu::TextureViewDescriptor::default());
+                let mut encoder = renderer_mut.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                    label: Some("A render encoder"),
+                });
+    
+                //per frame
+                if let Some(mut drawer) = renderer_mut.start_recording_frame(last.globals_bind_group(), &mut encoder, &view)
+                                            .expect("Unrecoverable render error when starting a new frame!") {
+                    
+                    if global_state.clear_shadows_next_frame {
+                        drawer.clear_shadows();
+                    }
+
+                    last.render(&mut drawer, &global_state.settings);
+
+                    renderer_mut.queue.submit(Some(encoder.finish()));
+                    frame.present();
+
+                };
+
+                if global_state.clear_shadows_next_frame {
+                    global_state.clear_shadows_next_frame = false;
+                }
+            },
+            Err(err @ wgpu::SurfaceError::Lost) => {
+                log::warn!("{}. Recreating swap chain. A frame will be missed", err);
+                renderer_mut.on_resize(renderer_mut.resolution);
+            },
+            Err(wgpu::SurfaceError::Timeout) => {
+                // This will probably be resolved on the next frame
+                // NOTE: we don't log this because it happens very frequently with
+                // PresentMode::Fifo and unlimited FPS on certain machines
+            },
+            Err(err @ wgpu::SurfaceError::Outdated) => {
+                log::warn!("{}. Recreating the swapchain", err);
+                //self.swap_chain = self.device.create_swap_chain(&self.surface, &self.sc_desc);
+                renderer_mut.surface.configure(&renderer_mut.device, &renderer_mut.sc_desc);
+            },
+            Err(err @ wgpu::SurfaceError::OutOfMemory) => {
+                panic!("Swapchain error: OutOfMemory. Rendering cannot continue.");
+            }
         };
-        if global_state.clear_shadows_next_frame {
-            global_state.clear_shadows_next_frame = false;
-        }
     }
 
     if !exit {
@@ -192,9 +224,7 @@ fn handle_main_events_cleared(
             max_fps
         };
 
-        global_state
-            .clock
-            .set_target_dt(Duration::from_secs_f64(1.0 / target_fps as f64));
+        global_state.clock.set_target_dt(Duration::from_secs_f64(1.0 / target_fps as f64));
         global_state.clock.tick();
 
         // Maintain global state.

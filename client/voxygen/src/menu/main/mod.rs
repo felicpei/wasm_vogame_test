@@ -154,27 +154,27 @@ impl PlayState for MainMenuState {
             }
         }
 
-        // Poll renderer pipeline creation
-        if let InitState::Pipeline(..) = &self.init {
-            // If not complete go to char select screen
-            if global_state
-                .window
-                .renderer()
-                .pipeline_creation_status()
-                .is_none()
-            {
-                // Always succeeds since we check above
-                if let InitState::Pipeline(client) =
-                    core::mem::replace(&mut self.init, InitState::None)
-                {
-                    self.main_menu_ui.connected();
-                    return PlayStateResult::Push(Box::new(CharSelectionState::new(
-                        global_state,
-                        std::rc::Rc::new(std::cell::RefCell::new(*client)),
-                    )));
-                }
-            }
-        }
+        // // Poll renderer pipeline creation
+        // if let InitState::Pipeline(..) = &self.init {
+        //     // If not complete go to char select screen
+        //     if global_state
+        //         .window
+        //         .renderer()
+        //         .pipeline_creation_status()
+        //         .is_none()
+        //     {
+        //         // Always succeeds since we check above
+        //         if let InitState::Pipeline(client) =
+        //             core::mem::replace(&mut self.init, InitState::None)
+        //         {
+        //             self.main_menu_ui.connected();
+        //             return PlayStateResult::Push(Box::new(CharSelectionState::new(
+        //                 global_state,
+        //                 std::rc::Rc::new(std::cell::RefCell::new(*client)),
+        //             )));
+        //         }
+        //     }
+        // }
 
         // Maintain the UI.
         for event in self

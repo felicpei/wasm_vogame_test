@@ -189,7 +189,7 @@ fn handle_main_events_cleared(
                 }
             },
             Err(err @ wgpu::SurfaceError::Lost) => {
-                log::warn!("{}. Recreating swap chain. A frame will be missed", err);
+                log::warn!("{}. SurfaceError::Lost swap chain. A frame will be missed", err);
                 renderer_mut.on_resize(renderer_mut.resolution);
             },
             Err(wgpu::SurfaceError::Timeout) => {
@@ -198,7 +198,7 @@ fn handle_main_events_cleared(
                 // PresentMode::Fifo and unlimited FPS on certain machines
             },
             Err(err @ wgpu::SurfaceError::Outdated) => {
-                log::warn!("{}. Recreating the swapchain", err);
+                log::warn!("{}. SurfaceError::Outdated the swapchain", err);
                 //self.swap_chain = self.device.create_swap_chain(&self.surface, &self.sc_desc);
                 renderer_mut.surface.configure(&renderer_mut.device, &renderer_mut.sc_desc);
             },

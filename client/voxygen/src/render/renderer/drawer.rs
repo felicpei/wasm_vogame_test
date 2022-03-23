@@ -75,7 +75,7 @@ impl<'frame> Drawer<'frame> {
     ) -> Self {
        
         let (pipelines, shadow) = match &renderer.state {
-            super::State::Interface { pipelines, .. } => (Pipelines::Interface(pipelines), None),
+            super::State::Interface { interface_pipelines, .. } => (Pipelines::Interface(interface_pipelines), None),
             super::State::Complete {
                 pipelines, shadow, ..
             } => (Pipelines::All(pipelines), Some(shadow)),
@@ -554,6 +554,7 @@ impl<'pass> FirstPassDrawer<'pass> {
     }
 
     pub fn init_figures(&mut self) {
+        
         let render_pass = self.render_pass.as_mut();
         render_pass.set_pipeline(&self.pipelines.figure.pipeline);
         // Note: figures use the same vertex type as the terrain

@@ -7,7 +7,7 @@ mod shadow_map;
 
 use locals::Locals;
 use pipeline_creation::{
-    IngameAndShadowPipelines, InterfacePipelines, PipelineCreation, Pipelines, ShadowPipelines,
+    Pipelines, ShadowPipelines, InterfacePipelines, IngamePipelines,
 };
 use shadow_map::{ShadowMap, ShadowMapRenderer};
 
@@ -95,27 +95,14 @@ enum State {
     // NOTE: this is used as a transient placeholder for moving things out of State temporarily
     Nothing,
     Interface {
-        pipelines: InterfacePipelines,
-        shadow_views: Option<(Texture, Texture)>,
-        // In progress creation of the remaining pipelines in the background
-        creating: PipelineCreation<IngameAndShadowPipelines>,
+        interface_pipelines: InterfacePipelines,
+        ingame_pipelines: IngamePipelines,
+	    shadow_views: Option<(Texture, Texture)>,
+        shadow_pipelines: ShadowPipelines,
     },
     Complete {
         pipelines: Pipelines,
         shadow: Shadow,
-        recreating: Option<(
-            PipelineModes,
-            PipelineCreation<
-                Result<
-                    (
-                        Pipelines,
-                        ShadowPipelines,
-                        Arc<postprocess::PostProcessLayout>,
-                    ),
-                    RenderError,
-                >,
-            >,
-        )>,
     },
 }
 
@@ -282,7 +269,7 @@ impl Renderer {
         // Arcify the device
         let device = Arc::new(device);
 
-        let (interface_pipelines, creating) = pipeline_creation::initial_create_pipelines(
+        let (interface_pipelines, ingame_pipelines, shadow_pipelines) = pipeline_creation::initial_create_pipelines(
             Arc::clone(&device),
             Layouts {
                 immutable: Arc::clone(&layouts.immutable),
@@ -290,13 +277,13 @@ impl Renderer {
             },
             pipeline_modes.clone(),
             sc_desc.clone(), // Note: cheap clone
-            shadow_views.is_some(),
         )?;
 
         let state = State::Interface {
-            pipelines: interface_pipelines,
+            interface_pipelines,
+            ingame_pipelines,
             shadow_views,
-            creating,
+            shadow_pipelines,
         };
 
         let (views, bloom_sizes) = Self::create_rt_views(
@@ -388,28 +375,6 @@ impl Renderer {
         })
     }
 
-    /// Check the status of the intial pipeline creation
-    /// Returns `None` if complete
-    /// Returns `Some((total, complete))` if in progress
-    pub fn pipeline_creation_status(&self) -> Option<(usize, usize)> {
-        if let State::Interface { creating, .. } = &self.state {
-            Some(creating.status())
-        } else {
-            None
-        }
-    }
-
-    /// Check the status the pipeline recreation
-    /// Returns `None` if pipelines are currently not being recreated
-    /// Returns `Some((total, complete))` if in progress
-    pub fn pipeline_recreation_status(&self) -> Option<(usize, usize)> {
-        if let State::Complete { recreating, .. } = &self.state {
-            recreating.as_ref().map(|(_, c)| c.status())
-        } else {
-            None
-        }
-    }
-
     /// Change the render mode.
     pub fn set_render_mode(&mut self, mode: RenderMode) -> Result<(), RenderError> {
         let (pipeline_modes, other_modes) = mode.split();
@@ -422,19 +387,6 @@ impl Renderer {
 
             // Recreate render target
             self.on_resize(self.resolution);
-        }
-
-        // We can't cancel the pending recreation even if the new settings are equal
-        // to the current ones becuase the recreation could be triggered by something
-        // else like shader hotloading
-        if self.pipeline_modes != pipeline_modes
-            || self
-                .recreation_pending
-                .as_ref()
-                .map_or(false, |modes| modes != &pipeline_modes)
-        {
-            // Recreate pipelines with new modes
-            self.recreate_pipelines(pipeline_modes);
         }
 
         Ok(())
@@ -751,105 +703,71 @@ impl Renderer {
         // groups / render targets (handling defered so that State will be valid
         // when calling Self::on_resize)
         let mut trigger_on_resize = false;
+
+        
         // If still creating initial pipelines, check if complete
         self.state = if let State::Interface {
-            pipelines: interface,
+            interface_pipelines,
+            ingame_pipelines,
             shadow_views,
-            creating,
+            shadow_pipelines,
         } = state
         {
-            match creating.try_complete() {
-                Ok(pipelines) => {
-                    let IngameAndShadowPipelines { ingame, shadow } = pipelines;
+            let pipelines = Pipelines::consolidate(interface_pipelines, ingame_pipelines);
+            let shadow_map = ShadowMap::new(
+                &self.device,
+                &self.queue,
+                shadow_pipelines.point,
+                shadow_pipelines.directed,
+                shadow_pipelines.figure,
+                shadow_views,
+            );
 
-                    let pipelines = Pipelines::consolidate(interface, ingame);
+            let shadow_bind = {
+                let (point, directed) = shadow_map.textures();
+                self.layouts
+                    .global
+                    .bind_shadow_textures(&self.device, point, directed)
+            };
 
-                    let shadow_map = ShadowMap::new(
-                        &self.device,
-                        &self.queue,
-                        shadow.point,
-                        shadow.directed,
-                        shadow.figure,
-                        shadow_views,
-                    );
-
-                    let shadow_bind = {
-                        let (point, directed) = shadow_map.textures();
-                        self.layouts
-                            .global
-                            .bind_shadow_textures(&self.device, point, directed)
-                    };
-
-                    let shadow = Shadow {
-                        map: shadow_map,
-                        bind: shadow_bind,
-                    };
-
-                    State::Complete {
-                        pipelines,
-                        shadow,
-                        recreating: None,
-                    }
-                },
-                // Not complete
-                Err(creating) => State::Interface {
-                    pipelines: interface,
-                    shadow_views,
-                    creating,
-                },
+            let shadow = Shadow {
+                map: shadow_map,
+                bind: shadow_bind,
+            };
+            State::Complete {
+                pipelines,
+                shadow,
             }
         // If recreating the pipelines, check if that is complete
         } else if let State::Complete {
             pipelines,
             mut shadow,
-            recreating: Some((new_pipeline_modes, pipeline_creation)),
         } = state
         {
-            match pipeline_creation.try_complete() {
-                Ok(Ok((pipelines, shadow_pipelines, postprocess_layout))) => {
-                    if let (
-                        Some(point_pipeline),
-                        Some(terrain_directed_pipeline),
-                        Some(figure_directed_pipeline),
-                        ShadowMap::Enabled(shadow_map),
-                    ) = (
-                        shadow_pipelines.point,
-                        shadow_pipelines.directed,
-                        shadow_pipelines.figure,
-                        &mut shadow.map,
-                    ) {
-                        shadow_map.point_pipeline = point_pipeline;
-                        shadow_map.terrain_directed_pipeline = terrain_directed_pipeline;
-                        shadow_map.figure_directed_pipeline = figure_directed_pipeline;
-                    }
+            // if let (
+            //     Some(point_pipeline),
+            //     Some(terrain_directed_pipeline),
+            //     Some(figure_directed_pipeline),
+            //     ShadowMap::Enabled(shadow_map),
+            // ) = (
+            //     shadow_pipelines.point,
+            //     shadow_pipelines.directed,
+            //     shadow_pipelines.figure,
+            //     &mut shadow.map,
+            // ) {
+            //     shadow_map.point_pipeline = point_pipeline;
+            //     shadow_map.terrain_directed_pipeline = terrain_directed_pipeline;
+            //     shadow_map.figure_directed_pipeline = figure_directed_pipeline;
+            // }
 
-                    self.pipeline_modes = new_pipeline_modes;
-                    self.layouts.postprocess = postprocess_layout;
-                    // TODO: we have the potential to skip recreating bindings / render targets on
-                    // pipeline recreation trigged by shader reloading (would need to ensure new
-                    // postprocess_layout is not created...)
-                    trigger_on_resize = true;
+            //self.pipeline_modes = new_pipeline_modes;
+            //self.layouts.postprocess = postprocess_layout;
 
-                    State::Complete {
-                        pipelines,
-                        shadow,
-                        recreating: None,
-                    }
-                },
-                Ok(Err(e)) => {
-                    log::error!("{:?} Could not recreate shaders from assets due to an error", e);
-                    State::Complete {
-                        pipelines,
-                        shadow,
-                        recreating: None,
-                    }
-                },
-                // Not complete
-                Err(pipeline_creation) => State::Complete {
-                    pipelines,
-                    shadow,
-                    recreating: Some((new_pipeline_modes, pipeline_creation)),
-                },
+            // trigger_on_resize = true;
+
+            State::Complete {
+                pipelines,
+                shadow,
             }
         } else {
             state
@@ -861,53 +779,8 @@ impl Renderer {
         if trigger_on_resize {
             self.on_resize(self.resolution);
         }
-        // Or if we have a recreation pending
-        if matches!(&self.state, State::Complete {
-            recreating: None,
-            ..
-        }) {
-            if let Some(new_pipeline_modes) = self.recreation_pending.take() {
-                self.recreate_pipelines(new_pipeline_modes);
-            }
-        }
 
         Ok(Some(drawer::Drawer::new(encoder, self, view, globals)))
-    }
-
-
-    /// Recreate the pipelines
-    fn recreate_pipelines(&mut self, pipeline_modes: PipelineModes) {
-        match &mut self.state {
-            State::Complete { recreating, .. } if recreating.is_some() => {
-                // Defer recreation so that we are not building multiple sets of pipelines in
-                // the background at once
-                self.recreation_pending = Some(pipeline_modes);
-            },
-            State::Complete {
-                recreating, shadow, ..
-            } => {
-                *recreating = Some((
-                    pipeline_modes.clone(),
-                    pipeline_creation::recreate_pipelines(
-                        Arc::clone(&self.device),
-                        Arc::clone(&self.layouts.immutable),
-                        pipeline_modes,
-                        // NOTE: if present_mode starts to be used to configure pipelines then it
-                        // needs to become a part of the pipeline modes
-                        // (note here since the present mode is accessible
-                        // through the swap chain descriptor)
-                        self.sc_desc.clone(), // Note: cheap clone
-                        shadow.map.is_enabled(),
-                    ),
-                ));
-            },
-            State::Interface { .. } => {
-                // Defer recreation so that we are not building multiple sets of pipelines in
-                // the background at once
-                self.recreation_pending = Some(pipeline_modes);
-            },
-            State::Nothing => {},
-        }
     }
 
     /// Create a new set of constants with the provided values.

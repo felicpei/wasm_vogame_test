@@ -124,7 +124,7 @@ pub trait PlayState {
 // ----------------------- wasm start ------------------------//
 use wasm_bindgen::prelude::*;
 use common_assets as res;
-//pub use wasm_bindgen_rayon::init_thread_pool;
+pub use wasm_bindgen_rayon::init_thread_pool;
 
 // When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
 // allocator.
@@ -142,7 +142,7 @@ pub fn set_resource_data(name: &str, data: &[u8]) {
 pub fn start() {
     wasm_logger::init(wasm_logger::Config::new(log::Level::Info));
     std::panic::set_hook(Box::new(console_error_panic_hook::hook));
-    log::info!("start web");
+    log::info!("start wasm");
     //wasm_bindgen_futures::spawn_local(start_game());
     start_game();
 }
@@ -191,13 +191,15 @@ pub fn start_game() {
     i18n.set_english_fallback(settings.language.use_english_fallback);
     
 
+    log::info!("start window init");
+
     //创建运行窗体
     let (mut window, event_loop) = match Window::new(&settings, &tokio_runtime) {
         Ok(ok) => ok,
         Err(error) => panic!("Failed to create window!: {:?}", error),
     };
 
-
+    log::info!("end window init");
     let clipboard = iced::Clipboard::connect(window.window());
     let lazy_init = SpriteRenderContext::new(window.renderer_mut());
     let global_state = GlobalState {
@@ -215,6 +217,7 @@ pub fn start_game() {
         clear_shadows_next_frame: false,
     };
 
+    log::info!("start run::run");
     run::run(global_state, event_loop);
 }
 

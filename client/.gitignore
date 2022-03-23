@@ -1,2 +1,7 @@
 /target
+/voxygen/node_modules
+/voxygen/target/
+/voxygen/pkg/
+/voxygen/www/node_modules/
+/voxygen/www/package-lock.json
 Cargo.lock

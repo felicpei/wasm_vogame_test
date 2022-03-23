@@ -32,45 +32,45 @@ function DownAllRes(cb) {
             url: '/assets/md5.json',
             responseType: 'json',
         })
-            .then(res => {
-                let json = res.data
-                let jsonArray = []
-                let jsonDownIndex = 0
-                let downCount = 0
+        .then(res => {
+            let json = res.data
+            let jsonArray = []
+            let jsonDownIndex = 0
+            let downCount = 0
 
-                let loadOneResCB = function () {
+            let loadOneResCB = function () {
 
-                    downCount = downCount + 1
-                    document.getElementById("loading").innerHTML = "加载资源中:" + downCount + "/" + jsonArray.length
-                    if (downCount == jsonArray.length) {
-                        document.getElementById("loading").innerHTML = ""
-                        cb()
-                    }
+                downCount = downCount + 1
+                document.getElementById("loading").innerHTML = "加载资源中:" + downCount + "/" + jsonArray.length
+                if (downCount == jsonArray.length) {
+                    document.getElementById("loading").innerHTML = ""
+                    cb()
                 }
+            }
 
-                let loadOneRes;
-                loadOneRes = function (isFirst) {
-                    if (jsonDownIndex < jsonArray.length) {
-                        var data = jsonArray[jsonDownIndex]
-                        jsonDownIndex = jsonDownIndex + 1
-                        downResFile(data[0], data[1], loadOneRes)
+            let loadOneRes;
+            loadOneRes = function (isFirst) {
+                if (jsonDownIndex < jsonArray.length) {
+                    var data = jsonArray[jsonDownIndex]
+                    jsonDownIndex = jsonDownIndex + 1
+                    downResFile(data[0], data[1], loadOneRes)
 
-                    }
-                    if (!isFirst)
-                        loadOneResCB()
                 }
+                if (!isFirst)
+                    loadOneResCB()
+            }
 
-                for (var key in json) {
-                    //TODO  不支持直接存储 
-                    if (!key.endsWith(".xml")) {
-                        jsonArray.push([key, json[key]])
-                    }
+            for (var key in json) {
+                //TODO  不支持直接存储 
+                if (!key.endsWith(".xml")) {
+                    jsonArray.push([key, json[key]])
                 }
-                for (let i = 0; i < 1000; i++) {
-                    loadOneRes(true)
-                }
+            }
+            for (let i = 0; i < 1000; i++) {
+                loadOneRes(true)
+            }
 
-            });
+        });
     }
 
     console.log("open indexedDB")

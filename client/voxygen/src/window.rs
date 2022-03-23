@@ -401,7 +401,6 @@ pub struct Window {
     pub key_layout: Option<KeyLayout>,
 }
 
-#[cfg(target_arch = "wasm32")]
 fn create_render_area(window: &winit::window::Window, canvas_id: &str) {
 
     use winit::platform::web::WindowExtWebSys;
@@ -426,23 +425,25 @@ impl Window {
     ) -> Result<(Window, EventLoop), Error> {
 
         //创建窗体
+        log::info!("Window new : start");
         let event_loop = EventLoop::with_user_event();
         let window = WindowBuilder::new()
             .with_title("Wasm_test")
             .build(&event_loop)
             .unwrap();
-        
+
         //创建画布
-        #[cfg(target_arch = "wasm32")]
-        {
-            let canvas_id = "canvas_main";
-            create_render_area(&window, canvas_id);
-        }
+        log::info!("Window new : create_render_area");
+        let canvas_id = "canvas_main";
+        create_render_area(&window, canvas_id);
 
         //渲染引擎
+        log::info!("Window new : Renderer::new");
         let renderer = Renderer::new(&window, settings.graphics.render_mode.clone(), runtime)?;
+        
+        //按键map
+        log::info!("Window new : Gilrs::new");
         let keypress_map = HashMap::new();
-
         let gilrs = match Gilrs::new() {
             Ok(gilrs) => Some(gilrs),
             Err(gilrs::Error::NotImplemented(_dummy)) => {

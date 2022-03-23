@@ -282,7 +282,7 @@ impl ShaderModules {
             source: wgpu::ShaderSource::SpirV(Cow::Borrowed(include_spirv!("shaders/blit-frag.glsl", frag, I "shaders/include/"))),
         });
 
-        log::warn!("TODO 不支持的 Shader: shaders/point-light-shadows-vert.glsl");
+        log::warn!("TODO 不支持的 Shader: shaders/point-light-shadows-vert.glsl, 临时用别的Shader代替了");
         let point_light_shadows_vert = device.create_shader_module(&wgpu::ShaderModuleDescriptor {
             label: Some("point_light_shadows_vert"),
             //source: wgpu::ShaderSource::SpirV(Cow::Borrowed(include_spirv!("shaders/point-light-shadows-vert.glsl", vert, I "shaders/include/"))),

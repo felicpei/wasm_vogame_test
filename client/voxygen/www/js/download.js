@@ -93,42 +93,6 @@ function DownAllRes(cb) {
     }
 }
 
-// function getResFile(assetName, ext) {
-//     assetName = assetName + "." + ext
-//     let res = cache[assetName]
-//     if (res == undefined) {
-//         res = ""
-//         console.error("没有资源:" + assetName)
-//     }
-//     else {
-//         // console.log(res)
-//     }
-//     return res
-// }
-
-
-
-
-
-//测试用的 1
-setTimeout(function () {
-    // console.log(window.rustFunc)
-    // window.rustFunc.TestCall();
-    // axios({
-    //     method: 'get',
-    //     url: '/assets/md5.json',
-    //     responseType: 'arraybuffer',
-    // })
-    //     .then(res => {
-    //         console.error(res.data)
-    //         addRes("aaa",res.data,"");
-    //         addRes("bbb","122","");
-
-    //     })
-}, 1000);
-
-
-
 function getTransaction() {
     return objectStore = db.transaction(['resCache'], 'readwrite') //新建事务，readwrite, readonly(默认), versionchange 
         .objectStore('resCache')
@@ -152,12 +116,13 @@ function readRes(path, md5, cb) {
 
     request.onsuccess = function (event) {
         if (request.result) {
-            if (request.result.md5 != md5) {
-                console.error('md5不一致 重新获取')
-                var req = objectStore.delete(path)
-                cb()
-            }
-            else {
+            // if (request.result.md5 != md5) {
+            //     console.error('md5不一致 重新获取')
+            //     var req = objectStore.delete(path)
+            //     cb()
+            // }
+            // else 
+            {
                 cb(request.result.res)
             }
         } else {

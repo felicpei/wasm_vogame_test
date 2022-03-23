@@ -1,8 +1,12 @@
-import * as wasm from "wasm_test";
 
-window.rust_func = {
-    SetResourceData: wasm.set_resource_data,
+import init, { start, set_resource_data } from "../pkg/veloren_voxygen.js";
+
+async function main() {
+  await init();
+  window.rust_func = {
+    SetResourceData: set_resource_data,
+  }
+  DownAllRes(start)
 }
 
-DownAllRes(wasm.start);
-//wasm.start();
+main();

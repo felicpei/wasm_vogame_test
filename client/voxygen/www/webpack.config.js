@@ -1,14 +1,26 @@
-const CopyWebpackPlugin = require("copy-webpack-plugin");
 const path = require('path');
 
 module.exports = {
-  entry: "./bootstrap.js",
+  entry: "./index.js",
   output: {
     path: path.resolve(__dirname, "dist"),
-    filename: "bootstrap.js",
+    filename: "index.js",
   },
   mode: "development",
-  plugins: [
-    new CopyWebpackPlugin(['index.html'])
-  ],
+ 
+  //server配置
+  devServer: {
+
+    //static配置
+    static: {
+      directory: path.resolve(__dirname, './'), 
+      publicPath: '/'
+    },
+
+    //跨域配置
+    headers: {
+      "Cross-Origin-Embedder-Policy": "require-corp",
+      "Cross-Origin-Opener-Policy": "same-origin",
+    }
+  },
 };

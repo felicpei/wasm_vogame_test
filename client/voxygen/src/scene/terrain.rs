@@ -315,9 +315,6 @@ pub struct Terrain<V: RectRasterableVol = TerrainChunk> {
     /// might significantly reduce the number of textures we need for
     /// particularly difficult locations.
     atlas: AtlasAllocator,
-    /// FIXME: This could possibly become an `AssetHandle<SpriteSpec>`, to get
-    /// hot-reloading for free, but I am not sure if sudden changes of this
-    /// value would break something
     sprite_config: Arc<SpriteSpec>,
     chunks: HashMap<Vec2<i32>, TerrainChunkData>,
     /// Temporary storage for dead chunks that might still be shadowing chunks

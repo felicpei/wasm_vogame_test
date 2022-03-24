@@ -17,7 +17,7 @@ impl Pet {
     /// Not to be used outside of persistence - provides mutable access to the
     /// pet component's database ID which is required to save the pet's data
     /// from the persistence thread.
-    #[doc(hidden)]
+    
     pub fn get_database_id(&self) -> Arc<PetId> { Arc::clone(&self.database_id) }
 
     pub fn new_from_database(database_id: NonZeroU64) -> Self {

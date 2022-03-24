@@ -4,21 +4,16 @@ use std::{any::TypeId, cmp, fmt, hash};
 
 use crate::{
     cache::load_from_source,
-    entry::{CacheEntry, CacheEntryInner},
+    entry::{CacheEntry},
     source::Source,
     utils, Asset, Error, SharedString,
 };
 
 pub(crate) trait AnyAsset: Send + Sync + 'static {
-    fn reload(self: Box<Self>, entry: CacheEntryInner);
     fn create(self: Box<Self>, id: SharedString) -> CacheEntry;
 }
 
 impl<A: Asset> AnyAsset for A {
-    fn reload(self: Box<Self>, entry: CacheEntryInner) {
-        entry.handle::<A>().as_dynamic().write(*self);
-    }
-
     fn create(self: Box<Self>, id: SharedString) -> CacheEntry {
         CacheEntry::new::<A>(*self, id)
     }

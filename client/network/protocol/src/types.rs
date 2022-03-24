@@ -88,7 +88,7 @@ impl Pid {
     /// don't use fake! just for testing!
     /// This will panic if pid i greater than 7, as I do not want you to use
     /// this in production!
-    #[doc(hidden)]
+    
     pub fn fake(pid_offset: u8) -> Self {
         assert!(pid_offset < 8);
         let o = pid_offset as u128;

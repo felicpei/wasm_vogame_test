@@ -8,6 +8,3 @@ pub use string::SharedString;
 
 mod private;
 pub(crate) use private::*;
-
-#[cfg(test)]
-mod tests;

@@ -677,6 +677,8 @@ impl Item {
     /// Creates a Vec containing one of each item that matches the provided
     /// asset glob pattern
     pub fn new_from_asset_glob(asset_glob: &str) -> Result<Vec<Self>, Error> {
+        log::info!("new_from_asset_glob load_dir"); 
+
         let specifier = asset_glob.strip_suffix(".*").unwrap_or(asset_glob);
         let defs = assets::load_dir::<RawItemDef>(specifier, true)?;
         defs.ids().map(Item::new_from_asset).collect()
@@ -722,7 +724,7 @@ impl Item {
     /// currently we use an Atomic inside an Arc; this is clearly very
     /// dangerous, so in the future we will hopefully have a better way of
     /// dealing with this.
-    #[doc(hidden)]
+    
     pub fn get_item_id_for_database(&self) -> Arc<ItemId> { Arc::clone(&self.item_id) }
 
     /// Resets the item's item ID to None, giving it a new identity. Used when
@@ -973,6 +975,8 @@ pub fn all_item_defs_expect() -> Vec<String> {
 
 /// Returns all item asset specifiers
 pub fn try_all_item_defs() -> Result<Vec<String>, Error> {
+    log::info!("try_all_item_defs load_dir"); 
+
     let defs = assets::load_dir::<RawItemDef>("common.items", true)?;
     Ok(defs.ids().map(|id| id.to_owned()).collect())
 }

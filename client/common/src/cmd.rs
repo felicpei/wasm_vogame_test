@@ -141,7 +141,6 @@ lazy_static! {
         .iter()
         .map(|s| s.to_string())
         .collect();
-    /// TODO: Make this use hot-reloading
     static ref ENTITIES: Vec<String> = {
         let npc_names = &*npc::NPC_NAMES.read();
         let mut souls = Vec::new();

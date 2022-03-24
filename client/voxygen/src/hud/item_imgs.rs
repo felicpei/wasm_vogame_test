@@ -74,9 +74,6 @@ impl ItemImgs {
             .read()
             .0
             .iter()
-            // TODO: what if multiple kinds map to the same image, it would be nice to use the same
-            // image id for both, although this does interfere with the current hot-reloading
-            // strategy
             .map(|(kind, spec)| (kind.clone(), ui.add_graphic(spec.create_graphic())))
             .collect();
 

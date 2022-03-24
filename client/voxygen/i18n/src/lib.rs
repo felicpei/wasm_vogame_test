@@ -107,18 +107,18 @@ impl common_assets::Compound for Language {
     ) -> Result<Self, common_assets::BoxedError> {
        
         log::info!("start load Language, key:{}, file:{}", asset_key, LANG_MANIFEST_FILE);
-        let manifest_path = [asset_key, ".", LANG_MANIFEST_FILE].concat();
 
+        let manifest_path = [asset_key, ".", LANG_MANIFEST_FILE].concat();
         let manifest = cache.load::<RawManifest>(&manifest_path)?.cloned();
+        log::info!("load Language manifest over");
+
+        let ids = cache.load_dir::<RawFragment<String>>(asset_key, true)?.ids();
+        log::info!("load Language ids over");
 
         // Walk through files in the folder, collecting localization fragment to merge
         // inside the asked_localization
         let mut fragments = HashMap::new();
-
-        let ids = cache.load_dir::<RawFragment<String>>(asset_key, true)?.ids();
-
-        log::info!("load Language ids over");
-
+        
         for id in ids {
             log::info!("load Language: {}", id);
 
@@ -324,6 +324,9 @@ impl common_assets::Compound for LocalizationList {
         specifier: &str,
     ) -> Result<Self, common_assets::BoxedError> {
         // List language directories
+
+        log::info!("common_assets::Compound LocalizationList load_dir"); 
+
         let languages = common_assets::load_dir::<FindManifests>(specifier, false)
             .unwrap_or_else(|e| panic!("Failed to get manifests from {}: {:?}", specifier, e))
             .ids()

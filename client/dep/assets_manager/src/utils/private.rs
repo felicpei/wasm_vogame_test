@@ -18,37 +18,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-pub fn path_of_entry(root: &Path, entry: DirEntry) -> PathBuf {
-    let (id, ext) = match entry {
-        DirEntry::File(id, ext) => (id, Some(ext)),
-        DirEntry::Directory(id) => (id, None),
-    };
 
-    let capacity = root.as_os_str().len() + id.len() + ext.map_or(0, |ext| ext.len()) + 2;
-    let mut path = PathBuf::with_capacity(capacity);
-
-    path.push(root);
-    path.extend(id.split('.'));
-    if let Some(ext) = ext {
-        path.set_extension(ext);
-    }
-
-    path
-}
-
-#[inline]
-pub(crate) fn extension_of(path: &Path) -> Option<&str> {
-    match path.extension() {
-        Some(ext) => ext.to_str(),
-        None => Some(""),
-    }
-}
-
-/// Trick to be able to use a `BorrowedKey` to index a HashMap<OwnedKey, _>`.
-///
-/// See https://stackoverflow.com/questions/45786717/how-to-implement-hashmap-with-two-keys/45795699#45795699.
-///
-/// TODO: Remove this in favor of the `raw_entry` API when it is stabilized.
 pub(crate) trait Key {
     fn id(&self) -> &str;
     fn type_id(&self) -> TypeId;
@@ -93,24 +63,12 @@ impl OwnedKey {
         Self { id, type_id }
     }
 
-    #[cfg(feature = "hot-reloading")]
-    #[inline]
-    pub fn id(&self) -> &str {
-        &self.id
-    }
-
     #[inline]
     pub fn borrow(&self) -> BorrowedKey {
         BorrowedKey {
             id: &self.id,
             type_id: self.type_id,
         }
-    }
-
-    #[cfg(feature = "hot-reloading")]
-    #[inline]
-    pub fn into_id(self) -> SharedString {
-        self.id
     }
 }
 
@@ -335,47 +293,3 @@ where
         self.0.fmt(f)
     }
 }
-
-#[cfg(feature = "hot-reloading")]
-pub(crate) struct HashSet<T>(StdHashSet<T, RandomState>);
-
-#[cfg(feature = "hot-reloading")]
-impl<T> HashSet<T> {
-    #[inline]
-    pub fn new() -> Self {
-        Self(StdHashSet::with_hasher(RandomState::new()))
-    }
-}
-
-#[cfg(feature = "hot-reloading")]
-impl<T> Deref for HashSet<T> {
-    type Target = StdHashSet<T, RandomState>;
-
-    #[inline]
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-#[cfg(feature = "hot-reloading")]
-impl<T> DerefMut for HashSet<T> {
-    #[inline]
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
-}
-
-#[cfg(feature = "hot-reloading")]
-impl<T> fmt::Debug for HashSet<T>
-where
-    StdHashSet<T, RandomState>: fmt::Debug,
-{
-    #[inline]
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.0.fmt(f)
-    }
-}
-
-#[cfg(feature = "hot-reloading")]
-#[derive(Debug)]
-pub struct DepsRecord(pub(crate) HashSet<OwnedKey>);

@@ -27,19 +27,23 @@ impl Source for ResSystem {
 
     fn read_dir(&self, id: &str, f: &mut dyn FnMut(DirEntry)) -> io::Result<()> {
 
+        log::warn!("start load dir: {}", id);
         let map = super::ASSET_MAP_DIR.lock().unwrap();
         for key in map.keys() {
             if key.starts_with(id) {
+                log::warn!("# find dir: {}", id);
                 f(DirEntry::Directory(key))
             }
         }
 
-        let fileMap = super::ASSET_MAP.lock().unwrap();
-        for (key, value) in fileMap.iter() {
+        let file_map = super::ASSET_MAP.lock().unwrap();
+        for key in file_map.keys() {
             if key.starts_with(id) {
                 if let Some(pos) = key.rfind(".") {
                     let name = &key[0..pos - 1];
                     let ext = &key[pos..];
+
+                    log::warn!("# find file: {}", &key);
                     f(DirEntry::File(name, ext))
                 }
             }

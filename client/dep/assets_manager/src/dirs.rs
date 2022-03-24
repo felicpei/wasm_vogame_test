@@ -5,66 +5,6 @@ use crate::{
 
 use std::{fmt, io, marker::PhantomData};
 
-/// Assets that are loadable from directories
-///
-/// Types that implement this trait can be used with [`AssetCache::load_dir`] to
-/// load all available assets in a directory (eventually recursively).
-///
-/// This trait is automatically implemented for all types that implement
-/// [`Asset`], and you can implement it to extend your own `Compound`s.
-///
-/// # Exemple implementation
-///
-/// Imagine you have several playlists with a JSON manifest to specify the ids
-/// of the musics to include.
-///
-/// ```no_run
-/// # cfg_if::cfg_if! { if #[cfg(all(feature = "json", feature = "flac"))] {
-/// use assets_manager::{
-///     Compound, BoxedError, AssetCache, SharedString,
-///     asset::{DirLoadable, Json, Flac},
-///     source::{DirEntry, Source},
-/// };
-///
-/// /// A simple playlist, a mere ordered list of musics
-/// struct Playlist {
-///     sounds: Vec<Flac>
-/// }
-///
-/// // Specify how to load a playlist
-/// impl Compound for Playlist {
-///     fn load<S: Source + ?Sized>(cache: &AssetCache<S>, id: &str) -> Result<Self, BoxedError> {
-///         // Read the manifest (a list of ids)
-///         let manifest = cache.load::<Json<Vec<String>>>(id)?.read();
-///
-///         // Load each sound
-///         let sounds = manifest.0.iter()
-///             .map(|id| Ok(cache.load::<Flac>(id)?.cloned()))
-///             .collect::<Result<_, BoxedError>>()?;
-///
-///         Ok(Playlist { sounds })
-///     }
-/// }
-///
-/// // Specify how to get ids of playlists in a directory
-/// impl DirLoadable for Playlist {
-///     fn select_ids<S: Source + ?Sized>(source: &S, id: &str) -> std::io::Result<Vec<SharedString>> {
-///         let mut ids = Vec::new();
-///
-///         // Select all files with "json" extension (manifest files)
-///         source.read_dir(id, &mut |entry| {
-///             if let DirEntry::File(id, ext) = entry {
-///                 if ext == "json" {
-///                     ids.push(id.into());
-///                 }
-///             }
-///         })?;
-///
-///         Ok(ids)
-///     }
-/// }
-/// # }}
-/// ```
 pub trait DirLoadable: Compound {
     /// Returns the ids of the assets contained in the directory given by `id`.
     ///
@@ -135,8 +75,6 @@ where
             _marker: PhantomData,
         })
     }
-
-    const HOT_RELOADED: bool = false;
 }
 
 impl<A: DirLoadable> crate::asset::NotHotReloaded for CachedDir<A> {}
@@ -179,8 +117,6 @@ where
             _marker: PhantomData,
         })
     }
-
-    const HOT_RELOADED: bool = false;
 }
 
 impl<A: DirLoadable> crate::asset::NotHotReloaded for CachedRecDir<A> {}

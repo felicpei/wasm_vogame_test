@@ -7,8 +7,8 @@ use crate::{
 use bytes::Bytes;
 use std::{
     collections::{HashMap, VecDeque},
-    time::Duration,
 };
+use instant::Duration;
 
 #[derive(Debug)]
 struct StreamInfo {

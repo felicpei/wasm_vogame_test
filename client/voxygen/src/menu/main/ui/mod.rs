@@ -26,7 +26,7 @@ use keyboard_keynames::key_layout::KeyLayout;
 use crate::settings::Settings;
 use common::assets::{self, AssetExt};
 use rand::{seq::SliceRandom, thread_rng};
-use std::time::Duration;
+use instant::Duration;
 
 // TODO: what is this? (showed up in rebase)
 //const COL1: Color = Color::Rgba(0.07, 0.1, 0.1, 0.9);

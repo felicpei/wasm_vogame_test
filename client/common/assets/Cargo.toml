@@ -10,7 +10,7 @@ version = "0.10.0"
 
 [dependencies]
 lazy_static = "1.4.0"
-assets_manager = {version = "0.7", features = ["bincode", "ron", "json"]}
+assets_manager = {path = "../../dep/assets_manager", features = ["bincode", "ron", "json"]}
 ron = { version = "0.7", default-features = false }
 
 #解析.vox文件

@@ -1,3 +1,19 @@
+## [0.2] 
+- 升级wgpu到0.12版本, 支持webgl
+- 删掉wgpu-profile，目前兼容性有问题，且让代码过于复杂
+- 整合支持wgpu的iced开发版本与项目内iced版本，让在项目升级到wgpu0.12的情况下可以运行
+- 修改shader编译方式，取消用shaderc在runtime编译，使用inline-spirv在build时编译shader
+- 去掉wgpu在webgl下不支持的特性，DEPTH_CLIP_CONTROL|ADDRESS_MODE_CLAMP_TO_BORDER|PUSH_CONSTANTS
+- 取消recrate-pipeline功能，渲染管线创建后不再支持动态改变
+  - 动态recrate-pipeline在玩家改变渲染设置的后会执行
+  - 渲染设置依靠shaderc动态编译shader代码实现，实际上是修改的shader代码来改变渲染设置，目前已不支持动态编译shader代码
+  - 目前的渲染设置写死在shader中
+- 屏蔽webgl不支持的shader
+- 渲染管线多线程->单线程，目前wasm不支持ThreadPool
+- Terrain改为单线程
+- 修改所有std::time为instant
+
+## [0.1] 
 - 去掉登录验证，保证客户端and服务器分开运行，且可以跑。
   - 分离客户端服务器目录
   - 去掉了authc账号验证
@@ -11,7 +27,6 @@
   - Udp（未使用，删除）
   - quic（默认未使用，删除）
   - mpsc（一种c2c的网络，可选使用，删除后不影响）
-
 - 屏蔽使用socket2的地方，用client_tcp feature 区分。
   - 用cargo跑的话，打开client_tcp feature
 - 删除dyn相关，dyn是支持动态更新资源的，web应该不需要。
@@ -48,37 +63,3 @@
   -  删除GlobalState中的 userdata_dir 和 config_dir(本地存储的路径信息)
   -  (目前保存在客户端修改的设置不会保存, 以后需要的话需要放到服务器)
   - 删除本地截图功能(Settings.screenshots_path, take_screenshot)(wasm不支持)
-
-
-
-todo：
-1. 目前网络部分使用了多线程，这个wasm会有问题，修改 tokio 的 rt-multi-thread 为 rt，wasm不支持 rt-multi-thread。
-2. 网络部分暂时屏蔽了tcpsocket，以后换。
-
-
--------
-去掉IcedUI相关 和 ShaderC以后， wasm已经可以编译通过了。
-但去掉后就无法运行了。
-
-
-剩下还有几个难关要攻克：
-     UI. 
-	逻辑太混乱，在游戏任何地方都有UI，像很多登录等，都在UI代码中驱动。
-          UI看了下，可能要换底层。设计大量修改。
-          IcedWeb是个实验版本，且已经不维护了，功能几乎没有。
-          目前比较成熟的是egui-web，例子：https://github.com/emilk/eframe_template
-          需要基于这个按照目前的代码逻辑来包装中间层，来适应目前的接口。
-
-     渲染
-	如何在web解析shader，以及shader是否支持web。
-          渲染逻辑目前完全依赖于wgpu，大概看了下有10条左右的管线，还有N个pass。
-          这块要测试怎么在web上跑（初步猜测一些管线的并不能支持在web的渲染引擎中跑）
-
-     网络
-	修改为websocket（不确定服务器要不要一起改）
-          web是否支持单独开个线程跑网络？
-           
-     运行时问题：
-	 一致 std::time(标准时间库) 在wasm上不可用，（这个运行时报错，编译不报错）
-           其他还有一些像std::io 之类的。
-           这个估计也要花一定时间调试。

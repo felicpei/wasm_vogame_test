@@ -9,7 +9,7 @@ use crate::{
     },
 };
 use serde::{Deserialize, Serialize};
-use std::time::Duration;
+use instant::Duration;
 
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 /// Separated out to condense update portions of character state

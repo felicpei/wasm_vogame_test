@@ -22,8 +22,8 @@ use fxhash::FxHasher64;
 use serde::{Deserialize, Serialize};
 use std::{
     ops::{Add, Div},
-    time::Duration,
 };
+use instant::Duration;
 use strum_macros::Display;
 use vek::*;
 

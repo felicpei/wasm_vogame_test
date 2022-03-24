@@ -13,7 +13,7 @@ pub use self::{
     figure::FigureMgr,
     lod::Lod,
     particle::ParticleMgr,
-    terrain::{SpriteRenderContextLazy, Terrain},
+    terrain::{SpriteRenderContext, Terrain},
 };
 use crate::{
     audio::{ambient::AmbientMgr, music::MusicMgr, sfx::SfxMgr, AudioFrontend},
@@ -263,12 +263,10 @@ impl Scene {
     /// Create a new `Scene` with default parameters.
     pub fn new(
         renderer: &mut Renderer,
-        lazy_init: &mut SpriteRenderContextLazy,
         client: &Client,
         settings: &Settings,
     ) -> Self {
         let resolution = renderer.resolution().map(|e| e as f32);
-        let sprite_render_context = lazy_init(renderer);
 
         let data = GlobalModel {
             globals: renderer.create_consts(&[Globals::default()]),
@@ -282,6 +280,7 @@ impl Scene {
 
         let globals_bind_group = renderer.bind_globals(&data, lod.get_data());
 
+        let sprite_render_context = SpriteRenderContext::new(renderer);
         let terrain = Terrain::new(renderer, &data, lod.get_data(), sprite_render_context);
 
         Self {

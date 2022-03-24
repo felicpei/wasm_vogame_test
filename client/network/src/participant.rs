@@ -16,14 +16,9 @@ use std::{
         atomic::{AtomicBool, AtomicI32, Ordering},
         Arc,
     },
-    time::{Duration},
 };
 
-#[cfg(target_arch = "wasm32")]
-pub use instant::Instant;
-
-#[cfg(not(target_arch = "wasm32"))]
-pub use std::time::Instant;
+use instant::{Duration, Instant};
 
 use tokio::{
     select,

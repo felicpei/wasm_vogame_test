@@ -1,6 +1,8 @@
 use crate::metrics::SysMetrics;
 use specs::{ReadExpect, RunNow};
-use std::{collections::HashMap, time::Instant};
+use std::{collections::HashMap};
+use instant::Instant;
+use instant::Duration;
 
 /// measuring the level of threads a unit of code ran on. Use Rayon when it ran
 /// on their threadpool. Use Exact when you know on how many threads your code
@@ -85,7 +87,7 @@ impl CpuTimeline {
     /// this statement, till the next / end of the System.
     pub fn measure(&mut self, par: ParMode) { self.measures.push((Instant::now(), par)); }
 
-    fn end(&mut self) -> std::time::Duration {
+    fn end(&mut self) -> Duration {
         let end = Instant::now();
         self.measures.push((end, ParMode::None));
         end.duration_since(

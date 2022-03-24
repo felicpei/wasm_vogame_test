@@ -30,7 +30,8 @@ use hashbrown::HashMap;
 use serde::{Deserialize, Serialize};
 use specs::{Component, DerefFlaggedStorage};
 use specs_idvs::IdvStorage;
-use std::{convert::TryFrom, time::Duration};
+use std::{convert::TryFrom};
+use instant::Duration;
 
 pub const MAX_ABILITIES: usize = 5;
 pub type AuxiliaryKey = (Option<ToolKind>, Option<ToolKind>);

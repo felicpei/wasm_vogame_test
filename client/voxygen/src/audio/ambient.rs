@@ -10,7 +10,7 @@ use common::{
 };
 use common_state::State;
 use serde::Deserialize;
-use std::time::Instant;
+use instant::Instant;
 use vek::*;
 
 #[derive(Debug, Default, Deserialize)]

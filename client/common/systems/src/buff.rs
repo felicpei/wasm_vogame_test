@@ -22,7 +22,7 @@ use specs::{
     saveload::MarkerAllocator, shred::ResourceId, Entities, Join, Read, ReadStorage, SystemData,
     World, WriteStorage,
 };
-use std::time::Duration;
+use instant::Duration;
 
 #[derive(SystemData)]
 pub struct ReadData<'a> {

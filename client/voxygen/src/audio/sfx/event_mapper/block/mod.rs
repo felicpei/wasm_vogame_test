@@ -17,7 +17,7 @@ use common::{
 use common_state::State;
 use hashbrown::HashMap;
 use rand::{seq::SliceRandom, thread_rng, Rng};
-use std::time::{Duration, Instant};
+use instant::{Duration, Instant};
 use vek::*;
 
 #[derive(Clone, PartialEq)]

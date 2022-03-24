@@ -26,8 +26,8 @@ use rand::prelude::*;
 use specs::{Join, WorldExt};
 use std::{
     f32::consts::{PI, TAU},
-    time::Duration,
 };
+use instant::Duration;
 use vek::*;
 
 pub struct ParticleMgr {

@@ -8,7 +8,7 @@ use crate::{
     },
 };
 use serde::{Deserialize, Serialize};
-use std::time::Duration;
+use instant::Duration;
 use vek::Vec3;
 
 /// Separated out to condense update portions of character state

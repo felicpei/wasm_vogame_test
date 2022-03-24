@@ -51,12 +51,7 @@ use settings_window::{SettingsTab, SettingsWindow};
 use skillbar::Skillbar;
 use social::Social;
 use trade::Trade;
-
-#[cfg(target_arch = "wasm32")]
-pub use instant::Instant;
-
-#[cfg(not(target_arch = "wasm32"))]
-pub use std::time::Instant;
+use instant::Instant;
 
 use crate::{
     ecs::{comp as vcomp, comp::HpFloaterList},
@@ -119,8 +114,8 @@ use std::{
     borrow::Cow,
     collections::VecDeque,
     sync::Arc,
-    time::{Duration},
 };
+use instant::Duration;
 use vek::*;
 
 const TEXT_COLOR: Color = Color::Rgba(1.0, 1.0, 1.0, 1.0);

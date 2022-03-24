@@ -106,35 +106,40 @@ impl common_assets::Compound for Language {
         asset_key: &str,
     ) -> Result<Self, common_assets::BoxedError> {
        
-        log::info!("start load Language");
-        let manifest = cache.load::<RawManifest>(&[asset_key, ".", LANG_MANIFEST_FILE].concat())?
-            .cloned();
+        log::info!("start load Language, key:{}, file:{}", asset_key, LANG_MANIFEST_FILE);
+        let manifest_path = [asset_key, ".", LANG_MANIFEST_FILE].concat();
+
+        let manifest = cache.load::<RawManifest>(&manifest_path)?.cloned();
 
         // Walk through files in the folder, collecting localization fragment to merge
         // inside the asked_localization
         let mut fragments = HashMap::new();
 
-        log::warn!("todo load language dir!!!");
-        // for id in cache.load_dir::<RawFragment<String>>(asset_key, true)?.ids()
-        // {
-        //     // Don't try to load manifests
-        //     if let Some(id) = id.strip_suffix(LANG_MANIFEST_FILE) {
-        //         if id.ends_with('.') {
-        //             continue;
-        //         }
-        //     }
+        let ids = cache.load_dir::<RawFragment<String>>(asset_key, true)?.ids();
 
-        //     match cache.load(id) {
-        //         Ok(handle) => {
-        //             let fragment: &RawFragment<String> = &*handle.read();
+        log::info!("load Language ids over");
 
-        //             fragments.insert(PathBuf::from(id), fragment.clone());
-        //         },
-        //         Err(e) => {
-        //             log::warn!("Unable to load asset {}, error={:?}", id, e);
-        //         },
-        //     }
-        // }
+        for id in ids {
+            log::info!("load Language: {}", id);
+
+            // Don't try to load manifests
+            if let Some(id) = id.strip_suffix(LANG_MANIFEST_FILE) {
+                if id.ends_with('.') {
+                    continue;
+                }
+            }
+
+            match cache.load(id) {
+                Ok(handle) => {
+                    let fragment: &RawFragment<String> = &*handle.read();
+
+                    fragments.insert(PathBuf::from(id), fragment.clone());
+                },
+                Err(e) => {
+                    log::warn!("Unable to load asset {}, error={:?}", id, e);
+                },
+            }
+        }
 
         log::info!("end load Language");
         Ok(Language::from(RawLanguage {
@@ -295,6 +300,8 @@ impl common_assets::DirLoadable for FindManifests {
     ) -> io::Result<Vec<common_assets::SharedString>> {
         let mut specifiers = Vec::new();
 
+        log::warn!("try load dir:{}", specifier);
+
         source.read_dir(specifier, &mut |entry| {
             if let DirEntry::Directory(spec) = entry {
                 let manifest_spec = [spec, ".", LANG_MANIFEST_FILE].concat();
@@ -331,40 +338,4 @@ impl common_assets::Compound for LocalizationList {
 /// Load all the available languages located in the voxygen asset directory
 pub fn list_localizations() -> Vec<LanguageMetadata> {
     LocalizationList::load_expect_cloned("voxygen.i18n").0
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::path::BasePath;
-
-    // Test that localization list is loaded (not empty)
-    #[test]
-    fn test_localization_list() {
-        let list = super::list_localizations();
-        assert!(!list.is_empty());
-    }
-
-    // Test that reference language can be loaded
-    #[test]
-    fn test_localization_handle() {
-        let _ = super::LocalizationHandle::load_expect(super::REFERENCE_LANG);
-    }
-
-    // Test to verify all languages that they are VALID and loadable, without
-    // need of git just on the local assets folder
-    #[test]
-    fn verify_all_localizations() {
-        // Generate paths
-        let root_dir = common_assets::find_root().expect("Failed to discover repository root");
-        crate::verification::verify_all_localizations(&BasePath::new(&root_dir));
-    }
-
-    // Test to verify all languages and print missing and faulty localisation
-    #[test]
-    #[ignore]
-    fn test_all_localizations() {
-        // Generate paths
-        let root_dir = common_assets::find_root().expect("Failed to discover repository root");
-        crate::analysis::test_all_localizations(&BasePath::new(&root_dir), true, true);
-    }
 }

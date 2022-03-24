@@ -1,0 +1,7 @@
+
+#run server
+cargo run --bin veloren-server-cli
+
+#build wasm
+cd voxygen/www
+wasm-pack build --out-dir www/pkg --target web

@@ -23,6 +23,7 @@ use crate::audio::{
 use rodio::{OutputStreamHandle, Sample, Sink, Source, SpatialSink};
 use serde::Deserialize;
 use vek::*;
+use instant::Duration;
 
 #[derive(PartialEq, Clone, Copy)]
 enum ChannelState {
@@ -134,7 +135,7 @@ impl MusicChannel {
 
     /// Maintain the fader attached to this channel. If the channel is not
     /// fading, no action is taken.
-    pub fn maintain(&mut self, dt: std::time::Duration) {
+    pub fn maintain(&mut self, dt: Duration) {
         if self.state == ChannelState::Fading {
             self.fader.update(dt);
             self.sink.set_volume(self.fader.get_volume());

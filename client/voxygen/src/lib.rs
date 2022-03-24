@@ -46,6 +46,7 @@ use common::clock::Clock;
 use i18n::LocalizationHandle;
 use std::sync::Arc;
 use tokio::runtime::Runtime;
+use instant::Duration;
 
 /// A type used to store state that is shared between all play states.
 pub struct GlobalState {
@@ -53,7 +54,6 @@ pub struct GlobalState {
     pub profile: Profile,
     pub window: Window,
     pub tokio_runtime: Arc<Runtime>,
-    pub lazy_init: scene::terrain::SpriteRenderContextLazy,
     pub audio: AudioFrontend,
     pub info_message: Option<String>,
     pub clock: Clock,
@@ -69,7 +69,7 @@ impl GlobalState {
         self.window.needs_refresh_resize();
     }
 
-    pub fn maintain(&mut self, dt: std::time::Duration) {
+    pub fn maintain(&mut self, dt: Duration) {
         self.audio.maintain(dt);
         self.window.renderer().maintain()
     }
@@ -137,6 +137,11 @@ pub fn set_resource_data(name: &str, data: &[u8]) {
     res::set_cache_data(name, data);
 }
 
+#[wasm_bindgen]
+pub fn set_resource_dir(name: &str) {
+    res::set_cache_dir(name);
+}
+
 //canvas_id 来自html的canvas
 #[wasm_bindgen]
 pub fn start() {
@@ -150,18 +155,19 @@ pub fn start() {
 pub fn start_game() {
 
     //load setting
+    log::info!("start init settings");
     let mut settings = Settings::load();
     settings.display_warnings();
 
-    // TODO: evaluate std::thread::available_concurrency as a num_cpus replacement
+    log::info!("start init tokio_runtime");
     let tokio_runtime = Arc::new(
         tokio::runtime::Builder::new_current_thread()
             .build()
             .unwrap(),
     );
 
-    log::info!("start init audio");
     // Setup audio
+    log::info!("start init audio");
     let mut audio = match settings.audio.output {
         AudioOutput::Off => AudioFrontend::no_audio(),
         AudioOutput::Automatic => AudioFrontend::new(settings.audio.num_sfx_channels),
@@ -173,9 +179,11 @@ pub fn start_game() {
 
 
     // Load the profile.
+    log::info!("start init profile");
     let profile = Profile::load();
 
     //i18n
+    log::info!("start init i18n");
     let mut i18n =
         LocalizationHandle::load(&settings.language.selected_language).unwrap_or_else(|error| {
             let selected_language = &settings.language.selected_language;
@@ -191,24 +199,23 @@ pub fn start_game() {
     i18n.set_english_fallback(settings.language.use_english_fallback);
     
 
-    log::info!("start window init");
-
     //创建运行窗体
-    let (mut window, event_loop) = match Window::new(&settings, &tokio_runtime) {
+    log::info!("start window init");
+    let (window, event_loop) = match Window::new(&settings, &tokio_runtime) {
         Ok(ok) => ok,
         Err(error) => panic!("Failed to create window!: {:?}", error),
     };
 
-    log::info!("end window init");
+    log::info!("start iced::Clipboard::connect");
     let clipboard = iced::Clipboard::connect(window.window());
-    let lazy_init = SpriteRenderContext::new(window.renderer_mut());
+
+    log::info!("start init global_state");
     let global_state = GlobalState {
         audio,
         profile,
         window,
         tokio_runtime,
-        lazy_init,
-        clock: Clock::new(std::time::Duration::from_secs_f64(1.0 / get_fps(settings.graphics.max_fps) as f64)),
+        clock: Clock::new(Duration::from_secs_f64(1.0 / get_fps(settings.graphics.max_fps) as f64)),
         settings,
         info_message: None,
         i18n,

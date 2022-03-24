@@ -1,7 +1,7 @@
 #![allow(clippy::nonstandard_macro_braces)] //tmp as of false positive !?
 use crate::uid::Uid;
-use core::{cmp::Ordering, time::Duration};
-
+use core::{cmp::Ordering};
+use instant::Duration;
 use hashbrown::HashMap;
 use serde::{Deserialize, Serialize};
 

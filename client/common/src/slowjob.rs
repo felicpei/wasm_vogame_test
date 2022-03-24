@@ -4,8 +4,8 @@ use rayon::ThreadPool;
 use std::{
     collections::VecDeque,
     sync::{Arc, Mutex},
-    time::Instant,
 };
+use instant::Instant;
 
 /// Provides a Wrapper around rayon threadpool to execute slow-jobs.
 /// slow means, the job doesn't need to not complete within the same tick.

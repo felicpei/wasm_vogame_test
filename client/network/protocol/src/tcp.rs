@@ -12,7 +12,7 @@ use crate::{
 use async_trait::async_trait;
 use bytes::BytesMut;
 use hashbrown::HashMap;
-use std::time::{Duration, Instant};
+use instant::{Duration, Instant};
 
 /// TCP implementation of [`SendProtocol`]
 ///

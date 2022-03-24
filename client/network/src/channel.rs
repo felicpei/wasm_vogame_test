@@ -32,9 +32,9 @@ use std::{
         atomic::{AtomicU64, Ordering},
         Arc,
     },
-    time::Duration,
 };
 
+use instant::Duration;
 
 #[allow(clippy::large_enum_variant)]
 #[derive(Debug)]

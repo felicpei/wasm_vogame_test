@@ -10,7 +10,7 @@ use crate::{
 use serde::{Deserialize, Serialize};
 use specs::Component;
 use specs_idvs::IdvStorage;
-use std::time::Duration;
+use instant::Duration;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum Effect {

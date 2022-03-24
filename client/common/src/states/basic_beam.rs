@@ -18,7 +18,7 @@ use crate::{
     util::Dir,
 };
 use serde::{Deserialize, Serialize};
-use std::time::Duration;
+use instant::Duration;
 use vek::*;
 
 /// Separated out to condense update portions of character state

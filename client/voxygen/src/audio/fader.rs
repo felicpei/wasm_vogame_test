@@ -1,6 +1,6 @@
 //! Controls volume transitions for Audio Channels
 
-use std::time::Duration;
+use instant::Duration;
 
 /// Faders are attached to channels with initial and target volumes as well as a
 /// transition time.
@@ -64,7 +64,7 @@ impl Fader {
     }
 
     /// Called each tick to update the volume and state
-    pub fn update(&mut self, dt: std::time::Duration) {
+    pub fn update(&mut self, dt: Duration) {
         if self.is_running {
             self.running_time += dt;
             if self.running_time >= self.length {

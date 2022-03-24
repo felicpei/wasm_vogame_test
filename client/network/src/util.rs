@@ -1,5 +1,6 @@
 use core::hash::Hash;
-use std::{collections::HashMap, time::Instant};
+use std::{collections::HashMap};
+use instant::Instant;
 
 /// used to collect multiple traces and not spam the console
 pub(crate) struct DeferredTracer<T: Eq + Hash> {

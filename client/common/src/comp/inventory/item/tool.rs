@@ -9,8 +9,8 @@ use hashbrown::HashMap;
 use serde::{Deserialize, Serialize};
 use std::{
     ops::{AddAssign, DivAssign, MulAssign, Sub},
-    time::Duration,
 };
+use instant::Duration;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize, Ord, PartialOrd)]
 pub enum ToolKind {

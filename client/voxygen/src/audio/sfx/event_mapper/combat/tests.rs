@@ -8,7 +8,7 @@ use common::{
     },
     states,
 };
-use std::time::{Duration, Instant};
+use instant::{Duration, Instant};
 
 #[test]
 fn maps_wield_while_equipping() {

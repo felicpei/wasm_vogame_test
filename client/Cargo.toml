@@ -96,4 +96,3 @@ debug = 1
 
 [patch.crates-io]
 vek = { git = "https://gitlab.com/veloren/vek.git", branch = "fix_intrinsics2" }
-#iced = { path = './dep/iced' }

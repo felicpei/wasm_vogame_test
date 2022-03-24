@@ -53,12 +53,7 @@ use common_state::State;
 use hashbrown::HashMap;
 use rand::{prelude::SliceRandom, thread_rng, Rng};
 use serde::Deserialize;
-
-#[cfg(target_arch = "wasm32")]
-pub use instant::Instant;
-
-#[cfg(not(target_arch = "wasm32"))]
-pub use std::time::Instant;
+use instant::Instant;
 
 /// Collection of all the tracks
 #[derive(Debug, Deserialize)]

@@ -7,7 +7,8 @@ use conrod_core::{
     widget_ids, Color, Colorable, Positionable, Widget, WidgetCommon,
 };
 use i18n::Localization;
-use std::{collections::VecDeque, time::Instant};
+use std::{collections::VecDeque};
+use instant::Instant;
 
 widget_ids! {
     struct Ids {

@@ -42,11 +42,12 @@ pub const DISABLED_TEXT_COLOR: iced::Color = iced::Color::from_rgba(1.0, 1.0, 1.
 pub const TOOLTIP_BACK_COLOR: Rgba<u8> = Rgba::new(20, 18, 10, 255);
 const FILL_FRAC_ONE: f32 = 0.77;
 const FILL_FRAC_TWO: f32 = 0.53;
-const TOOLTIP_HOVER_DUR: std::time::Duration = std::time::Duration::from_millis(150);
-const TOOLTIP_FADE_DUR: std::time::Duration = std::time::Duration::from_millis(350);
+const TOOLTIP_HOVER_DUR: instant::Duration = instant::Duration::from_millis(150);
+const TOOLTIP_FADE_DUR: instant::Duration = instant::Duration::from_millis(350);
 const BANNER_ALPHA: u8 = 210;
 // Buttons in the bottom corners
 const SMALL_BUTTON_HEIGHT: u16 = 31;
+
 
 const STARTER_HAMMER: &str = "common.items.weapons.hammer.starter_hammer";
 const STARTER_BOW: &str = "common.items.weapons.bow.starter";

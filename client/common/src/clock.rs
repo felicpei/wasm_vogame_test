@@ -2,8 +2,9 @@
 use ordered_float::NotNan;
 use std::{
     collections::VecDeque,
-    time::{Duration, Instant},
 };
+use instant::Instant;
+use instant::Duration;
 
 /// This Clock tries to make this tick a constant time by sleeping the rest of
 /// the tick

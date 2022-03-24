@@ -29,7 +29,8 @@ use common::{
     volumes::vol_grid_2d::{VolGrid2d, VolGrid2dError},
 };
 
-use core::{f32, fmt::Debug, i32, marker::PhantomData, time::Duration};
+use core::{f32, fmt::Debug, i32, marker::PhantomData};
+use instant::Duration;
 use crossbeam_channel as channel;
 use enum_iterator::IntoEnumIterator;
 use guillotiere::AtlasAllocator;
@@ -366,170 +367,127 @@ impl TerrainChunkData {
 #[derive(Clone)]
 pub struct SpriteRenderContext {
     sprite_config: Arc<SpriteSpec>,
-    // Maps sprite kind + variant to data detailing how to render it
     sprite_data: Arc<HashMap<(SpriteKind, usize), [SpriteData; SPRITE_LOD_LEVELS]>>,
     sprite_col_lights: Arc<ColLights<pipelines::sprite::Locals>>,
     sprite_verts_buffer: Arc<SpriteVerts>,
 }
 
-pub type SpriteRenderContextLazy = Box<dyn FnMut(&mut Renderer) -> SpriteRenderContext>;
-
-impl SpriteRenderContext {
-    pub fn new(renderer: &mut Renderer) -> SpriteRenderContextLazy {
+impl SpriteRenderContext{
+    pub fn new(renderer: &mut Renderer) -> SpriteRenderContext {
         let max_texture_size = renderer.max_texture_size();
 
-        struct SpriteWorkerResponse {
-            sprite_config: Arc<SpriteSpec>,
-            sprite_data: HashMap<(SpriteKind, usize), [SpriteData; SPRITE_LOD_LEVELS]>,
-            sprite_col_lights: ColLightInfo,
-            sprite_mesh: Mesh<SpriteVertex>,
-        }
+        // 修改为单线程
 
-        let join_handle = std::thread::spawn(move || {
-            // Load all the sprite config data.
-            let sprite_config =
-                Arc::<SpriteSpec>::load_expect("voxygen.voxel.sprite_manifest").cloned();
+        // Load all the sprite config data.
+        let sprite_config =
+        Arc::<SpriteSpec>::load_expect("voxygen.voxel.sprite_manifest").cloned();
 
-            let max_size = guillotiere::Size::new(max_texture_size as i32, max_texture_size as i32);
-            let mut greedy = GreedyMesh::new(max_size);
-            let mut sprite_mesh = Mesh::new();
-            let sprite_config_ = &sprite_config;
-            // NOTE: Tracks the start vertex of the next model to be meshed.
-            let sprite_data: HashMap<(SpriteKind, usize), _> = SpriteKind::into_enum_iter()
-                .filter_map(|kind| Some((kind, kind.elim_case_pure(&sprite_config_.0).as_ref()?)))
-                .flat_map(|(kind, sprite_config)| {
-                    sprite_config.variations.iter().enumerate().map(
-                        move |(
-                            variation,
-                            SpriteModelConfig {
-                                model,
-                                offset,
-                                lod_axes,
-                            },
-                        )| {
-                            let scaled = [1.0, 0.8, 0.6, 0.4, 0.2];
-                            let offset = Vec3::from(*offset);
-                            let lod_axes = Vec3::from(*lod_axes);
-                            let model = DotVoxAsset::load_expect(model);
-                            let zero = Vec3::zero();
-                            let model_size = model
-                                .read()
-                                .0
-                                .models
-                                .first()
-                                .map(
-                                    |&dot_vox::Model {
-                                         size: dot_vox::Size { x, y, z },
-                                         ..
-                                     }| Vec3::new(x, y, z),
-                                )
-                                .unwrap_or(zero);
-                            let max_model_size = Vec3::new(31.0, 31.0, 63.0);
-                            let model_scale =
-                                max_model_size.map2(model_size, |max_sz: f32, cur_sz| {
-                                    let scale = max_sz / max_sz.max(cur_sz as f32);
-                                    if scale < 1.0 && (cur_sz as f32 * scale).ceil() > max_sz {
-                                        scale - 0.001
-                                    } else {
-                                        scale
-                                    }
-                                });
-                            move |greedy: &mut GreedyMesh, sprite_mesh: &mut Mesh<SpriteVertex>| {
-                                let lod_sprite_data = scaled.map(|lod_scale_orig| {
-                                    let lod_scale = model_scale
-                                        * if lod_scale_orig == 1.0 {
-                                            Vec3::broadcast(1.0)
-                                        } else {
-                                            lod_axes * lod_scale_orig
-                                                + lod_axes.map(|e| if e == 0.0 { 1.0 } else { 0.0 })
-                                        };
-
-                                    // Get starting page count of opaque mesh
-                                    let start_page_num = sprite_mesh.vertices().len()
-                                        / SPRITE_VERT_PAGE_SIZE as usize;
-                                    // Mesh generation exclusively acts using side effects; it
-                                    // has no interesting return value, but updates the mesh.
-                                    generate_mesh_base_vol_sprite(
-                                        Segment::from(&model.read().0).scaled_by(lod_scale),
-                                        (greedy, sprite_mesh, false),
-                                    );
-                                    // Get the number of pages after the model was meshed
-                                    let end_page_num = (sprite_mesh.vertices().len()
-                                        + SPRITE_VERT_PAGE_SIZE as usize
-                                        - 1)
-                                        / SPRITE_VERT_PAGE_SIZE as usize;
-                                    // Fill the current last page up with degenerate verts
-                                    sprite_mesh.vertices_mut_vec().resize_with(
-                                        end_page_num * SPRITE_VERT_PAGE_SIZE as usize,
-                                        SpriteVertex::default,
-                                    );
-
-                                    let sprite_scale = Vec3::one() / lod_scale;
-
-                                    SpriteData {
-                                        vert_pages: start_page_num as u32..end_page_num as u32,
-                                        scale: sprite_scale,
-                                        offset,
-                                    }
-                                });
-
-                                ((kind, variation), lod_sprite_data)
-                            }
+        let max_size = guillotiere::Size::new(max_texture_size as i32, max_texture_size as i32);
+        let mut greedy = GreedyMesh::new(max_size);
+        let mut sprite_mesh = Mesh::new();
+        let sprite_config_ = &sprite_config;
+        // NOTE: Tracks the start vertex of the next model to be meshed.
+        let sprite_data: HashMap<(SpriteKind, usize), _> = SpriteKind::into_enum_iter()
+            .filter_map(|kind| Some((kind, kind.elim_case_pure(&sprite_config_.0).as_ref()?)))
+            .flat_map(|(kind, sprite_config)| {
+                sprite_config.variations.iter().enumerate().map(
+                    move |(
+                        variation,
+                        SpriteModelConfig {
+                            model,
+                            offset,
+                            lod_axes,
                         },
-                    )
-                })
-                .map(|f| f(&mut greedy, &mut sprite_mesh))
-                .collect();
+                    )| {
+                        let scaled = [1.0, 0.8, 0.6, 0.4, 0.2];
+                        let offset = Vec3::from(*offset);
+                        let lod_axes = Vec3::from(*lod_axes);
+                        let model = DotVoxAsset::load_expect(model);
+                        let zero = Vec3::zero();
+                        let model_size = model
+                            .read()
+                            .0
+                            .models
+                            .first()
+                            .map(
+                                |&dot_vox::Model {
+                                    size: dot_vox::Size { x, y, z },
+                                    ..
+                                }| Vec3::new(x, y, z),
+                            )
+                            .unwrap_or(zero);
+                        let max_model_size = Vec3::new(31.0, 31.0, 63.0);
+                        let model_scale =
+                            max_model_size.map2(model_size, |max_sz: f32, cur_sz| {
+                                let scale = max_sz / max_sz.max(cur_sz as f32);
+                                if scale < 1.0 && (cur_sz as f32 * scale).ceil() > max_sz {
+                                    scale - 0.001
+                                } else {
+                                    scale
+                                }
+                            });
+                        move |greedy: &mut GreedyMesh, sprite_mesh: &mut Mesh<SpriteVertex>| {
+                            let lod_sprite_data = scaled.map(|lod_scale_orig| {
+                                let lod_scale = model_scale
+                                    * if lod_scale_orig == 1.0 {
+                                        Vec3::broadcast(1.0)
+                                    } else {
+                                        lod_axes * lod_scale_orig
+                                            + lod_axes.map(|e| if e == 0.0 { 1.0 } else { 0.0 })
+                                    };
 
-            let sprite_col_lights = greedy.finalize();
+                                // Get starting page count of opaque mesh
+                                let start_page_num = sprite_mesh.vertices().len()
+                                    / SPRITE_VERT_PAGE_SIZE as usize;
+                                // Mesh generation exclusively acts using side effects; it
+                                // has no interesting return value, but updates the mesh.
+                                generate_mesh_base_vol_sprite(
+                                    Segment::from(&model.read().0).scaled_by(lod_scale),
+                                    (greedy, sprite_mesh, false),
+                                );
+                                // Get the number of pages after the model was meshed
+                                let end_page_num = (sprite_mesh.vertices().len()
+                                    + SPRITE_VERT_PAGE_SIZE as usize
+                                    - 1)
+                                    / SPRITE_VERT_PAGE_SIZE as usize;
+                                // Fill the current last page up with degenerate verts
+                                sprite_mesh.vertices_mut_vec().resize_with(
+                                    end_page_num * SPRITE_VERT_PAGE_SIZE as usize,
+                                    SpriteVertex::default,
+                                );
 
-            SpriteWorkerResponse {
-                sprite_config,
-                sprite_data,
-                sprite_col_lights,
-                sprite_mesh,
-            }
-        });
+                                let sprite_scale = Vec3::one() / lod_scale;
 
-        let init = core::lazy::OnceCell::new();
-        let mut join_handle = Some(join_handle);
-        let mut closure = move |renderer: &mut Renderer| {
-            // The second unwrap can only fail if the sprite meshing thread panics, which
-            // implies that our sprite assets either were not found or did not
-            // satisfy the size requirements for meshing, both of which are
-            // considered invariant violations.
-            let SpriteWorkerResponse {
-                sprite_config,
-                sprite_data,
-                sprite_col_lights,
-                sprite_mesh,
-            } = join_handle
-                .take()
-                .expect(
-                    "Closure should only be called once (in a `OnceCell::get_or_init`) in the \
-                     absence of caught panics!",
+                                SpriteData {
+                                    vert_pages: start_page_num as u32..end_page_num as u32,
+                                    scale: sprite_scale,
+                                    offset,
+                                }
+                            });
+
+                            ((kind, variation), lod_sprite_data)
+                        }
+                    },
                 )
-                .join()
-                .unwrap();
+            })
+            .map(|f| f(&mut greedy, &mut sprite_mesh))
+            .collect();
 
-            let sprite_col_lights =
-                pipelines::shadow::create_col_lights(renderer, &sprite_col_lights);
-            let sprite_col_lights = renderer.sprite_bind_col_light(sprite_col_lights);
+        let sprite_col_lights = greedy.finalize();
 
-            // Write sprite model to a 1D texture
-            let sprite_verts_buffer = renderer.create_sprite_verts(sprite_mesh);
+        let sprite_col_lights = pipelines::shadow::create_col_lights(renderer, &sprite_col_lights);
+        let sprite_col_lights = renderer.sprite_bind_col_light(sprite_col_lights);
+        let sprite_verts_buffer = renderer.create_sprite_verts(sprite_mesh);
 
-            Self {
-                // TODO: these are all Arcs, would it makes sense to factor out the Arc?
-                sprite_config: Arc::clone(&sprite_config),
-                sprite_data: Arc::new(sprite_data),
-                sprite_col_lights: Arc::new(sprite_col_lights),
-                sprite_verts_buffer: Arc::new(sprite_verts_buffer),
-            }
-        };
-        Box::new(move |renderer| init.get_or_init(|| closure(renderer)).clone())
+        SpriteRenderContext {
+            sprite_config: Arc::clone(&sprite_config),
+            sprite_data: Arc::new(sprite_data),
+            sprite_col_lights: Arc::new(sprite_col_lights),
+            sprite_verts_buffer: Arc::new(sprite_verts_buffer),
+        }
     }
 }
+
 
 impl<V: RectRasterableVol> Terrain<V> {
     pub fn new(

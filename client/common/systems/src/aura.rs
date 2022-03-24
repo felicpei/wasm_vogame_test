@@ -15,7 +15,7 @@ use specs::{
     saveload::MarkerAllocator, shred::ResourceId, Entities, Entity as EcsEntity, Join, Read,
     ReadStorage, SystemData, World, WriteStorage,
 };
-use std::time::Duration;
+use instant::Duration;
 
 #[derive(SystemData)]
 pub struct ReadData<'a> {

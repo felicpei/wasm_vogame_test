@@ -30,7 +30,8 @@ use crate::{comp::Group, resources::Time};
 
 use specs::{saveload::MarkerAllocator, Entity as EcsEntity, ReadStorage};
 
-use std::{ops::MulAssign, time::Duration};
+use std::{ops::MulAssign};
+use instant::Duration;
 use vek::*;
 
 

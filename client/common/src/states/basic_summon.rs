@@ -19,8 +19,9 @@ use crate::{
 };
 use rand::Rng;
 use serde::{Deserialize, Serialize};
-use std::{f32::consts::PI, ops::Sub, time::Duration};
+use std::{f32::consts::PI, ops::Sub};
 use vek::*;
+use instant::Duration;
 
 /// Separated out to condense update portions of character state
 #[derive(Copy, Clone, Debug, PartialEq, Serialize, Deserialize)]

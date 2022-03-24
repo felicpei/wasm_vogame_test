@@ -18,10 +18,10 @@ use common::{
 };
 use common_ecs::{PhysicsMetrics, SysMetrics};
 use common_net::sync::{interpolation as sync_interp, WorldSyncExt};
-use core::{convert::identity, time::Duration};
+use core::{convert::identity};
 use hashbrown::{HashMap, HashSet};
 use rayon::{ThreadPool, ThreadPoolBuilder};
-
+use instant::Duration;
 use specs::{
     prelude::Resource,
     shred::{Fetch, FetchMut},

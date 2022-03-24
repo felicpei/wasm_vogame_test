@@ -12,8 +12,9 @@ use crate::{
 use serde::{Deserialize, Serialize};
 use specs::{Component, DerefFlaggedStorage};
 use specs_idvs::IdvStorage;
-use std::{ops::Mul, time::Duration};
+use std::{ops::Mul};
 use vek::*;
+use instant::Duration;
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 pub struct PoiseChange {

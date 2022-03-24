@@ -36,5 +36,8 @@ hashbrown = { version = "0.11", features = ["rayon", "serde", "nightly"] }
 #logging
 log = "0.4"
 
-#wasm
+[target.'cfg(target_arch = "wasm32")'.dependencies]
 instant = { version = "0.1", features = [ "wasm-bindgen", "inaccurate" ] }
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+instant = "0.1"

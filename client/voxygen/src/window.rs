@@ -425,7 +425,6 @@ impl Window {
     ) -> Result<(Window, EventLoop), Error> {
 
         //创建窗体
-        log::info!("Window new : start");
         let event_loop = EventLoop::with_user_event();
         let window = WindowBuilder::new()
             .with_title("Wasm_test")
@@ -433,7 +432,6 @@ impl Window {
             .unwrap();
 
         //创建画布
-        log::info!("Window new : create_render_area");
         let canvas_id = "canvas_main";
         create_render_area(&window, canvas_id);
 

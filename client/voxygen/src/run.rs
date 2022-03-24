@@ -6,7 +6,8 @@ use crate::{
     Direction, GlobalState, PlayState, PlayStateResult,
 };
 
-use std::{mem, time::Duration};
+use std::mem;
+use instant::Duration;
 
 pub fn run(mut global_state: GlobalState, event_loop: EventLoop) {
     // Set up the initial play state.

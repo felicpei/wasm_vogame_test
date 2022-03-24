@@ -2,7 +2,8 @@ pub mod interactable;
 pub mod settings_change;
 mod target;
 
-use std::{cell::RefCell, collections::HashSet, rc::Rc, result::Result, sync::Arc, time::Duration};
+use std::{cell::RefCell, collections::HashSet, rc::Rc, result::Result, sync::Arc};
+use instant::Duration;
 use ordered_float::OrderedFloat;
 use specs::{Join, WorldExt};
 use vek::*;
@@ -47,12 +48,7 @@ use crate::{
 use hashbrown::HashMap;
 use interactable::{select_interactable, Interactable};
 use target::targets_under_cursor;
-
-#[cfg(target_arch = "wasm32")]
 pub use instant::Instant;
-
-#[cfg(not(target_arch = "wasm32"))]
-pub use std::time::Instant;
 
 /// The action to perform after a tick
 enum TickAction {
@@ -91,7 +87,6 @@ impl SessionState {
         // game world.
         let mut scene = Scene::new(
             global_state.window.renderer_mut(),
-            &mut global_state.lazy_init,
             &*client.borrow(),
             &global_state.settings,
         );

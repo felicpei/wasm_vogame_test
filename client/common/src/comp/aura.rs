@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use slotmap::{new_key_type, SlotMap};
 use specs::{Component, DerefFlaggedStorage};
 use specs_idvs::IdvStorage;
-use std::time::Duration;
+use instant::Duration;
 
 new_key_type! { pub struct AuraKey; }
 

@@ -18,7 +18,7 @@ use specs::{
     saveload::MarkerAllocator, shred::ResourceId, Entities, Entity as EcsEntity, Join, Read,
     ReadStorage, SystemData, World, Write, WriteStorage,
 };
-use std::time::Duration;
+use instant::Duration;
 use vek::*;
 
 #[derive(SystemData)]

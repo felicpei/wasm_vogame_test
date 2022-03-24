@@ -22,12 +22,12 @@ mod fs;
 
 
 lazy_static! {
-    static ref ASSETS: AssetCache<fs::ResSystem> =
-        AssetCache::with_source(fs::ResSystem::new().unwrap());
+    
+    static ref ASSETS: AssetCache<fs::ResSystem> =  AssetCache::with_source(fs::ResSystem::new().unwrap());
 
-    static ref ASSET_MAP: Mutex<HashMap<String, Vec<u8>>> = Mutex::new({
-        HashMap::new()
-    });
+    static ref ASSET_MAP: Mutex<HashMap<String, Vec<u8>>> = Mutex::new({ HashMap::new() });
+
+    static ref ASSET_MAP_DIR: Mutex<HashMap<String, bool>> = Mutex::new({ HashMap::new() });
 }
 
 pub enum ResourceError {
@@ -49,6 +49,10 @@ impl fmt::Debug for ResourceError {
     }
 }
 
+//缓存dir数据
+pub fn set_cache_dir(name: &str) {
+    ASSET_MAP_DIR.lock().unwrap().insert(name.to_string(), true);
+}
 
 //缓存data, 通过js传入
 pub fn set_cache_data(name: &str, data: &[u8]) {
@@ -178,6 +182,8 @@ pub fn load_dir<T: DirLoadable>(
     let specifier = specifier.strip_suffix(".*").unwrap_or(specifier);
     ASSETS.load_dir(specifier, recursive)
 }
+
+
 impl<T: Compound> AssetExt for T {
     fn load(specifier: &str) -> Result<AssetHandle<Self>, Error> { ASSETS.load(specifier) }
 

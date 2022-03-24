@@ -51,8 +51,8 @@ use conrod_core::{
 use core::{convert::TryInto, f32, f64, ops::Range};
 use graphic::TexId;
 use hashbrown::hash_map::Entry;
-use std::time::Duration;
 use vek::*;
+use instant::Duration;
 
 #[derive(Debug)]
 pub enum UiError {

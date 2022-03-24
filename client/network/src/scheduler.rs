@@ -15,8 +15,8 @@ use std::{
         atomic::{AtomicBool, AtomicU64, Ordering},
         Arc,
     },
-    time::Duration,
 };
+use instant::Duration;
 use tokio::{
     io,
     sync::{mpsc, oneshot, Mutex},

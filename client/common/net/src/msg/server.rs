@@ -16,7 +16,7 @@ use common::{
 };
 use hashbrown::HashMap;
 use serde::{Deserialize, Serialize};
-use std::time::Duration;
+use instant::Duration;
 use vek::*;
 
 ///This struct contains all messages the server might send (on different
@@ -140,7 +140,7 @@ pub enum ServerGeneral {
     /// Indicate to the client that they are invited to join a group
     Invite {
         inviter: sync::Uid,
-        timeout: std::time::Duration,
+        timeout: Duration,
         kind: InviteKind,
     },
     /// Indicate to the client that their sent invite was not invalid and is

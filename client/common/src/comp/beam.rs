@@ -2,7 +2,7 @@ use crate::{combat::Attack, uid::Uid};
 use serde::{Deserialize, Serialize};
 use specs::{Component, DerefFlaggedStorage};
 use specs_idvs::IdvStorage;
-use std::time::Duration;
+use instant::Duration;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Properties {

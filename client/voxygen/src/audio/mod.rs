@@ -12,7 +12,7 @@ use fader::Fader;
 use music::MusicTransitionManifest;
 use sfx::{SfxEvent, SfxTriggerItem};
 use soundcache::load_ogg;
-use std::time::Duration;
+use instant::Duration;
 
 use common::assets::{AssetExt, AssetHandle};
 use rodio::{source::Source, OutputStream, OutputStreamHandle, StreamError};

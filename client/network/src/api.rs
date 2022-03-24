@@ -17,8 +17,9 @@ use std::{
         atomic::{AtomicBool, Ordering},
         Arc,
     },
-    time::Duration,
 };
+use instant::{Duration};
+
 use tokio::{
     io,
     runtime::Runtime,

@@ -4,15 +4,9 @@ use iced::{
 use std::{
     hash::Hash,
     sync::Mutex,
-    time::{Duration},
 };
 use vek::*;
-
-#[cfg(target_arch = "wasm32")]
-pub use instant::Instant;
-
-#[cfg(not(target_arch = "wasm32"))]
-pub use std::time::Instant;
+use instant::{Duration, Instant};
 
 #[derive(Copy, Clone, Debug)]
 struct Hover {

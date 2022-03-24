@@ -9,8 +9,8 @@ use std::{
         atomic::{AtomicBool, Ordering},
         Arc,
     },
-    time::Duration,
 };
+use instant::Duration;
 use tokio::runtime;
 
 #[derive(Debug)]

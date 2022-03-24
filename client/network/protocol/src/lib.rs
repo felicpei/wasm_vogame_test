@@ -75,7 +75,7 @@ pub mod _internal {
         util::SortedVec,
     };
 }
-
+use instant::Duration;
 use async_trait::async_trait;
 
 /// Handshake: Used to connect 2 Channels.
@@ -118,7 +118,7 @@ pub trait SendProtocol {
     async fn flush(
         &mut self,
         bandwidth: Bandwidth,
-        dt: std::time::Duration,
+        dt: Duration,
     ) -> Result<Bandwidth, ProtocolError>;
 }
 

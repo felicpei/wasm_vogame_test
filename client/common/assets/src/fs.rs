@@ -25,15 +25,48 @@ impl Source for ResSystem {
         }
     }
 
-    fn read_dir(&self, id: &str, _: &mut dyn FnMut(DirEntry)) -> io::Result<()> {
-        use std::io::{Error, ErrorKind};
-        let s = format!("读取文件夹 {}", id);
-        let custom_error = Error::new(ErrorKind::Other, s);
-        Err(custom_error)
+    fn read_dir(&self, id: &str, f: &mut dyn FnMut(DirEntry)) -> io::Result<()> {
+
+        let map = super::ASSET_MAP_DIR.lock().unwrap();
+        for key in map.keys() {
+            if key.starts_with(id) {
+                f(DirEntry::Directory(key))
+            }
+        }
+
+        let fileMap = super::ASSET_MAP.lock().unwrap();
+        for (key, value) in fileMap.iter() {
+            if key.starts_with(id) {
+                if let Some(pos) = key.rfind(".") {
+                    let name = &key[0..pos - 1];
+                    let ext = &key[pos..];
+                    f(DirEntry::File(name, ext))
+                }
+            }
+        }
+        io::Result::Ok(())
     }
 
     fn exists(&self, entry: DirEntry) -> bool { 
-        true 
+
+        //判断文件或者文件夹是否存在
+        if let DirEntry::File(id, ext) = entry {
+            let mut name = String::from(id);
+            name.push_str(&".");
+            name.push_str(ext);
+
+            let map = super::ASSET_MAP.lock().unwrap();
+            if map.contains_key(&name) {
+                return true
+            }
+
+        } else if let DirEntry::Directory(dir) = entry {
+            let map = super::ASSET_MAP_DIR.lock().unwrap();
+            if map.contains_key(dir) {
+                return true
+            }
+        }
+        false
     }
 
     fn make_source(&self) -> Option<Box<dyn Source + Send>> { Some(Box::new(self.clone())) }

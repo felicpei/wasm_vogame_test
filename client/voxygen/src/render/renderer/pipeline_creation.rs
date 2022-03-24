@@ -15,15 +15,15 @@ use std::sync::Arc;
 pub struct Pipelines {
     pub debug: debug::DebugPipeline,
     pub figure: figure::FigurePipeline,
-    pub fluid: fluid::FluidPipeline,
-    pub lod_terrain: lod_terrain::LodTerrainPipeline,
-    pub particle: particle::ParticlePipeline,
+    //pub fluid: fluid::FluidPipeline,
+    //pub lod_terrain: lod_terrain::LodTerrainPipeline,
+    //pub particle: particle::ParticlePipeline,
     pub clouds: clouds::CloudsPipeline,
     pub bloom: Option<bloom::BloomPipelines>,
     pub postprocess: postprocess::PostProcessPipeline,
     pub skybox: skybox::SkyboxPipeline,
-    pub sprite: sprite::SpritePipeline,
-    pub terrain: terrain::TerrainPipeline,
+    //pub sprite: sprite::SpritePipeline,
+    //pub terrain: terrain::TerrainPipeline,
     pub ui: ui::UiPipeline,
     pub blit: blit::BlitPipeline,
 }
@@ -33,15 +33,15 @@ pub struct Pipelines {
 pub struct IngamePipelines {
     debug: debug::DebugPipeline,
     figure: figure::FigurePipeline,
-    fluid: fluid::FluidPipeline,
-    lod_terrain: lod_terrain::LodTerrainPipeline,
-    particle: particle::ParticlePipeline,
+    //fluid: fluid::FluidPipeline,
+    //lod_terrain: lod_terrain::LodTerrainPipeline,
+    //particle: particle::ParticlePipeline,
     clouds: clouds::CloudsPipeline,
     pub bloom: Option<bloom::BloomPipelines>,
     postprocess: postprocess::PostProcessPipeline,
     skybox: skybox::SkyboxPipeline,
-    sprite: sprite::SpritePipeline,
-    terrain: terrain::TerrainPipeline,
+    //sprite: sprite::SpritePipeline,
+    //terrain: terrain::TerrainPipeline,
 }
 
 pub struct ShadowPipelines {
@@ -60,15 +60,15 @@ impl Pipelines {
         Self {
             debug: ingame.debug,
             figure: ingame.figure,
-            fluid: ingame.fluid,
-            lod_terrain: ingame.lod_terrain,
-            particle: ingame.particle,
+            //fluid: ingame.fluid,
+            //lod_terrain: ingame.lod_terrain,
+            //particle: ingame.particle,
             clouds: ingame.clouds,
             bloom: ingame.bloom,
             postprocess: ingame.postprocess,
             skybox: ingame.skybox,
-            sprite: ingame.sprite,
-            terrain: ingame.terrain,
+            //sprite: ingame.sprite,
+            //terrain: ingame.terrain,
             ui: interface.ui,
             blit: interface.blit,
         }
@@ -357,6 +357,7 @@ fn create_interface_pipelines(needs: PipelineNeeds) -> InterfacePipelines {
 fn create_shadow_pipelines(needs: PipelineNeeds) -> ShadowPipelines {
 
     // shader不支持，屏蔽管线
+    log::warn!("不支持的Pipeline(Shader Error): PointShadowPipeline");
     // let point_shadow = shadow::PointShadowPipeline::new(
     //     needs.device,
     //     &needs.shaders.point_light_shadows_vert,
@@ -365,27 +366,31 @@ fn create_shadow_pipelines(needs: PipelineNeeds) -> ShadowPipelines {
     //     needs.pipeline_modes.aa,
     // );
    
-    let terrain_directed_shadow = shadow::ShadowPipeline::new(
-        needs.device,
-        &needs.shaders.light_shadows_directed_vert,
-        &needs.layouts.global,
-        &needs.layouts.terrain,
-        needs.pipeline_modes.aa,
-    );
+    log::warn!("不支持的Pipeline(Shader Error): ShadowPipeline");
+    // let terrain_directed_shadow = shadow::ShadowPipeline::new(
+    //     needs.device,
+    //     &needs.shaders.light_shadows_directed_vert,
+    //     &needs.layouts.global,
+    //     &needs.layouts.terrain,
+    //     needs.pipeline_modes.aa,
+    // );
 
-    let figure_directed_shadow = shadow::ShadowFigurePipeline::new(
-        needs.device,
-        &needs.shaders.light_shadows_figure_vert,
-        &needs.layouts.global,
-        &needs.layouts.figure,
-        needs.pipeline_modes.aa,
-    );
+    log::warn!("不支持的Pipeline(Shader Error): ShadowFigurePipeline");
+    // let figure_directed_shadow = shadow::ShadowFigurePipeline::new(
+    //     needs.device,
+    //     &needs.shaders.light_shadows_figure_vert,
+    //     &needs.layouts.global,
+    //     &needs.layouts.figure,
+    //     needs.pipeline_modes.aa,
+    // );
 
     ShadowPipelines {
         //point: Some(point_shadow),
         point: None,
-        directed: Some(terrain_directed_shadow),
-        figure: Some(figure_directed_shadow),
+        //directed: Some(terrain_directed_shadow),
+        directed: None,
+        //figure: Some(figure_directed_shadow),
+        figure: None,
     }
 }
 
@@ -426,49 +431,54 @@ fn create_ingame_pipelines(needs: PipelineNeeds) -> IngamePipelines {
         pipeline_modes.aa,
     );
 
-    let terrain =  terrain::TerrainPipeline::new(
-        device,
-        &shaders.terrain_vert,
-        &shaders.terrain_frag,
-        &layouts.global,
-        &layouts.terrain,
-        pipeline_modes.aa,
-    );
+    log::warn!("不支持的Pipeline(Shader Error): TerrainPipeline");
+    // let terrain =  terrain::TerrainPipeline::new(
+    //     device,
+    //     &shaders.terrain_vert,
+    //     &shaders.terrain_frag,
+    //     &layouts.global,
+    //     &layouts.terrain,
+    //     pipeline_modes.aa,
+    // );
 
-    let fluid = fluid::FluidPipeline::new(
-        device,
-        &shaders.fluid_vert,
-        &shaders.fluid_frag,
-        &layouts.global,
-        &layouts.terrain,
-        pipeline_modes.aa,
-    );
+    log::warn!("不支持的Pipeline(Shader Error): FluidPipeline");
+    // let fluid = fluid::FluidPipeline::new(
+    //     device,
+    //     &shaders.fluid_vert,
+    //     &shaders.fluid_frag,
+    //     &layouts.global,
+    //     &layouts.terrain,
+    //     pipeline_modes.aa,
+    // );
 
-    let sprite =  sprite::SpritePipeline::new(
-        device,
-        &shaders.sprite_vert,
-        &shaders.sprite_frag,
-        &layouts.global,
-        &layouts.sprite,
-        &layouts.terrain,
-        pipeline_modes.aa,
-    );
+    log::warn!("不支持的Pipeline(Shader Error): SpritePipeline");
+    // let sprite =  sprite::SpritePipeline::new(
+    //     device,
+    //     &shaders.sprite_vert,
+    //     &shaders.sprite_frag,
+    //     &layouts.global,
+    //     &layouts.sprite,
+    //     &layouts.terrain,
+    //     pipeline_modes.aa,
+    // );
 
-    let particle = particle::ParticlePipeline::new(
-        device,
-        &shaders.particle_vert,
-        &shaders.particle_frag,
-        &layouts.global,
-        pipeline_modes.aa,
-    );
+    log::warn!("不支持的Pipeline(Shader Error): ParticlePipeline");
+    // let particle = particle::ParticlePipeline::new(
+    //     device,
+    //     &shaders.particle_vert,
+    //     &shaders.particle_frag,
+    //     &layouts.global,
+    //     pipeline_modes.aa,
+    // );
 
-    let lod_terrain = lod_terrain::LodTerrainPipeline::new(
-        device,
-        &shaders.lod_terrain_vert,
-        &shaders.lod_terrain_frag,
-        &layouts.global,
-        pipeline_modes.aa,
-    );
+    log::warn!("不支持的Pipeline(Shader Error): LodTerrainPipeline");
+    // let lod_terrain = lod_terrain::LodTerrainPipeline::new(
+    //     device,
+    //     &shaders.lod_terrain_vert,
+    //     &shaders.lod_terrain_frag,
+    //     &layouts.global,
+    //     pipeline_modes.aa,
+    // );
 
    
     let clouds =  clouds::CloudsPipeline::new(
@@ -510,15 +520,15 @@ fn create_ingame_pipelines(needs: PipelineNeeds) -> IngamePipelines {
     IngamePipelines {
         debug,
         figure,
-        fluid,
-        lod_terrain,
-        particle,
+        //fluid,
+        //lod_terrain,
+        //particle,
         clouds,
         bloom,
         postprocess,
         skybox,
-        sprite,
-        terrain,
+        //sprite,
+        //terrain,
     }
 }
 

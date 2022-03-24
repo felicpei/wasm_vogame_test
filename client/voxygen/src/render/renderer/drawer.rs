@@ -545,12 +545,13 @@ impl<'pass> FirstPassDrawer<'pass> {
 
     pub fn draw_lod_terrain<'data: 'pass>(&mut self, model: &'data Model<lod_terrain::Vertex>) {
 
-        let render_pass = self.render_pass.as_mut();
+        // todo 屏蔽不支持的管线
 
-        render_pass.set_pipeline(&self.pipelines.lod_terrain.pipeline);
-        set_quad_index_buffer::<lod_terrain::Vertex>(render_pass, self.borrow);
-        render_pass.set_vertex_buffer(0, model.buf().slice(..));
-        render_pass.draw_indexed(0..model.len() as u32 / 4 * 6, 0, 0..1);
+        // let render_pass = self.render_pass.as_mut();
+        // render_pass.set_pipeline(&self.pipelines.lod_terrain.pipeline);
+        // set_quad_index_buffer::<lod_terrain::Vertex>(render_pass, self.borrow);
+        // render_pass.set_vertex_buffer(0, model.buf().slice(..));
+        // render_pass.draw_indexed(0..model.len() as u32 / 4 * 6, 0, 0..1);
     }
 
     pub fn init_figures(&mut self) {
@@ -583,9 +584,11 @@ impl<'pass> FirstPassDrawer<'pass> {
 
     pub fn init_terrain(&mut self) {
 
-        let render_pass = self.render_pass.as_mut();
-        render_pass.set_pipeline(&self.pipelines.terrain.pipeline);
-        set_quad_index_buffer::<terrain::Vertex>(render_pass, self.borrow);
+        // todo 屏蔽不支持的管线
+        
+        // let render_pass = self.render_pass.as_mut();
+        // render_pass.set_pipeline(&self.pipelines.terrain.pipeline);
+        // set_quad_index_buffer::<terrain::Vertex>(render_pass, self.borrow);
     }
 
     pub fn draw_terrain<'data: 'pass>(
@@ -594,29 +597,32 @@ impl<'pass> FirstPassDrawer<'pass> {
         col_lights: &'data Arc<ColLights<terrain::Locals>>,
         locals: &'data terrain::BoundLocals,
     ) {
-        let render_pass = self.render_pass.as_mut();
+        // todo 屏蔽不支持的管线
 
-        if self.col_lights
-            // Check if we are still using the same atlas texture as the previous drawn
-            // chunk
-            .filter(|current_col_lights| Arc::ptr_eq(current_col_lights, col_lights))
-            .is_none()
-        {
-            render_pass.set_bind_group(2, &col_lights.bind_group, &[]);
-            self.col_lights = Some(col_lights);
-        };
+        // let render_pass = self.render_pass.as_mut();
+        // if self.col_lights
+        //     // Check if we are still using the same atlas texture as the previous drawn
+        //     // chunk
+        //     .filter(|current_col_lights| Arc::ptr_eq(current_col_lights, col_lights))
+        //     .is_none()
+        // {
+        //     render_pass.set_bind_group(2, &col_lights.bind_group, &[]);
+        //     self.col_lights = Some(col_lights);
+        // };
 
-        render_pass.set_bind_group(3, &locals.bind_group, &[]);
-        render_pass.set_vertex_buffer(0, model.buf().slice(..));
-        render_pass.draw_indexed(0..model.len() as u32 / 4 * 6, 0, 0..1);
+        // render_pass.set_bind_group(3, &locals.bind_group, &[]);
+        // render_pass.set_vertex_buffer(0, model.buf().slice(..));
+        // render_pass.draw_indexed(0..model.len() as u32 / 4 * 6, 0, 0..1);
     }
 
 
     pub fn init_particles(&mut self)  {
 
-        let render_pass = self.render_pass.as_mut();
-        render_pass.set_pipeline(&self.pipelines.particle.pipeline);
-        set_quad_index_buffer::<particle::Vertex>(render_pass, self.borrow);
+        // todo 屏蔽不支持的管线
+
+        // let render_pass = self.render_pass.as_mut();
+        // render_pass.set_pipeline(&self.pipelines.particle.pipeline);
+        // set_quad_index_buffer::<particle::Vertex>(render_pass, self.borrow);
     }
 
     pub fn draw_particles<'data: 'pass>(
@@ -624,10 +630,12 @@ impl<'pass> FirstPassDrawer<'pass> {
         model: &'data Model<particle::Vertex>,
         instances: &'data Instances<particle::Instance>,
     ) {
-        let render_pass = self.render_pass.as_mut();
-        render_pass.set_vertex_buffer(0, model.buf().slice(..));
-        render_pass.set_vertex_buffer(1, instances.buf().slice(..));
-        render_pass.draw_indexed(0..model.len() as u32 / 4 * 6, 0, 0..instances.count() as u32);
+        // todo 屏蔽不支持的管线
+
+        // let render_pass = self.render_pass.as_mut();
+        // render_pass.set_vertex_buffer(0, model.buf().slice(..));
+        // render_pass.set_vertex_buffer(1, instances.buf().slice(..));
+        // render_pass.draw_indexed(0..model.len() as u32 / 4 * 6, 0, 0..instances.count() as u32);
     }
 
    
@@ -636,12 +644,13 @@ impl<'pass> FirstPassDrawer<'pass> {
         globals: &'data sprite::SpriteGlobalsBindGroup,
         col_lights: &'data ColLights<sprite::Locals>,
     ) {
+        // todo 屏蔽不支持的管线
 
-        let render_pass = self.render_pass.as_mut();
-        render_pass.set_pipeline(&self.pipelines.sprite.pipeline);
-        set_quad_index_buffer::<sprite::Vertex>(render_pass, self.borrow);
-        render_pass.set_bind_group(0, &globals.bind_group, &[]);
-        render_pass.set_bind_group(2, &col_lights.bind_group, &[]);
+        // let render_pass = self.render_pass.as_mut();
+        // render_pass.set_pipeline(&self.pipelines.sprite.pipeline);
+        // set_quad_index_buffer::<sprite::Vertex>(render_pass, self.borrow);
+        // render_pass.set_bind_group(0, &globals.bind_group, &[]);
+        // render_pass.set_bind_group(2, &col_lights.bind_group, &[]);
     }
 
     pub fn draw_sprites<'data: 'pass>(
@@ -649,28 +658,34 @@ impl<'pass> FirstPassDrawer<'pass> {
         terrain_locals: &'data terrain::BoundLocals,
         instances: &'data Instances<sprite::Instance>,
     ) {
+        // todo 屏蔽不支持的管线
 
-        let render_pass = self.render_pass.as_mut();
-        render_pass.set_bind_group(3, &terrain_locals.bind_group, &[]);
+        // let render_pass = self.render_pass.as_mut();
+        // render_pass.set_bind_group(3, &terrain_locals.bind_group, &[]);
 
-        render_pass.set_vertex_buffer(0, instances.buf().slice(..));
-        render_pass.draw_indexed(
-            0..sprite::VERT_PAGE_SIZE / 4 * 6,
-            0,
-            0..instances.count() as u32,
-        );
+        // render_pass.set_vertex_buffer(0, instances.buf().slice(..));
+        // render_pass.draw_indexed(
+        //     0..sprite::VERT_PAGE_SIZE / 4 * 6,
+        //     0,
+        //     0..instances.count() as u32,
+        // );
     }
 
     pub fn drop_sprites<'data: 'pass>(&mut self) {
-        // Reset to regular globals
-        let render_pass = self.render_pass.as_mut();
-        render_pass.set_bind_group(0, &self.globals.bind_group, &[]);
+
+        // todo 屏蔽不支持的管线
+        
+        // let render_pass = self.render_pass.as_mut();
+        // render_pass.set_bind_group(0, &self.globals.bind_group, &[]);
     }
 
     pub fn init_fluid(&mut self) {
-        let render_pass = self.render_pass.as_mut();
-        render_pass.set_pipeline(&self.pipelines.fluid.pipeline);
-        set_quad_index_buffer::<fluid::Vertex>(render_pass, self.borrow);
+
+        // todo 屏蔽不支持的管线
+
+        // let render_pass = self.render_pass.as_mut();
+        // render_pass.set_pipeline(&self.pipelines.fluid.pipeline);
+        // set_quad_index_buffer::<fluid::Vertex>(render_pass, self.borrow);
     }
 
     pub fn draw_fluid<'data: 'pass>(
@@ -678,10 +693,12 @@ impl<'pass> FirstPassDrawer<'pass> {
         model: &'data Model<fluid::Vertex>,
         locals: &'data terrain::BoundLocals,
     ) {
-        let render_pass = self.render_pass.as_mut();
-        render_pass.set_vertex_buffer(0, model.buf().slice(..));
-        render_pass.set_bind_group(2, &locals.bind_group, &[]);
-        render_pass.draw_indexed(0..model.len() as u32 / 4 * 6, 0, 0..1);
+        // todo 屏蔽不支持的管线
+
+        // let render_pass = self.render_pass.as_mut();
+        // render_pass.set_vertex_buffer(0, model.buf().slice(..));
+        // render_pass.set_bind_group(2, &locals.bind_group, &[]);
+        // render_pass.draw_indexed(0..model.len() as u32 / 4 * 6, 0, 0..1);
     }
 
     

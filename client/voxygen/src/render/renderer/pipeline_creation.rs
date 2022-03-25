@@ -15,15 +15,27 @@ use std::sync::Arc;
 pub struct Pipelines {
     pub debug: debug::DebugPipeline,
     pub figure: figure::FigurePipeline,
-    //pub fluid: fluid::FluidPipeline,
-    //pub lod_terrain: lod_terrain::LodTerrainPipeline,
-    //pub particle: particle::ParticlePipeline,
+
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fluid: fluid::FluidPipeline,
+
+    #[cfg(not(target_arch = "wasm32"))]
+    pub lod_terrain: lod_terrain::LodTerrainPipeline,
+
+    #[cfg(not(target_arch = "wasm32"))]
+    pub particle: particle::ParticlePipeline,
+
     pub clouds: clouds::CloudsPipeline,
     pub bloom: Option<bloom::BloomPipelines>,
     pub postprocess: postprocess::PostProcessPipeline,
     pub skybox: skybox::SkyboxPipeline,
-    //pub sprite: sprite::SpritePipeline,
-    //pub terrain: terrain::TerrainPipeline,
+
+    #[cfg(not(target_arch = "wasm32"))]
+    pub sprite: sprite::SpritePipeline,
+
+    #[cfg(not(target_arch = "wasm32"))]
+    pub terrain: terrain::TerrainPipeline,
+    
     pub ui: ui::UiPipeline,
     pub blit: blit::BlitPipeline,
 }
@@ -33,15 +45,27 @@ pub struct Pipelines {
 pub struct IngamePipelines {
     debug: debug::DebugPipeline,
     figure: figure::FigurePipeline,
-    //fluid: fluid::FluidPipeline,
-    //lod_terrain: lod_terrain::LodTerrainPipeline,
-    //particle: particle::ParticlePipeline,
+
+    #[cfg(not(target_arch = "wasm32"))]
+    fluid: fluid::FluidPipeline,
+
+    #[cfg(not(target_arch = "wasm32"))]
+    lod_terrain: lod_terrain::LodTerrainPipeline,
+
+    #[cfg(not(target_arch = "wasm32"))]
+    particle: particle::ParticlePipeline,
+
+
     clouds: clouds::CloudsPipeline,
     pub bloom: Option<bloom::BloomPipelines>,
     postprocess: postprocess::PostProcessPipeline,
     skybox: skybox::SkyboxPipeline,
-    //sprite: sprite::SpritePipeline,
-    //terrain: terrain::TerrainPipeline,
+
+    #[cfg(not(target_arch = "wasm32"))]
+    sprite: sprite::SpritePipeline,
+
+    #[cfg(not(target_arch = "wasm32"))]
+    terrain: terrain::TerrainPipeline,
 }
 
 pub struct ShadowPipelines {
@@ -56,6 +80,26 @@ pub struct InterfacePipelines {
 }
 
 impl Pipelines {
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn consolidate(interface: InterfacePipelines, ingame: IngamePipelines) -> Self {
+        Self {
+            debug: ingame.debug,
+            figure: ingame.figure,
+            fluid: ingame.fluid,
+            lod_terrain: ingame.lod_terrain,
+            particle: ingame.particle,
+            clouds: ingame.clouds,
+            bloom: ingame.bloom,
+            postprocess: ingame.postprocess,
+            skybox: ingame.skybox,
+            sprite: ingame.sprite,
+            terrain: ingame.terrain,
+            ui: interface.ui,
+            blit: interface.blit,
+        }
+    }
+
+    #[cfg(target_arch = "wasm32")]
     pub fn consolidate(interface: InterfacePipelines, ingame: IngamePipelines) -> Self {
         Self {
             debug: ingame.debug,
@@ -104,7 +148,10 @@ struct ShaderModules {
     postprocess_frag: wgpu::ShaderModule,
     blit_vert: wgpu::ShaderModule,
     blit_frag: wgpu::ShaderModule,
-    //point_light_shadows_vert: wgpu::ShaderModule,
+
+    #[cfg(not(target_arch = "wasm32"))]
+    point_light_shadows_vert: wgpu::ShaderModule,
+    
     light_shadows_directed_vert: wgpu::ShaderModule,
     light_shadows_figure_vert: wgpu::ShaderModule,
 }
@@ -271,10 +318,12 @@ impl ShaderModules {
         });
 
         log::warn!("TODO 不支持的 Shader: shaders/point-light-shadows-vert.glsl, 暂时屏蔽");
-        // let point_light_shadows_vert = device.create_shader_module(&wgpu::ShaderModuleDescriptor {
-        //     label: Some("point_light_shadows_vert"),
-        //     source: wgpu::ShaderSource::SpirV(Cow::Borrowed(include_spirv!("shaders/point-light-shadows-vert.glsl", vert, I "shaders/include/"))),
-        // });
+
+        #[cfg(not(target_arch = "wasm32"))]
+        let point_light_shadows_vert = device.create_shader_module(&wgpu::ShaderModuleDescriptor {
+            label: Some("point_light_shadows_vert"),
+            source: wgpu::ShaderSource::SpirV(Cow::Borrowed(include_spirv!("shaders/point-light-shadows-vert.glsl", vert, I "shaders/include/"))),
+        });
 
         let light_shadows_directed_vert = device.create_shader_module(&wgpu::ShaderModuleDescriptor {
             label: Some("light_shadows_directed_vert"),
@@ -314,7 +363,10 @@ impl ShaderModules {
             postprocess_frag,
             blit_vert,
             blit_frag,
-            //point_light_shadows_vert,
+
+            #[cfg(not(target_arch = "wasm32"))]
+            point_light_shadows_vert,
+
             light_shadows_directed_vert,
             light_shadows_figure_vert,
         })
@@ -357,39 +409,51 @@ fn create_interface_pipelines(needs: PipelineNeeds) -> InterfacePipelines {
 fn create_shadow_pipelines(needs: PipelineNeeds) -> ShadowPipelines {
 
     // shader不支持，屏蔽管线
-    log::warn!("不支持的Pipeline(Shader Error): PointShadowPipeline");
-    // let point_shadow = shadow::PointShadowPipeline::new(
-    //     needs.device,
-    //     &needs.shaders.point_light_shadows_vert,
-    //     &needs.layouts.global,
-    //     &needs.layouts.terrain,
-    //     needs.pipeline_modes.aa,
-    // );
+    log::warn!("Wasm 不支持的Pipeline(Shader Error): PointShadowPipeline");
+    #[cfg(not(target_arch = "wasm32"))]
+    let point_shadow = shadow::PointShadowPipeline::new(
+        needs.device,
+        &needs.shaders.point_light_shadows_vert,
+        &needs.layouts.global,
+        &needs.layouts.terrain,
+        needs.pipeline_modes.aa,
+    );
    
-    log::warn!("不支持的Pipeline(Shader Error): ShadowPipeline");
-    // let terrain_directed_shadow = shadow::ShadowPipeline::new(
-    //     needs.device,
-    //     &needs.shaders.light_shadows_directed_vert,
-    //     &needs.layouts.global,
-    //     &needs.layouts.terrain,
-    //     needs.pipeline_modes.aa,
-    // );
+    log::warn!("Wasm 不支持的Pipeline(Shader Error): ShadowPipeline");
+    #[cfg(not(target_arch = "wasm32"))]
+    let terrain_directed_shadow = shadow::ShadowPipeline::new(
+        needs.device,
+        &needs.shaders.light_shadows_directed_vert,
+        &needs.layouts.global,
+        &needs.layouts.terrain,
+        needs.pipeline_modes.aa,
+    );
 
-    log::warn!("不支持的Pipeline(Shader Error): ShadowFigurePipeline");
-    // let figure_directed_shadow = shadow::ShadowFigurePipeline::new(
-    //     needs.device,
-    //     &needs.shaders.light_shadows_figure_vert,
-    //     &needs.layouts.global,
-    //     &needs.layouts.figure,
-    //     needs.pipeline_modes.aa,
-    // );
+    log::warn!("Wasm 不支持的Pipeline(Shader Error): ShadowFigurePipeline");
+    #[cfg(not(target_arch = "wasm32"))]
+    let figure_directed_shadow = shadow::ShadowFigurePipeline::new(
+        needs.device,
+        &needs.shaders.light_shadows_figure_vert,
+        &needs.layouts.global,
+        &needs.layouts.figure,
+        needs.pipeline_modes.aa,
+    );
 
+    
     ShadowPipelines {
-        //point: Some(point_shadow),
+        #[cfg(not(target_arch = "wasm32"))]
+        point: Some(point_shadow),
+        #[cfg(target_arch = "wasm32")]
         point: None,
-        //directed: Some(terrain_directed_shadow),
+
+        #[cfg(not(target_arch = "wasm32"))]
+        directed: Some(terrain_directed_shadow),
+        #[cfg(target_arch = "wasm32")]
         directed: None,
-        //figure: Some(figure_directed_shadow),
+
+        #[cfg(not(target_arch = "wasm32"))]
+        figure: Some(figure_directed_shadow),
+        #[cfg(target_arch = "wasm32")]
         figure: None,
     }
 }
@@ -431,54 +495,59 @@ fn create_ingame_pipelines(needs: PipelineNeeds) -> IngamePipelines {
         pipeline_modes.aa,
     );
 
-    log::warn!("不支持的Pipeline(Shader Error): TerrainPipeline");
-    // let terrain =  terrain::TerrainPipeline::new(
-    //     device,
-    //     &shaders.terrain_vert,
-    //     &shaders.terrain_frag,
-    //     &layouts.global,
-    //     &layouts.terrain,
-    //     pipeline_modes.aa,
-    // );
+    log::warn!("Wasm 不支持的Pipeline(Shader Error): TerrainPipeline");
+    #[cfg(not(target_arch = "wasm32"))]
+    let terrain =  terrain::TerrainPipeline::new(
+        device,
+        &shaders.terrain_vert,
+        &shaders.terrain_frag,
+        &layouts.global,
+        &layouts.terrain,
+        pipeline_modes.aa,
+    );
 
-    log::warn!("不支持的Pipeline(Shader Error): FluidPipeline");
-    // let fluid = fluid::FluidPipeline::new(
-    //     device,
-    //     &shaders.fluid_vert,
-    //     &shaders.fluid_frag,
-    //     &layouts.global,
-    //     &layouts.terrain,
-    //     pipeline_modes.aa,
-    // );
+    log::warn!("Wasm 不支持的Pipeline(Shader Error): FluidPipeline");
+    #[cfg(not(target_arch = "wasm32"))]
+    let fluid = fluid::FluidPipeline::new(
+        device,
+        &shaders.fluid_vert,
+        &shaders.fluid_frag,
+        &layouts.global,
+        &layouts.terrain,
+        pipeline_modes.aa,
+    );
 
-    log::warn!("不支持的Pipeline(Shader Error): SpritePipeline");
-    // let sprite =  sprite::SpritePipeline::new(
-    //     device,
-    //     &shaders.sprite_vert,
-    //     &shaders.sprite_frag,
-    //     &layouts.global,
-    //     &layouts.sprite,
-    //     &layouts.terrain,
-    //     pipeline_modes.aa,
-    // );
+    log::warn!("Wasm 不支持的Pipeline(Shader Error): SpritePipeline");
+    #[cfg(not(target_arch = "wasm32"))]
+    let sprite =  sprite::SpritePipeline::new(
+        device,
+        &shaders.sprite_vert,
+        &shaders.sprite_frag,
+        &layouts.global,
+        &layouts.sprite,
+        &layouts.terrain,
+        pipeline_modes.aa,
+    );
 
-    log::warn!("不支持的Pipeline(Shader Error): ParticlePipeline");
-    // let particle = particle::ParticlePipeline::new(
-    //     device,
-    //     &shaders.particle_vert,
-    //     &shaders.particle_frag,
-    //     &layouts.global,
-    //     pipeline_modes.aa,
-    // );
+    log::warn!("Wasm 不支持的Pipeline(Shader Error): ParticlePipeline");
+    #[cfg(not(target_arch = "wasm32"))]
+    let particle = particle::ParticlePipeline::new(
+        device,
+        &shaders.particle_vert,
+        &shaders.particle_frag,
+        &layouts.global,
+        pipeline_modes.aa,
+    );
 
     log::warn!("不支持的Pipeline(Shader Error): LodTerrainPipeline");
-    // let lod_terrain = lod_terrain::LodTerrainPipeline::new(
-    //     device,
-    //     &shaders.lod_terrain_vert,
-    //     &shaders.lod_terrain_frag,
-    //     &layouts.global,
-    //     pipeline_modes.aa,
-    // );
+    #[cfg(not(target_arch = "wasm32"))]
+    let lod_terrain = lod_terrain::LodTerrainPipeline::new(
+        device,
+        &shaders.lod_terrain_vert,
+        &shaders.lod_terrain_frag,
+        &layouts.global,
+        pipeline_modes.aa,
+    );
 
    
     let clouds =  clouds::CloudsPipeline::new(
@@ -517,18 +586,31 @@ fn create_ingame_pipelines(needs: PipelineNeeds) -> IngamePipelines {
     );
 
 
+   
     IngamePipelines {
         debug,
         figure,
-        //fluid,
-        //lod_terrain,
-        //particle,
+        
+        #[cfg(not(target_arch = "wasm32"))]
+        fluid,
+
+        #[cfg(not(target_arch = "wasm32"))]
+        lod_terrain,
+
+        #[cfg(not(target_arch = "wasm32"))]
+        particle,
+
+
         clouds,
         bloom,
         postprocess,
         skybox,
-        //sprite,
-        //terrain,
+
+        #[cfg(not(target_arch = "wasm32"))]
+        sprite,
+
+        #[cfg(not(target_arch = "wasm32"))]
+        terrain,
     }
 }
 

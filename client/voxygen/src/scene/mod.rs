@@ -280,8 +280,10 @@ impl Scene {
 
         let globals_bind_group = renderer.bind_globals(&data, lod.get_data());
 
+        log::info!("SpriteRenderContext::new(renderer)");
         let sprite_render_context = SpriteRenderContext::new(renderer);
         let terrain = Terrain::new(renderer, &data, lod.get_data(), sprite_render_context);
+        log::info!("Terrain::new over");
 
         Self {
             data,

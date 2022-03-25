@@ -493,6 +493,8 @@ impl<V: RectRasterableVol> Terrain<V> {
         lod_data: &LodData,
         sprite_render_context: SpriteRenderContext,
     ) -> Self {
+
+        log::info!("Terrain new");
         // Create a new mpsc (Multiple Produced, Single Consumer) pair for communicating
         // with worker threads that are meshing chunks.
         let (send, recv) = channel::unbounded();

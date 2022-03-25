@@ -120,11 +120,8 @@ pub struct Renderer {
     depth_sampler: wgpu::Sampler,
 
     state: State,
-    // Some if there is a pending need to recreate the pipelines (e.g. RenderMode change or shader
-    // hotloading)
-    recreation_pending: Option<PipelineModes>,
-
     layouts: Layouts,
+
     // Note: we keep these here since their bind groups need to be updated if we resize the
     // color/depth textures
     locals: Locals,
@@ -172,15 +169,32 @@ impl Renderer {
         .expect("Failed to find an appropriate adapter");
 
 
+        let features: wgpu::Features;
+        let limits: wgpu::Limits;
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            features = wgpu::Features::DEPTH_CLIP_CONTROL
+                    | wgpu::Features::ADDRESS_MODE_CLAMP_TO_BORDER
+                    | wgpu::Features::PUSH_CONSTANTS
+                    | adapter.features();
+
+            limits = wgpu::Limits {
+                max_push_constant_size: 64,
+                ..Default::default()
+            };
+        }
+
+        #[cfg(target_arch = "wasm32")]
+        {
+            features = adapter.features();
+            limits = wgpu::Limits::downlevel_webgl2_defaults().using_resolution(adapter.limits());
+        }
+
         let (device, queue) = runtime.block_on(adapter.request_device(
             &wgpu::DeviceDescriptor {
                 label: None,
-                features: /*  wasm 不支持
-                      wgpu::Features::DEPTH_CLIP_CONTROL
-                    | wgpu::Features::ADDRESS_MODE_CLAMP_TO_BORDER
-                    | wgpu::Features::PUSH_CONSTANTS
-                    | */adapter.features(),
-                limits: wgpu::Limits::downlevel_webgl2_defaults().using_resolution(adapter.limits()),
+                features,
+                limits
             },
             None,
         ))?;
@@ -357,7 +371,6 @@ impl Renderer {
             sc_desc,
 
             state,
-            recreation_pending: None,
 
             layouts,
             locals,

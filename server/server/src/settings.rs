@@ -146,7 +146,7 @@ impl Default for Settings {
             banned_words_files: Vec::new(),
             max_player_group_size: 6,
             calendar_mode: CalendarMode::Auto,
-            client_timeout: Duration::from_secs(40),
+            client_timeout: Duration::from_secs(360),
             spawn_town: None,
             safe_spawn: true,
             max_player_for_kill_broadcast: None,

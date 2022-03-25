@@ -186,8 +186,10 @@ impl SpriteLayout {
                 binding: 12,
                 visibility: wgpu::ShaderStages::VERTEX,
                 ty: wgpu::BindingType::Buffer {
-                    //ty: wgpu::BufferBindingType::Storage { read_only: true },
+                    #[cfg(not(target_arch = "wasm32"))]
+                    ty: wgpu::BufferBindingType::Storage { read_only: true },
                     //webgl 不支持 Storage，不知道改了会怎样
+                    #[cfg(target_arch = "wasm32")]
                     ty: wgpu::BufferBindingType::Uniform,
                     has_dynamic_offset: false,
                     min_binding_size: core::num::NonZeroU64::new(

@@ -677,10 +677,9 @@ impl Item {
     /// Creates a Vec containing one of each item that matches the provided
     /// asset glob pattern
     pub fn new_from_asset_glob(asset_glob: &str) -> Result<Vec<Self>, Error> {
-        log::info!("new_from_asset_glob load_dir"); 
 
         let specifier = asset_glob.strip_suffix(".*").unwrap_or(asset_glob);
-        let defs = assets::load_dir::<RawItemDef>(specifier, true)?;
+        let defs = assets::load_dir::<RawItemDef>(specifier)?;
         defs.ids().map(Item::new_from_asset).collect()
     }
 
@@ -977,7 +976,7 @@ pub fn all_item_defs_expect() -> Vec<String> {
 pub fn try_all_item_defs() -> Result<Vec<String>, Error> {
     log::info!("try_all_item_defs load_dir"); 
 
-    let defs = assets::load_dir::<RawItemDef>("common.items", true)?;
+    let defs = assets::load_dir::<RawItemDef>("common.items")?;
     Ok(defs.ids().map(|id| id.to_owned()).collect())
 }
 

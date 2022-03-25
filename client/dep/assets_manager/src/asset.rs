@@ -67,13 +67,9 @@ pub trait Compound: Sized + Send + Sync + 'static {
         cache: &AssetCache<S>,
         id: SharedString,
     ) -> Result<CacheEntry, Error> {
-
-        log::info!("_load_and_record_entry"); 
         let asset = Self::_load_and_record::<S, P>(cache, &id)?;
-        log::info!("_load_and_record_entry _load_and_record over"); 
         Ok(CacheEntry::new(asset, id))
     }
-
     
     fn get_key<P: PrivateMarker>() -> Option<crate::key::AssetType> {
         None

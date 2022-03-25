@@ -27,6 +27,7 @@ where
             let mut ids = Vec::new();
 
             // Select all files with an extension valid for type `A`
+            log::info!("read_dir select_ids");
             source.read_dir(id, &mut |entry| {
                 if let DirEntry::File(id, ext) = entry {
                     if extensions.contains(&ext) {
@@ -39,16 +40,6 @@ where
         }
 
         inner(source, id, A::EXTENSIONS)
-    }
-}
-
-impl<A> DirLoadable for std::sync::Arc<A>
-where
-    A: DirLoadable,
-{
-    #[inline]
-    fn select_ids<S: Source + ?Sized>(source: &S, id: &str) -> io::Result<Vec<SharedString>> {
-        A::select_ids(source, id)
     }
 }
 
@@ -84,52 +75,8 @@ impl<A> fmt::Debug for CachedDir<A> {
         self.ids.fmt(f)
     }
 }
-
-/// Stores ids in a recursive directory containing assets of type `A`
-pub(crate) struct CachedRecDir<A> {
-    ids: Vec<SharedString>,
-    _marker: PhantomData<A>,
-}
-
-impl<A> Compound for CachedRecDir<A>
-where
-    A: DirLoadable,
-{
-    fn load<S: Source + ?Sized>(cache: &AssetCache<S>, id: &str) -> Result<Self, BoxedError> {
-        // Load the current directory
-        let this = cache.load::<CachedDir<A>>(id)?;
-        let mut ids = this.get().ids.clone();
-
-        // Recursively load child directories
-        cache
-            .source()
-            .read_dir(id, &mut |entry| {
-                if let DirEntry::Directory(id) = entry {
-                    if let Ok(child) = cache.load::<CachedRecDir<A>>(id) {
-                        ids.extend_from_slice(&child.get().ids);
-                    }
-                }
-            })
-            .map_err(|err| Error::from_io(id.into(), err))?;
-
-        Ok(CachedRecDir {
-            ids,
-            _marker: PhantomData,
-        })
-    }
-}
-
-impl<A: DirLoadable> crate::asset::NotHotReloaded for CachedRecDir<A> {}
-
-impl<A> fmt::Debug for CachedRecDir<A> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.ids.fmt(f)
-    }
-}
-
 enum DirHandleInner<'a, A> {
     Simple(Handle<'a, CachedDir<A>>),
-    Recursive(Handle<'a, CachedRecDir<A>>),
 }
 
 impl<A> Clone for DirHandleInner<'_, A> {
@@ -148,7 +95,6 @@ where
     fn id(self) -> &'a str {
         match self {
             Self::Simple(handle) => handle.id(),
-            Self::Recursive(handle) => handle.id(),
         }
     }
 
@@ -156,7 +102,6 @@ where
     fn ids(self) -> &'a [SharedString] {
         match self {
             Self::Simple(handle) => &handle.get().ids,
-            Self::Recursive(handle) => &handle.get().ids,
         }
     }
 }
@@ -180,11 +125,6 @@ where
         DirHandle { inner, cache }
     }
 
-    #[inline]
-    pub(crate) fn new_rec(handle: Handle<'a, CachedRecDir<A>>, cache: &'a AssetCache<S>) -> Self {
-        let inner = DirHandleInner::Recursive(handle);
-        DirHandle { inner, cache }
-    }
 
     /// The id of the directory handle.
     #[inline]

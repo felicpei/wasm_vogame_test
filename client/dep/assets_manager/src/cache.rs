@@ -206,10 +206,7 @@ where
         id: &str,
         recursive: bool,
     ) -> Option<DirHandle<A, S>> {
-        Some(if recursive {
-            let handle = self.get_cached(id)?;
-            DirHandle::new_rec(handle, self)
-        } else {
+        Some({
             let handle = self.get_cached(id)?;
             DirHandle::new(handle, self)
         })
@@ -299,12 +296,8 @@ where
     pub fn load_dir<A: DirLoadable>(
         &self,
         id: &str,
-        recursive: bool,
     ) -> Result<DirHandle<A, S>, Error> {
-        Ok(if recursive {
-            let handle = self.load(id)?;
-            DirHandle::new_rec(handle, self)
-        } else {
+        Ok({
             let handle = self.load(id)?;
             DirHandle::new(handle, self)
         })

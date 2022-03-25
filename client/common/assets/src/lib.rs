@@ -181,13 +181,10 @@ pub trait AssetExt: Sized + Send + Sync + 'static {
 /// ignored.
 pub fn load_dir<T: DirLoadable>(
     specifier: &str,
-    recursive: bool,
 ) -> Result<AssetDirHandle<T>, Error> {
 
-    log::info!("common load_dir"); 
-
     let specifier = specifier.strip_suffix(".*").unwrap_or(specifier);
-    ASSETS.load_dir(specifier, recursive)
+    ASSETS.load_dir(specifier)
 }
 
 

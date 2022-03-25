@@ -14,6 +14,7 @@ impl ResSystem {
 
 impl Source for ResSystem {
     fn read(&self, id: &str, ext: &str) -> io::Result<Cow<[u8]>> {
+
         let result = super::get_cache_data(id, ext);
         match result {
             Ok(bytes) => Ok(bytes),
@@ -27,11 +28,9 @@ impl Source for ResSystem {
 
     fn read_dir(&self, id: &str, f: &mut dyn FnMut(DirEntry)) -> io::Result<()> {
 
-        log::warn!("start load dir: {}", id);
         let map = super::ASSET_MAP_DIR.lock().unwrap();
         for key in map.keys() {
             if key.starts_with(id) {
-                log::warn!("# find dir: {}", id);
                 f(DirEntry::Directory(key))
             }
         }
@@ -43,7 +42,6 @@ impl Source for ResSystem {
                     let name = &key[0..pos - 1];
                     let ext = &key[pos..];
 
-                    log::warn!("# find file: {}", &key);
                     f(DirEntry::File(name, ext))
                 }
             }

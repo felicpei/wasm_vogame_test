@@ -21,13 +21,6 @@ default = ["default-publish", "console_error_panic_hook"]
 
 
 [dependencies]
-#wasm 
-web-sys = "0.3"
-js-sys = { version = "0.3" }
-wasm-bindgen = "0.2"
-wasm-bindgen-futures = "0.4"
-console_error_panic_hook = { version = "0.1.6", optional = true }
-wee_alloc = { version = "0.4.5", optional = true }
 
 #log
 log = "0.4.6"
@@ -108,6 +101,12 @@ git = "https://github.com/iced-rs/winit"
 rev = "02a12380960cec2f351c09a33d6a7cc2789d96a6"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
+web-sys = "0.3"
+js-sys = { version = "0.3" }
+wasm-bindgen = "0.2"
+wasm-bindgen-futures = "0.4"
+console_error_panic_hook = { version = "0.1.6", optional = true }
+wee_alloc = { version = "0.4.5", optional = true }
 instant = { version = "0.1", features = [ "wasm-bindgen", "inaccurate" ] }
 wasm-logger = "0.2.0"
 tokio = { version = "=1.17.0", default-features = false, features = ["rt"] }

@@ -101,7 +101,8 @@ pub fn create_col_lights(
         mag_filter: wgpu::FilterMode::Linear,
         min_filter: wgpu::FilterMode::Linear,
         mipmap_filter: wgpu::FilterMode::Nearest,
-        border_color: Some(wgpu::SamplerBorderColor::TransparentBlack),
+        //todo border_color webgl 好像不支持
+        //border_color: Some(wgpu::SamplerBorderColor::TransparentBlack),
         ..Default::default()
     };
 

@@ -60,6 +60,7 @@ pub fn run(mut global_state: GlobalState, event_loop: EventLoop) {
             },
             winit::event::Event::MainEventsCleared => {
                 if polled_twice {
+                    global_state.window.handle_redraw_requested();
                     handle_main_events_cleared(&mut states, control_flow, &mut global_state);
                 }
                 polled_twice = !polled_twice;

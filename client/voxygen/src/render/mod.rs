@@ -251,7 +251,7 @@ pub enum PresentMode {
 }
 
 impl Default for PresentMode {
-    fn default() -> Self { Self::Immediate }
+    fn default() -> Self { Self::Fifo }
 }
 
 impl From<PresentMode> for wgpu::PresentMode {

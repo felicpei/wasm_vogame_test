@@ -174,7 +174,7 @@ impl Texture {
         let tex = device.create_texture(texture_info);
         let view = tex.create_view(view_info);
 
-        log::warn!("new_raw create_sampler:{:?}", &sampler_info);
+        //log::warn!("new_raw create_sampler:{:?}", &sampler_info);
         let sampler = device.create_sampler(sampler_info);
 
         Self {

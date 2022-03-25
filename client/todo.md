@@ -19,4 +19,14 @@
   - wasm线程方式为：js开出的线程然后调用wasm的接口来实现多线程，目前几乎无法使用。
     - pipeline_creation.rs 渲染管线改为单线程（效率未知）
     - terrain.rs SpriteRenderContext 改为单线程
+- clock.rs中的sleep wasm不支持(spin_sleep中含有std::thread)
+- 窗口自适应
+  - window中的resize不支持wasm, wasm要单独处理自己的resize
+  - UI操作位置与实际位置不符合
+- SamplerDescriptor不支持border
+- ui_set_scissor貌似不支持wasm
+- 音效播放不处理，不支持的Device
+- 按钮文字I18N问题
+- 画面比客户端版本要糊
+
 

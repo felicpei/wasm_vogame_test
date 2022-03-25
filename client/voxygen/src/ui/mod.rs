@@ -1,3 +1,6 @@
+#[cfg(target_arch = "wasm32")]
+pub mod wasm;
+
 mod cache;
 mod event;
 mod graphic;

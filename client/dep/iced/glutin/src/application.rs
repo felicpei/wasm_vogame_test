@@ -199,8 +199,7 @@ async fn run_instance<A, E, C>(
                 }
 
                 if !messages.is_empty() {
-                    let cache =
-                        ManuallyDrop::into_inner(user_interface).into_cache();
+                    let cache = ManuallyDrop::into_inner(user_interface).into_cache();
 
                     // Update application
                     application::update(
@@ -231,16 +230,15 @@ async fn run_instance<A, E, C>(
                 }
 
                 debug.draw_started();
-                primitive =
-                    user_interface.draw(&mut renderer, state.cursor_position());
+                primitive = user_interface.draw(&mut renderer, state.cursor_position());
                 debug.draw_finished();
-
                 context.window().request_redraw();
             }
             event::Event::UserEvent(message) => {
                 messages.push(message);
             }
             event::Event::RedrawRequested(_) => {
+                
                 debug.render_started();
                 let current_viewport_version = state.viewport_version();
 

@@ -89,7 +89,9 @@ impl LodData {
                 mag_filter: filter,
                 min_filter: filter,
                 mipmap_filter: wgpu::FilterMode::Nearest,
-                border_color: Some(wgpu::SamplerBorderColor::TransparentBlack),
+
+                //todo border_color webgl 好像不支持
+                //border_color: Some(wgpu::SamplerBorderColor::TransparentBlack),
                 ..Default::default()
             };
 

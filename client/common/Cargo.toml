@@ -42,7 +42,7 @@ ordered-float = { version = "2.0.1", default-features = false }
 rayon = "1.5"
 
 roots = "0.0.6"
-spin_sleep = "1.0"
+
 
 uuid = { version = "0.8.1", default-features = false, features = ["serde", "v4"] }
 rand = "0.8"
@@ -75,3 +75,4 @@ instant = { version = "0.1", features = [ "wasm-bindgen", "inaccurate" ] }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 instant = "0.1"
+spin_sleep = "1.0"

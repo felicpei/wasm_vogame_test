@@ -106,7 +106,11 @@ impl Clock {
         
         // Attempt to sleep to fill the gap.
         if let Some(sleep_dur) = self.target_dt.checked_sub(busy_delta) {
+
+            #[cfg(not(target_arch = "wasm32"))]
             spin_sleep::sleep(sleep_dur);
+
+            //todo wasm 这里怎么办？
         }
 
         let after_sleep_sys_time = Instant::now();

@@ -172,6 +172,8 @@ impl Controls {
         i18n: LocalizationHandle,
         settings: &Settings,
     ) -> Self {
+
+        log::info!("MainUI Controls new");
         let version = common::util::DISPLAY_VERSION_LONG.clone();
         let alpha = format!("Veloren {}", common::util::DISPLAY_VERSION.as_str());
 
@@ -457,11 +459,14 @@ pub struct MainMenuUi {
 
 impl MainMenuUi {
     pub fn new(global_state: &mut GlobalState) -> Self {
+
+        log::info!("MainMenuUi new start");
         // Load language
         let i18n = &global_state.i18n.read();
         // TODO: don't add default font twice
         let font = load_font(&i18n.fonts().get("cyri").unwrap().asset_key);
 
+        log::info!("MainMenuUi New UI start");
         let mut ui = Ui::new(
             &mut global_state.window,
             font,
@@ -469,10 +474,13 @@ impl MainMenuUi {
         )
         .unwrap();
 
+        log::info!("MainMenuUi LoadFont start");
         let fonts = Fonts::load(i18n.fonts(), &mut ui).expect("Impossible to load fonts");
 
+        log::info!("MainMenuUi bg_img_spec start");
         let bg_img_spec = BG_IMGS.choose(&mut thread_rng()).unwrap();
 
+        log::info!("MainMenuUi bg_img start");
         let bg_img = assets::Image::load_expect(bg_img_spec).read().to_image();
         let controls = Controls::new(
             fonts,

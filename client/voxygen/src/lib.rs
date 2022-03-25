@@ -154,6 +154,8 @@ pub fn start() {
 
 pub fn start_game() {
 
+    //res::debug_map();
+
     //load setting
     log::info!("start init settings");
     let mut settings = Settings::load();
@@ -224,7 +226,6 @@ pub fn start_game() {
         clear_shadows_next_frame: false,
     };
 
-    log::info!("start run::run");
     run::run(global_state, event_loop);
 }
 

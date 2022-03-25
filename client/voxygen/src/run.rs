@@ -10,6 +10,8 @@ use std::mem;
 use instant::Duration;
 
 pub fn run(mut global_state: GlobalState, event_loop: EventLoop) {
+    
+    log::info!("start game run");
     // Set up the initial play state.
     let mut states: Vec<Box<dyn PlayState>> = vec![Box::new(MainMenuState::new(&mut global_state))];
     states.last_mut().map(|current_state| {
@@ -18,6 +20,7 @@ pub fn run(mut global_state: GlobalState, event_loop: EventLoop) {
         log::debug!("{:?} Started game with state", current_state);
     });
 
+    log::info!("start game new menu over");
     // Used to ignore every other `MainEventsCleared`
     // This is a workaround for a bug on macos in which mouse motion events are only
     // reported every other cycle of the event loop

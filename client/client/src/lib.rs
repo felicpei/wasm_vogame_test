@@ -683,6 +683,7 @@ impl Client {
                 return Ok(());
             }
         }
+        
         match msg {
             ClientMsg::Type(msg) => self.register_stream.send(msg),
             ClientMsg::Register(msg) => self.register_stream.send(msg),
@@ -721,6 +722,8 @@ impl Client {
                     | ClientGeneral::Command(_, _)
                     | ClientGeneral::Terminate => &mut self.general_stream,
                 };
+
+                log::info!("# send msg: {:?}", msg);
                 stream.send(msg)
             },
             ClientMsg::Ping(msg) => self.ping_stream.send(msg),
@@ -1664,6 +1667,9 @@ impl Client {
                 self.player_list = list
             },
             ServerGeneral::PlayerListUpdate(PlayerListUpdate::Add(uid, player_info)) => {
+
+                log::info!("recv playerListUpdate:{}  {:?}", &uid, &player_info);
+
                 if let Some(old_player_info) = self.player_list.insert(uid, player_info.clone()) {
                     log::warn!(
                         "Received msg to insert {} with uid {} into the player list but there was \
@@ -1825,6 +1831,7 @@ impl Client {
         frontend_events: &mut Vec<Event>,
         msg: ServerGeneral,
     ) -> Result<(), Error> {
+
         match msg {
             ServerGeneral::GroupUpdate(change_notification) => {
                 use comp::group::ChangeNotification::*;
@@ -2090,6 +2097,7 @@ impl Client {
 
             while let Some(msg) = self.general_stream.try_recv()? {
                 cnt += 1;
+                // log::info!("recv handle_server_msg:{:?}", &msg);
                 self.handle_server_msg(frontend_events, msg)?;
             }
             while let Some(msg) = self.ping_stream.try_recv()? {
@@ -2098,14 +2106,17 @@ impl Client {
             }
             while let Some(msg) = self.character_screen_stream.try_recv()? {
                 cnt += 1;
+                // log::info!("recv handle_server_character_screen_msg:{:?}", &msg);
                 self.handle_server_character_screen_msg(frontend_events, msg)?;
             }
             while let Some(msg) = self.in_game_stream.try_recv()? {
                 cnt += 1;
+                // log::info!("recv handle_server_in_game_msg:{:?}", &msg);
                 self.handle_server_in_game_msg(frontend_events, msg)?;
             }
             while let Some(msg) = self.terrain_stream.try_recv()? {
                 cnt += 1;
+                // log::info!("recv handle_server_terrain_msg:{:?}", &msg);
                 self.handle_server_terrain_msg(msg)?;
             }
 

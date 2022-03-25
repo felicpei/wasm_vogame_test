@@ -300,8 +300,6 @@ impl common_assets::DirLoadable for FindManifests {
     ) -> io::Result<Vec<common_assets::SharedString>> {
         let mut specifiers = Vec::new();
 
-        log::warn!("try load dir:{}", specifier);
-
         source.read_dir(specifier, &mut |entry| {
             if let DirEntry::Directory(spec) = entry {
                 let manifest_spec = [spec, ".", LANG_MANIFEST_FILE].concat();

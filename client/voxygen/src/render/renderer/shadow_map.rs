@@ -110,27 +110,27 @@ impl ShadowMap {
         let tex = make_tex(wgpu::TextureViewDimension::D2, 1);
 
         // Clear to 1.0
-        let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("Dummy shadow tex clearing encoder"),
-        });
-        let mut clear = |tex: &Texture| {
-            encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                label: Some("Clear dummy shadow texture"),
-                color_attachments: &[],
-                depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
-                    view: &tex.view,
-                    depth_ops: Some(wgpu::Operations {
-                        load: wgpu::LoadOp::Clear(1.0),
-                        store: true,
-                    }),
-                    stencil_ops: None,
-                }),
-            });
-        };
-        clear(&cube_tex);
-        clear(&tex);
-        drop(clear);
-        queue.submit(std::iter::once(encoder.finish()));
+        // let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+        //     label: Some("Dummy shadow tex clearing encoder"),
+        // });
+        // let mut clear = |tex: &Texture| {
+        //     encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+        //         label: Some("Clear dummy shadow texture"),
+        //         color_attachments: &[],
+        //         depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
+        //             view: &tex.view,
+        //             depth_ops: Some(wgpu::Operations {
+        //                 load: wgpu::LoadOp::Clear(1.0),
+        //                 store: true,
+        //             }),
+        //             stencil_ops: None,
+        //         }),
+        //     });
+        // };
+        // clear(&cube_tex);
+        // clear(&tex);
+        // drop(clear);
+        // queue.submit(std::iter::once(encoder.finish()));
 
         (cube_tex, tex)
     }

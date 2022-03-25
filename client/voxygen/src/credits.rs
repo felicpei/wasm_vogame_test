@@ -65,27 +65,3 @@ impl assets::Asset for Credits {
 
     const EXTENSION: &'static str = "ron";
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn all_art_asset_paths_exists() {
-        use assets::AssetExt;
-        let credits = Credits::load_expect_cloned("common.credits");
-
-        credits
-            .music
-            .into_iter()
-            .chain(credits.fonts)
-            .chain(credits.other_art)
-            .for_each(|art| {
-                assert!(
-                    assets::ASSETS_PATH.join(&art.asset_path).exists(),
-                    "assets/{} does not exist!",
-                    art.asset_path.display(),
-                );
-            });
-    }
-}

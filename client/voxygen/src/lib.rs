@@ -132,17 +132,19 @@ use common_assets as res;
 #[global_allocator]
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
+#[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
 pub fn set_resource_data(name: &str, data: &[u8]) {
     res::set_cache_data(name, data);
 }
 
+#[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
 pub fn set_resource_dir(name: &str) {
     res::set_cache_dir(name);
 }
 
-//canvas_id 来自html的canvas
+#[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
 pub fn start() {
     wasm_logger::init(wasm_logger::Config::new(log::Level::Info));
@@ -154,19 +156,46 @@ pub fn start() {
 
 pub fn start_game() {
 
-    //res::debug_map();
-
     //load setting
     log::info!("start init settings");
     let mut settings = Settings::load();
     settings.display_warnings();
 
     log::info!("start init tokio_runtime");
-    let tokio_runtime = Arc::new(
-        tokio::runtime::Builder::new_current_thread()
-            .build()
-            .unwrap(),
-    );
+
+    let tokio_runtime : Arc<Runtime>;
+    
+    //native 多线程
+    #[cfg(not(target_arch = "wasm32"))]
+     {
+        use common::consts::MIN_RECOMMENDED_TOKIO_THREADS;
+        use std::sync::atomic::{AtomicUsize, Ordering};
+
+        // TODO: evaluate std::thread::available_concurrency as a num_cpus replacement
+        let cores = 8;
+        tokio_runtime = Arc::new(
+            tokio::runtime::Builder::new_multi_thread()
+                .enable_all()
+                .worker_threads((cores / 4).max(MIN_RECOMMENDED_TOKIO_THREADS))
+                .thread_name_fn(|| {
+                    static ATOMIC_ID: AtomicUsize = AtomicUsize::new(0);
+                    let id = ATOMIC_ID.fetch_add(1, Ordering::SeqCst);
+                    format!("tokio-voxygen-{}", id)
+                })
+                .build()
+                .unwrap(),
+        );
+    }
+
+    //wasm 单线程
+    #[cfg(target_arch = "wasm32")]
+    {
+        tokio_runtime = Arc::new(
+            tokio::runtime::Builder::new_current_thread()
+                .build()
+                .unwrap(),
+        );
+    }
 
     // Setup audio
     log::info!("start init audio");

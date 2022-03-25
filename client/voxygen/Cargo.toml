@@ -102,10 +102,6 @@ strum_macros = "0.23"
 treeculler = "0.2"
 itertools = "0.10.0"
 
-#tokio = { version = "=1.17.0", default-features = false, features = ["rt-multi-thread"] }
-tokio = { version = "=1.17.0", default-features = false, features = ["rt"] }
-
-
 [dependencies.winit]
 version = "0.26"
 git = "https://github.com/iced-rs/winit"
@@ -114,10 +110,12 @@ rev = "02a12380960cec2f351c09a33d6a7cc2789d96a6"
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 instant = { version = "0.1", features = [ "wasm-bindgen", "inaccurate" ] }
 wasm-logger = "0.2.0"
+tokio = { version = "=1.17.0", default-features = false, features = ["rt"] }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 env_logger = "0.9"
 instant = "0.1"
+tokio = { version = "=1.17.0", default-features = false, features = ["rt-multi-thread"] }
 
 
 # [target.'cfg(target_os = "macos")'.dependencies]

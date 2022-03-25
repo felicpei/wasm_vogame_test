@@ -154,7 +154,7 @@ impl Renderer {
         let (pipeline_modes, other_modes) = mode.split();
        
 
-        let instance = wgpu::Instance::new(wgpu::Backends::GL);
+        let instance = wgpu::Instance::new(wgpu::Backends::all());
         let dims = window.inner_size();
 
         // This is unsafe because the window handle must be valid, if you find a way to
@@ -294,7 +294,8 @@ impl Renderer {
         );
 
         let create_sampler = |filter| {
-            device.create_sampler(&wgpu::SamplerDescriptor {
+
+            let sampler_info = &wgpu::SamplerDescriptor {
                 label: None,
                 address_mode_u: wgpu::AddressMode::ClampToEdge,
                 address_mode_v: wgpu::AddressMode::ClampToEdge,
@@ -304,7 +305,9 @@ impl Renderer {
                 mipmap_filter: wgpu::FilterMode::Nearest,
                 compare: None,
                 ..Default::default()
-            })
+            };
+            log::warn!("create_sampler: {:?}",&sampler_info);
+            device.create_sampler(sampler_info)
         };
 
         let sampler = create_sampler(wgpu::FilterMode::Linear);
@@ -699,11 +702,6 @@ impl Renderer {
         // Handle polling background pipeline creation/recreation
         // Temporarily set to nothing and then replace in the statement below
         let state = core::mem::replace(&mut self.state, State::Nothing);
-        // Indicator for if pipeline recreation finished and we need to recreate bind
-        // groups / render targets (handling defered so that State will be valid
-        // when calling Self::on_resize)
-        let mut trigger_on_resize = false;
-
         
         // If still creating initial pipelines, check if complete
         self.state = if let State::Interface {
@@ -773,12 +771,12 @@ impl Renderer {
             state
         };
 
-        // Call on_resize to recreate render targets and their bind groups if the
-        // pipelines were recreated with a new postprocess layout and or changes in the
-        // render modes
-        if trigger_on_resize {
-            self.on_resize(self.resolution);
-        }
+        // // Call on_resize to recreate render targets and their bind groups if the
+        // // pipelines were recreated with a new postprocess layout and or changes in the
+        // // render modes
+        // if trigger_on_resize {
+        //     self.on_resize(self.resolution);
+        // }
 
         Ok(Some(drawer::Drawer::new(encoder, self, view, globals)))
     }

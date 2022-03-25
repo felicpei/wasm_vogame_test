@@ -62,6 +62,9 @@ impl MainMenuState {
 
 impl PlayState for MainMenuState {
     fn enter(&mut self, global_state: &mut GlobalState, _: Direction) {
+
+        log::info!("PlayState for MainMenuState : enter");
+
         // Kick off title music
         if global_state.settings.audio.output.is_enabled() && global_state.audio.music_enabled() {
             global_state.audio.play_title_music();
@@ -78,6 +81,7 @@ impl PlayState for MainMenuState {
     #[allow(clippy::single_match)] // TODO: remove when event match has multiple arms
     fn tick(&mut self, global_state: &mut GlobalState, events: Vec<Event>) -> PlayStateResult {
         
+        //log::info!("PlayState for MainMenuState : tic");
         // Pull in localizations
         let localized_strings = &global_state.i18n.read();
        
@@ -154,27 +158,20 @@ impl PlayState for MainMenuState {
             }
         }
 
-        // // Poll renderer pipeline creation
-        // if let InitState::Pipeline(..) = &self.init {
-        //     // If not complete go to char select screen
-        //     if global_state
-        //         .window
-        //         .renderer()
-        //         .pipeline_creation_status()
-        //         .is_none()
-        //     {
-        //         // Always succeeds since we check above
-        //         if let InitState::Pipeline(client) =
-        //             core::mem::replace(&mut self.init, InitState::None)
-        //         {
-        //             self.main_menu_ui.connected();
-        //             return PlayStateResult::Push(Box::new(CharSelectionState::new(
-        //                 global_state,
-        //                 std::rc::Rc::new(std::cell::RefCell::new(*client)),
-        //             )));
-        //         }
-        //     }
-        // }
+        // Poll renderer pipeline creation
+        if let InitState::Pipeline(..) = &self.init {
+            // If not complete go to char select screen
+            // Always succeeds since we check above
+            if let InitState::Pipeline(client) =
+                core::mem::replace(&mut self.init, InitState::None)
+            {
+                self.main_menu_ui.connected();
+                return PlayStateResult::Push(Box::new(CharSelectionState::new(
+                    global_state,
+                    std::rc::Rc::new(std::cell::RefCell::new(*client)),
+                )));
+            }
+        }
 
         // Maintain the UI.
         for event in self
@@ -182,7 +179,6 @@ impl PlayState for MainMenuState {
             .maintain(global_state, global_state.clock.dt())
         {
             match event {
-
 
                 MainMenuEvent::LoginAttempt {
                     username,
@@ -263,6 +259,9 @@ impl PlayState for MainMenuState {
     fn globals_bind_group(&self) -> &GlobalsBindGroup { self.scene.global_bind_group() }
 
     fn render<'a>(&'a self, drawer: &mut Drawer<'a>, _: &Settings) {
+
+        //log::info!("PlayState for MainMenuState : render");
+
         // Draw the UI to the screen.
         let mut third_pass = drawer.third_pass();
         third_pass.init_ui();
@@ -366,7 +365,7 @@ fn attempt_login(
     runtime: &Arc<runtime::Runtime>,
     localized_strings: &LocalizationHandle,
 ) {
-    log::info!("attempt_login start");
+    log::info!("##### attempt_login start");
     let localization = localized_strings.read();
     if let Err(err) = comp::Player::alias_validate(&username) {
         match err {

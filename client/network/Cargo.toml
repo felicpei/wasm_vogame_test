@@ -9,24 +9,9 @@ edition = "2021"
 [features]
 metrics = ["prometheus", "network-protocol/metrics"]
 compression = ["lz-fear"]   #压缩
-
-#需要用websocket的情况
 default = ["metrics", "compression"]
 
-#需要用cargo的tcp情况
-# client_tcp = ["socket2", "tokio"]   #切换 客户端 和 wasm
-# default = ["metrics", "compression","client_tcp"]
-
-
 [dependencies]
-
-#需要用websocket的情况
-tokio = { version = "=1.17.0", default-features = false, features = ["macros", "rt", "time"] }
-
-# #需要用cargo的tcp情况
-# socket2 = { version = "0.4.4", default-features = false, optional = true }
-# tokio = { version = "=1.17.0", default-features = false, optional = true, features = ["io-util", "macros", "rt", "net", "time"] }
-
 
 network-protocol = { package = "veloren-network-protocol", path = "protocol" }
 tokio-stream = { version = "=0.1.8", default-features = false }
@@ -59,12 +44,15 @@ bytes = "^1"
 # faster HashMaps
 hashbrown = { version = "0.11" }
 
-
 #log
 log = "0.4"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 instant = { version = "0.1", features = [ "wasm-bindgen", "inaccurate" ] }
+tokio = { version = "=1.17.0", default-features = false, features = ["macros", "rt", "time"] }
+
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+socket2 = { version = "0.4.4", default-features = false}
+tokio = { version = "=1.17.0", default-features = false, features = ["io-util", "macros", "rt", "net", "time"] }
 instant = "0.1"

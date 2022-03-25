@@ -2,6 +2,17 @@
 #run server
 cargo run --bin veloren-server-cli
 
-#build wasm
+#先进入voxygen/www目录
 cd voxygen/www
+
+#debug
+wasm-pack build --out-dir www/pkg --target web --dev
+
+#release
 wasm-pack build --out-dir www/pkg --target web
+
+#首次执行：
+npm install
+
+#启动server
+npm restart

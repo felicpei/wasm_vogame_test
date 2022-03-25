@@ -12,6 +12,7 @@
 - 渲染管线多线程->单线程，目前wasm不支持ThreadPool
 - Terrain改为单线程
 - 修改所有std::time为instant
+- 重构加载代码，支持load_dir
 
 ## [0.1] 
 - 去掉登录验证，保证客户端and服务器分开运行，且可以跑。

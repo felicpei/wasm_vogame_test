@@ -204,7 +204,6 @@ where
     pub fn get_cached_dir<A: DirLoadable>(
         &self,
         id: &str,
-        recursive: bool,
     ) -> Option<DirHandle<A, S>> {
         Some({
             let handle = self.get_cached(id)?;
@@ -215,8 +214,8 @@ where
     /// Returns `true` if the cache contains the specified directory with the
     /// given `recursive` parameter.
     #[inline]
-    pub fn contains_dir<A: DirLoadable>(&self, id: &str, recursive: bool) -> bool {
-        self.get_cached_dir::<A>(id, recursive).is_some()
+    pub fn contains_dir<A: DirLoadable>(&self, id: &str) -> bool {
+        self.get_cached_dir::<A>(id).is_some()
     }
 
     /// Removes an asset from the cache, and returns whether it was present in

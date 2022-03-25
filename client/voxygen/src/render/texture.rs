@@ -101,10 +101,13 @@ impl Texture {
             array_layer_count: None,
         });
 
+        log::warn!("texture_new create_sampler:{:?}", &sampler_info);
+        let sampler = device.create_sampler(&sampler_info);
+       
         Ok(Self {
             tex,
             view,
-            sampler: device.create_sampler(&sampler_info),
+            sampler,
             size,
             format,
         })
@@ -171,10 +174,13 @@ impl Texture {
         let tex = device.create_texture(texture_info);
         let view = tex.create_view(view_info);
 
+        log::warn!("new_raw create_sampler:{:?}", &sampler_info);
+        let sampler = device.create_sampler(sampler_info);
+
         Self {
             tex,
             view,
-            sampler: device.create_sampler(sampler_info),
+            sampler,
             size: texture_info.size,
             format: texture_info.format,
         }

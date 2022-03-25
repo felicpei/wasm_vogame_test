@@ -401,6 +401,7 @@ pub struct Window {
     pub key_layout: Option<KeyLayout>,
 }
 
+#[cfg(target_arch = "wasm32")]
 fn create_render_area(window: &winit::window::Window, canvas_id: &str) {
 
     use winit::platform::web::WindowExtWebSys;
@@ -424,16 +425,32 @@ impl Window {
         runtime: &tokio::runtime::Runtime,
     ) -> Result<(Window, EventLoop), Error> {
 
-        //创建窗体
+        //native 创建窗体
         let event_loop = EventLoop::with_user_event();
-        let window = WindowBuilder::new()
-            .with_title("Wasm_test")
-            .build(&event_loop)
-            .unwrap();
+        let window : winit::window::Window;
 
-        //创建画布
-        let canvas_id = "canvas_main";
-        create_render_area(&window, canvas_id);
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            let size = settings.graphics.window_size;
+            let win_builder = winit::window::WindowBuilder::new()
+                .with_title("Veloren")
+                .with_inner_size(winit::dpi::LogicalSize::new(size[0] as f64, size[1] as f64))
+                .with_maximized(true);
+    
+            window = win_builder.build(&event_loop).unwrap();
+        }
+
+        //wasm 创建窗体
+        #[cfg(target_arch = "wasm32")]
+        {
+            window = WindowBuilder::new()
+                .with_title("Wasm_test")
+                .build(&event_loop)
+                .unwrap();
+
+            let canvas_id = "canvas_main";
+            create_render_area(&window, canvas_id);
+        }
 
         //渲染引擎
         log::info!("Window new : Renderer::new");

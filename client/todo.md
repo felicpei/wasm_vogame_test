@@ -2,7 +2,6 @@
 ## todo
 - 目前网络部分使用了多线程，这个wasm会有问题，修改 tokio 的 rt-multi-thread 为 rt，wasm不支持 rt-multi-thread。
 - 网络部分暂时屏蔽了tcpsocket，以后换。
-- 加载不支持loaddir的问题，目前i18n使用
 - 不支持的Shader
   - point-light-shadows-vert.glsl
   - 引用 shadows.glsl 的shader

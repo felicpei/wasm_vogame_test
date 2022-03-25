@@ -1,15 +1,13 @@
 //! Definitions of cache entries
 
 use std::{
-    any::{type_name, Any},
+    any::{Any},
     fmt,
-    marker::PhantomData,
     ops::Deref,
 };
 
 use crate::{
     asset::{NotHotReloaded, Storable},
-    utils::RwLock,
     SharedString,
 };
 

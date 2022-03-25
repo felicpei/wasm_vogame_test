@@ -47,7 +47,7 @@ impl ClientInit {
         let cancel = Arc::new(AtomicBool::new(false));
         let cancel2 = Arc::clone(&cancel);
 
-        log::info!("# start ClientInit");
+        log::info!("####### start ClientInit");
         let runtime2 = Arc::clone(&runtime);
         runtime.spawn(async move {
          
@@ -79,9 +79,7 @@ impl ClientInit {
                         let _ = tx.send(Msg::Done(Ok(client)));
 
                         
-                        //########## 去掉多线程 rt_multi_thread
                         tokio::task::spawn_blocking(move || drop(runtime2));
-                        //tokio::task::block_in_place(move || drop(runtime2));
                         return;
                     },
 
@@ -109,8 +107,6 @@ impl ClientInit {
             let _ = tx.send(Msg::Done(Err(last_err.unwrap_or(Error::ServerNotFound))));
 
             // Safe drop runtime
-            //########## 去掉多线程 rt_multi_thread
-            //tokio::task::block_in_place(move || drop(runtime2));
             tokio::task::spawn_blocking(move || drop(runtime2));
         });
 

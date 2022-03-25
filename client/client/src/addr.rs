@@ -14,14 +14,14 @@ impl ConnectionArgs {
     const DEFAULT_PORT: u16 = 14004;
 }
 
-#[cfg(feature = "client_tcp")]
+#[cfg(not(target_arch = "wasm32"))]
 use tokio::net::lookup_host;
 
 /// Parse ip address or resolves hostname.
 /// Note: If you use an ipv6 address, the number after the last
 /// colon will be used as the port unless you use [] around the address.
 
-#[cfg(feature = "client_tcp")]
+#[cfg(not(target_arch = "wasm32"))]
 pub(crate) async fn resolve(
     address: &str,
     prefer_ipv6: bool,
@@ -60,7 +60,7 @@ where
     use crate::error::Error;
 
     //tcp连接
-    #[cfg(feature = "client_tcp")]
+    #[cfg(not(target_arch = "wasm32"))]
     {
         let mut participant = None;
         for addr in resolve(address, prefer_ipv6)
@@ -79,9 +79,9 @@ where
     }
 
     //websocket连接 todo
-    #[cfg(not(feature = "client_tcp"))]
+    #[cfg(target_arch = "wasm32")]
     {
-        log::warn!("########## todo addr resolve and network connect");
+        log::error!("########## todo addr resolve and network connect");
         Err(Error::Other("todo addr resolve and network connect".to_string()))
     }
 }

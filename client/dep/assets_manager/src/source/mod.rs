@@ -1,4 +1,6 @@
 use std::{borrow::Cow, io};
+mod filesystem;
+pub use filesystem::FileSystem;
 
 /// An entry in a source.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

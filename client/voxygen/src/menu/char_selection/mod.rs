@@ -61,6 +61,9 @@ impl CharSelectionState {
 
 impl PlayState for CharSelectionState {
     fn enter(&mut self, global_state: &mut GlobalState, _: Direction) {
+
+        log::info!("enter CharSelectionState");
+        
         // Load the player's character list
         self.client.borrow_mut().load_character_list();
 
@@ -80,6 +83,7 @@ impl PlayState for CharSelectionState {
             let client = self.client.borrow();
             (client.presence(), client.registered())
         };
+
         if client_presence.is_none() && client_registered {
             // Handle window events
             for event in events {

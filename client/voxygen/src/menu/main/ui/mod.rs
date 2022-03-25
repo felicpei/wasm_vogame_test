@@ -176,26 +176,23 @@ impl Controls {
         log::info!("MainUI Controls new");
         let version = common::util::DISPLAY_VERSION_LONG.clone();
         let alpha = format!("Veloren {}", common::util::DISPLAY_VERSION.as_str());
-
         let credits = Credits::load_expect_cloned("common.credits");
 
-        // Note: Keeping in case we re-add the disclaimer
-        let screen = /* if settings.show_disclaimer {
-            Screen::Disclaimer {
-                screen: disclaimer::Screen::new(),
-            }
-        } else { */
-            Screen::Login {
-                screen: Box::new(login::Screen::new()),
-                error: None,
-            };
-        //};
+        log::info!("MainUI Controls new: Screen::Login");
 
+        let screen = Screen::Login {
+            screen: Box::new(login::Screen::new()),
+            error: None,
+        };
+
+        log::info!("MainUI Controls new: LoginInfo");
         let login_info = LoginInfo {
             username: settings.networking.username.clone(),
             password: String::new(),
             server: settings.networking.default_server.clone(),
         };
+
+        log::info!("MainUI Controls new: selected_server_index");
         let selected_server_index = settings
             .networking
             .servers
@@ -206,6 +203,8 @@ impl Controls {
         let selected_language_index = language_metadatas
             .iter()
             .position(|f| f.language_identifier == settings.language.selected_language);
+
+        log::info!("MainUI Controls new: over");
 
         Self {
             fonts,
@@ -489,6 +488,8 @@ impl MainMenuUi {
             global_state.i18n,
             &global_state.settings,
         );
+
+        log::info!("MainMenuUi New End");
 
         Self { ui, controls }
     }

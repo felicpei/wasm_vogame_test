@@ -1,1 +1,1 @@
-mklink /j server\assets ..\client\assets
+mklink /j server\assets client\voxygen\www\assets

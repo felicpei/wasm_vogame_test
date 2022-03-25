@@ -195,6 +195,8 @@ impl Mode {
     pub fn create(name: String) -> Self {
         // TODO: Load these from the server (presumably from a .ron) to allow for easier
         // modification of custom starting weapons
+        log::info!("create char_selection");
+
         let mainhand = Some(STARTER_SWORD);
         let offhand = None;
 
@@ -1380,6 +1382,8 @@ impl Controls {
     }
 
     fn update(&mut self, message: Message, events: &mut Vec<Event>, characters: &[CharacterItem]) {
+
+        
         match message {
             Message::Back => {
                 if matches!(&self.mode, Mode::CreateOrEdit { .. }) {
@@ -1390,6 +1394,7 @@ impl Controls {
                 events.push(Event::Logout);
             },
             Message::EnterWorld => {
+                log::info!("char_selection EnterWorld");
                 if let (Mode::Select { .. }, Some(selected)) = (&self.mode, self.selected) {
                     events.push(Event::Play(selected));
                 }
@@ -1718,9 +1723,11 @@ impl CharSelectionUi {
             &mut global_state.clipboard,
         );
 
+       
         if self.enter_pressed {
             self.enter_pressed = false;
             messages.push(Message::EnterWorld);
+            log::info!("char_selection maintain, enterworld");
         }
 
         if let Some(id) = self.select_character.take() {

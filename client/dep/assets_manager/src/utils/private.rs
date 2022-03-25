@@ -19,6 +19,32 @@ use std::{
 };
 
 
+pub fn path_of_entry(root: &Path, entry: DirEntry) -> PathBuf {
+    let (id, ext) = match entry {
+        DirEntry::File(id, ext) => (id, Some(ext)),
+        DirEntry::Directory(id) => (id, None),
+    };
+
+    let capacity = root.as_os_str().len() + id.len() + ext.map_or(0, |ext| ext.len()) + 2;
+    let mut path = PathBuf::with_capacity(capacity);
+
+    path.push(root);
+    path.extend(id.split('.'));
+    if let Some(ext) = ext {
+        path.set_extension(ext);
+    }
+
+    path
+}
+
+#[inline]
+pub(crate) fn extension_of(path: &Path) -> Option<&str> {
+    match path.extension() {
+        Some(ext) => ext.to_str(),
+        None => Some(""),
+    }
+}
+
 pub(crate) trait Key {
     fn id(&self) -> &str;
     fn type_id(&self) -> TypeId;

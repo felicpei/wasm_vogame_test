@@ -6,19 +6,19 @@ use tokio::sync::{mpsc, oneshot};
 
 
 
-#[cfg(feature = "client_tcp")]
+#[cfg(not(target_arch = "wasm32"))]
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
-#[cfg(feature = "client_tcp")]
+#[cfg(not(target_arch = "wasm32"))]
 use tokio::net;
 
-#[cfg(feature = "client_tcp")]
+#[cfg(not(target_arch = "wasm32"))]
 use tokio::net:: tcp::{OwnedReadHalf, OwnedWriteHalf};
 
-#[cfg(feature = "client_tcp")]
+#[cfg(not(target_arch = "wasm32"))]
 use tokio::select;
 
-#[cfg(feature = "client_tcp")]
+#[cfg(not(target_arch = "wasm32"))]
 use futures_util::FutureExt;
 
 use network_protocol::{
@@ -60,7 +60,7 @@ impl Protocols {
     ) -> Result<Self, NetworkConnectError> {
 
         //tcp连接
-        #[cfg(feature = "client_tcp")]
+        #[cfg(not(target_arch = "wasm32"))]
         {
             let stream = net::TcpStream::connect(addr)
                 .await
@@ -77,9 +77,9 @@ impl Protocols {
         }
     
         //websocket连接 todo
-        #[cfg(not(feature = "client_tcp"))]
+        #[cfg(target_arch = "wasm32")]
         {
-            dbg!("########## todo with_tcp_connect");
+            log::error!("########## todo with_tcp_connect");
             Err(NetworkConnectError::InvalidSecret)
         }
     }
@@ -93,7 +93,7 @@ impl Protocols {
     ) -> std::io::Result<()> {
 
         //tcp连接
-        #[cfg(feature = "client_tcp")]
+        #[cfg(not(target_arch = "wasm32"))]
         {
             use socket2::{Domain, Socket, Type};
             let domain = Domain::for_address(addr);
@@ -138,16 +138,16 @@ impl Protocols {
         }
     
         //websocket连接 todo
-        #[cfg(not(feature = "client_tcp"))]
+        #[cfg(target_arch = "wasm32")]
         {
-            dbg!("########## todo with tcp listen");
+            log::error!("########## todo with tcp listen");
         }
 
         Ok(())
     }
 
     //tcp连接
-    #[cfg(feature = "client_tcp")]
+    #[cfg(not(target_arch = "wasm32"))]
     pub(crate) fn new_tcp(stream: tokio::net::TcpStream, metrics: ProtocolMetricCache) -> Self {
 
         let (r, w) = stream.into_split();
@@ -222,13 +222,13 @@ impl network_protocol::RecvProtocol for RecvProtocols {
 //// TCP
 #[derive(Debug)]
 pub struct TcpDrain {
-    #[cfg(feature = "client_tcp")]
+    #[cfg(not(target_arch = "wasm32"))]
     half: OwnedWriteHalf,
 }
 
 #[derive(Debug)]
 pub struct TcpSink {
-    #[cfg(feature = "client_tcp")]
+    #[cfg(not(target_arch = "wasm32"))]
     half: OwnedReadHalf,
     
     buffer: BytesMut,
@@ -241,7 +241,7 @@ impl UnreliableDrain for TcpDrain {
     async fn send(&mut self, data: Self::DataFormat) -> Result<(), ProtocolError> {
        
         //tcp连接
-        #[cfg(feature = "client_tcp")]
+        #[cfg(not(target_arch = "wasm32"))]
         {
             match self.half.write_all(&data).await {
                 Ok(()) => Ok(()),
@@ -250,9 +250,9 @@ impl UnreliableDrain for TcpDrain {
         }
     
         //websocket连接 todo
-        #[cfg(not(feature = "client_tcp"))]
+        #[cfg(target_arch = "wasm32")]
         {
-            dbg!("########## todo UnreliableDrain for TcpDrain send");
+            log::error!("########## todo UnreliableDrain for TcpDrain send");
             Ok(())
         }
     }
@@ -265,7 +265,7 @@ impl UnreliableSink for TcpSink {
     async fn recv(&mut self) -> Result<Self::DataFormat, ProtocolError> {
 
         //tcp连接
-        #[cfg(feature = "client_tcp")]
+        #[cfg(not(target_arch = "wasm32"))]
         {
             self.buffer.resize(1500, 0u8);
             match self.half.read(&mut self.buffer).await {
@@ -276,9 +276,9 @@ impl UnreliableSink for TcpSink {
         }
     
         //websocket连接 todo
-        #[cfg(not(feature = "client_tcp"))]
+        #[cfg(target_arch = "wasm32")]
         {
-            dbg!("########## todo impl UnreliableSink for TcpSink recv");
+            log::error!("########## todo impl UnreliableSink for TcpSink recv");
             Err(ProtocolError::Closed)
         }
     }

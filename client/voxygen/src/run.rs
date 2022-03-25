@@ -17,7 +17,7 @@ pub fn run(mut global_state: GlobalState, event_loop: EventLoop) {
     states.last_mut().map(|current_state| {
         current_state.enter(&mut global_state, Direction::Forwards);
         let current_state = current_state.name();
-        log::debug!("{:?} Started game with state", current_state);
+        log::info!("{:?} Started game with state", current_state);
     });
 
     log::info!("start game new menu over");
@@ -47,8 +47,7 @@ pub fn run(mut global_state: GlobalState, event_loop: EventLoop) {
             // TODO: no clone
             if let winit::event::Event::WindowEvent { event, .. } = &event {
                 let window = &mut global_state.window;
-                if let Some(event) =
-                    ui::ice::window_event(event, window.scale_factor(), window.modifiers())
+                if let Some(event) = ui::ice::window_event(event, window.scale_factor(), window.modifiers())
                 {
                     window.send_event(Event::IcedUi(event));
                 }
@@ -126,7 +125,7 @@ fn handle_main_events_cleared(
             },
             PlayStateResult::Pop => {
                 states.pop().map(|old_state| {
-                    log::debug!("Popped state '{}'.", old_state.name());
+                    log::info!("Popped state '{}'.", old_state.name());
                     global_state.on_play_state_changed();
                 });
                 states.last_mut().map(|new_state| {
@@ -135,14 +134,14 @@ fn handle_main_events_cleared(
             },
             PlayStateResult::Push(mut new_state) => {
                 new_state.enter(global_state, Direction::Forwards);
-                log::debug!("Pushed state '{}'.", new_state.name());
+                log::info!("Pushed state '{}'.", new_state.name());
                 states.push(new_state);
                 global_state.on_play_state_changed();
             },
             PlayStateResult::Switch(mut new_state) => {
                 new_state.enter(global_state, Direction::Forwards);
                 states.last_mut().map(|old_state| {
-                    log::debug!(
+                    log::info!(
                         "Switching to state '{}' from state '{}'.",
                         new_state.name(),
                         old_state.name()

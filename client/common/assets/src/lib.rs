@@ -18,7 +18,19 @@ pub use assets_manager::{
     source::{self, Source},
     Asset, AssetCache, BoxedError, Compound, Error, SharedString,
 };
+
+#[cfg(target_arch = "wasm32")]
+mod wasm_fs;
+#[cfg(target_arch = "wasm32")]
+use wasm_fs as fs;
+
+#[cfg(not(target_arch = "wasm32"))]
 mod fs;
+
+
+#[cfg(not(target_arch = "wasm32"))]
+use std::path::PathBuf;
+
 
 
 lazy_static! {
@@ -48,11 +60,7 @@ impl fmt::Debug for ResourceError {
         }
     }
 }
-pub fn debug_map(){
-    for key in ASSET_MAP_DIR.lock().unwrap().keys() {
-        log::info!(" directory:   {}", &key);
-    }
-}
+
 //缓存dir数据
 pub fn set_cache_dir(name: &str) {
     ASSET_MAP_DIR.lock().unwrap().insert(name.to_string(), true);
@@ -232,4 +240,68 @@ impl Loader<DotVoxAsset> for DotVoxLoader {
 impl Asset for DotVoxAsset {
     type Loader = DotVoxLoader;
     const EXTENSION: &'static str = "vox";
+}
+
+
+
+
+//native load
+#[cfg(not(target_arch = "wasm32"))]
+/// Return path to repository root by searching 10 directories back
+pub fn find_root() -> Option<PathBuf> {
+    std::env::current_dir().map_or(None, |path| {
+        // If we are in the root, push path
+        if path.join(".git").exists() {
+            return Some(path);
+        }
+        // Search .git directory in parent directries
+        for ancestor in path.ancestors().take(10) {
+            if ancestor.join(".git").exists() {
+                return Some(ancestor.to_path_buf());
+            }
+        }
+        None
+    })
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+lazy_static! {
+    /// Lazy static to find and cache where the asset directory is.
+    /// Cases we need to account for:
+    /// 1. Running through airshipper (`assets` next to binary)
+    /// 2. Install with package manager and run (assets probably in `/usr/share/veloren/assets` while binary in `/usr/bin/`)
+    /// 3. Download & hopefully extract zip (`assets` next to binary)
+    /// 4. Running through cargo (`assets` in workspace root but not always in cwd in case you `cd voxygen && cargo r`)
+    /// 5. Running executable in the target dir (`assets` in workspace)
+    /// 6. Running tests (`assets` in workspace root)
+    pub static ref ASSETS_PATH: PathBuf = {
+        let mut paths = Vec::new();
+
+        if let Some(path) = find_root() {
+            let c_path = path.join("client/voxygen/www");
+            paths.push(c_path);
+        }
+
+        log::trace!("Possible asset locations paths={:?}", paths);
+
+        for mut path in paths.clone() {
+            if !path.ends_with("assets") {
+                path = path.join("assets");
+            }
+
+            if path.is_dir() {
+                log::info!("Assets found path={}", path.display());
+                return path;
+            }
+        }
+
+        panic!(
+            "Asset directory not found. In attempting to find it, we searched:\n{})",
+            paths.iter().fold(String::new(), |mut a, path| {
+                a += &path.to_string_lossy();
+                a += "\n";
+                a
+            }),
+        );
+    };
 }

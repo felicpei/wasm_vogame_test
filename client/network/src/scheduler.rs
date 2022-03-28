@@ -1,7 +1,7 @@
 use crate::{
     api::{ConnectAddr, ListenAddr, NetworkConnectError, Participant},
     channel::Protocols,
-    metrics::{NetworkMetrics, ProtocolInfo},
+    metrics::{ProtocolInfo},
     participant::{B2sPrioStatistic, BParticipant, S2bCreateChannel, S2bShutdownBparticipant},
 };
 use futures_util::StreamExt;

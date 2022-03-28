@@ -6,9 +6,7 @@ use crate::{
 };
 use futures_util::StreamExt;
 use hashbrown::HashMap;
-use network_protocol::{Cid, Pid, ProtocolMetricCache, ProtocolMetrics};
-#[cfg(feature = "metrics")]
-use prometheus::Registry;
+use network_protocol::{Cid, Pid};
 use rand::Rng;
 use std::{
     sync::{
@@ -73,14 +71,11 @@ pub struct Scheduler {
     participants: Arc<Mutex<HashMap<Pid, ParticipantInfo>>>,
     channel_ids: Arc<AtomicU64>,
     channel_listener: Mutex<HashMap<ProtocolInfo, oneshot::Sender<()>>>,
-    metrics: Arc<NetworkMetrics>,
-    protocol_metrics: Arc<ProtocolMetrics>,
 }
 
 impl Scheduler {
     pub fn new(
         local_pid: Pid,
-        #[cfg(feature = "metrics")] registry: Option<&Registry>,
     ) -> (
         Self,
         mpsc::UnboundedSender<A2sListen>,
@@ -110,16 +105,6 @@ impl Scheduler {
             b2s_prio_statistic_s,
         };
 
-        let metrics = Arc::new(NetworkMetrics::new(&local_pid).unwrap());
-        let protocol_metrics = Arc::new(ProtocolMetrics::new().unwrap());
-
-        #[cfg(feature = "metrics")]
-        {
-            if let Some(registry) = registry {
-                metrics.register(registry).unwrap();
-                protocol_metrics.register(registry).unwrap();
-            }
-        }
 
         let mut rng = rand::thread_rng();
         let local_secret: u128 = rng.gen();
@@ -134,8 +119,6 @@ impl Scheduler {
                 participants: Arc::new(Mutex::new(HashMap::new())),
                 channel_ids: Arc::new(AtomicU64::new(0)),
                 channel_listener: Mutex::new(HashMap::new()),
-                metrics,
-                protocol_metrics,
             },
             a2s_listen_s,
             a2s_connect_s,
@@ -169,30 +152,23 @@ impl Scheduler {
                 let address = address;
                 let cids = Arc::clone(&self.channel_ids);
 
-                #[cfg(feature = "metrics")]
-                let mcache = self.metrics.connect_requests_cache(&address);
 
                 log::debug!("Got request to open a channel_creator");
-                self.metrics.listen_request(&address);
                 let (s2s_stop_listening_s, s2s_stop_listening_r) = oneshot::channel::<()>();
                 let (c2s_protocol_s, mut c2s_protocol_r) = mpsc::unbounded_channel();
-                let metrics = Arc::clone(&self.protocol_metrics);
-
+       
                 async move {
                     self.channel_listener
                         .lock()
                         .await
                         .insert(address.clone().into(), s2s_stop_listening_s);
 
-                    #[cfg(feature = "metrics")]
-                    mcache.inc();
 
                     let res = match address {
                         ListenAddr::Tcp(addr) => {
                             Protocols::with_tcp_listen(
                                 addr,
                                 cids,
-                                metrics,
                                 s2s_stop_listening_r,
                                 c2s_protocol_s,
                             )
@@ -214,11 +190,8 @@ impl Scheduler {
         log::trace!("Start connect_mgr");
         while let Some((addr, pid_sender)) = a2s_connect_r.recv().await {
             let cid = self.channel_ids.fetch_add(1, Ordering::Relaxed);
-            let metrics =
-                ProtocolMetricCache::new(&cid.to_string(), Arc::clone(&self.protocol_metrics));
-            self.metrics.connect_request(&addr);
             let protocol = match addr {
-                ConnectAddr::Tcp(addr) => Protocols::with_tcp_connect(addr, metrics).await,
+                ConnectAddr::Tcp(addr) => Protocols::with_tcp_connect(addr).await,
             };
             let protocol = match protocol {
                 Ok(p) => p,
@@ -351,22 +324,12 @@ impl Scheduler {
         s2a_return_pid_s: Option<oneshot::Sender<Result<Participant, NetworkConnectError>>>,
         send_handshake: bool,
     ) {
-        //channels are unknown till PID is known!
-        /* When A connects to a NETWORK, we, the listener answers with a Handshake.
-          Pro: - Its easier to debug, as someone who opens a port gets a magic number back!
-          Contra: - DOS possibility because we answer first
-                  - Speed, because otherwise the message can be send with the creation
-        */
+
         let participant_channels = self.participant_channels.lock().await.clone().unwrap();
-        // spawn is needed here, e.g. for TCP connect it would mean that only 1
-        // participant can be in handshake phase ever! Someone could deadlock
-        // the whole server easily for new clients UDP doesnt work at all, as
-        // the UDP listening is done in another place.
         let participants = Arc::clone(&self.participants);
-        let metrics = Arc::clone(&self.metrics);
         let local_pid = self.local_pid;
         let local_secret = self.local_secret;
-        // this is necessary for UDP to work at all and to remove code duplication
+
         tokio::spawn(
             async move {
                 log::trace!( "Open channel and be ready for Handshake :{}",cid);
@@ -391,7 +354,7 @@ impl Scheduler {
                                 s2b_create_channel_s,
                                 s2b_shutdown_bparticipant_s,
                                 b2a_bandwidth_stats_r,
-                            ) = BParticipant::new(local_pid, pid, sid, Arc::clone(&metrics));
+                            ) = BParticipant::new(local_pid, pid, sid);
 
                             let participant = Participant::new(
                                 local_pid,
@@ -402,8 +365,6 @@ impl Scheduler {
                                 participant_channels.a2s_disconnect_s,
                             );
 
-                            #[cfg(feature = "metrics")]
-                            metrics.participants_connected_total.inc();
                             participants.insert(pid, ParticipantInfo {
                                 secret,
                                 s2b_create_channel_s: s2b_create_channel_s.clone(),
@@ -469,8 +430,6 @@ impl Scheduler {
                     },
                     Err(e) => {
                         log::debug!("Handshake from a new connection failed   {}   {}", cid, e);
-                        #[cfg(feature = "metrics")]
-                        metrics.failed_handshakes_total.inc();
                         if let Some(pid_oneshot) = s2a_return_pid_s {
                             // someone is waiting with `connect`, so give them their Error
                             log::trace!("returning the Err to api who requested the connect : {}", cid);

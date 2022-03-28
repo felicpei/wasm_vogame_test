@@ -101,7 +101,7 @@ impl Texture {
             array_layer_count: None,
         });
 
-        log::warn!("texture_new create_sampler:{:?}", &sampler_info);
+        // log::warn!("texture_new create_sampler:{:?}", &sampler_info);
         let sampler = device.create_sampler(&sampler_info);
        
         Ok(Self {

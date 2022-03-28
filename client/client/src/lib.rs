@@ -223,11 +223,7 @@ impl Client {
             //网络监听模块
             ConnectionArgs::Tcp {
                 hostname,
-                prefer_ipv6,
-            } => addr::try_connect(&network, &hostname, prefer_ipv6, ConnectAddr::Tcp).await?,
-  
-            //删除mpsc
-            //ConnectionArgs::Mpsc(id) => network.connect(ConnectAddr::Mpsc(id)).await?,
+            } => addr::try_connect(&network, &hostname, ConnectAddr::Tcp).await?,
         };
 
         let stream = participant.opened().await?;
@@ -723,7 +719,7 @@ impl Client {
                     | ClientGeneral::Terminate => &mut self.general_stream,
                 };
 
-                log::info!("# send msg: {:?}", msg);
+                //log::info!("# send msg: {:?}", msg);
                 stream.send(msg)
             },
             ClientMsg::Ping(msg) => self.ping_stream.send(msg),
@@ -1525,17 +1521,7 @@ impl Client {
             }
         }
 
-        /*
-        // Output debug metrics
-        if log_enabled!(Level::Info) && self.tick % 600 == 0 {
-            let metrics = self
-                .state
-                .terrain()
-                .iter()
-                .fold(ChonkMetrics::default(), |a, (_, c)| a + c.get_metrics());
-            info!("{:?}", metrics);
-        }
-        */
+       
 
         // 7) Finish the tick, pass control back to the frontend.
         self.tick += 1;

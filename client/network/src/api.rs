@@ -8,8 +8,6 @@ use hashbrown::HashMap;
 #[cfg(feature = "compression")]
 use lz_fear::raw::DecodeError;
 use network_protocol::{Bandwidth, InitProtocolError, Pid, Prio, Promises, Sid};
-#[cfg(feature = "metrics")]
-use prometheus::Registry;
 use serde::{de::DeserializeOwned, Serialize};
 use std::{
     net::SocketAddr,
@@ -220,45 +218,17 @@ impl Network {
         Self::internal_new(
             participant_id,
             runtime,
-            #[cfg(feature = "metrics")]
-            None,
         )
-    }
-
-    /// See [`new`]
-    ///
-    /// # additional Arguments
-    /// * `registry` - Provide a Registry in order to collect Prometheus metrics
-    ///   by this `Network`, `None` will deactivate Tracing. Tracing is done via
-    ///   [`prometheus`]
-    ///
-    /// # Examples
-    /// ```rust
-    /// use prometheus::Registry;
-    /// use tokio::runtime::Runtime;
-    /// use veloren_network::{Network, Pid};
-    ///
-    /// let runtime = Runtime::new().unwrap();
-    /// let registry = Registry::new();
-    /// let network = Network::new_with_registry(Pid::new(), &runtime, &registry);
-    /// ```
-    /// [`new`]: crate::api::Network::new
-    #[cfg(feature = "metrics")]
-    pub fn new_with_registry(participant_id: Pid, runtime: &Runtime, registry: &Registry) -> Self {
-        Self::internal_new(participant_id, runtime, Some(registry))
     }
 
     fn internal_new(
         participant_id: Pid,
         runtime: &Runtime,
-        #[cfg(feature = "metrics")] registry: Option<&Registry>,
     ) -> Self {
         let p = participant_id;
         let (scheduler, listen_sender, connect_sender, connected_receiver, shutdown_sender) =
             Scheduler::new(
                 participant_id,
-                #[cfg(feature = "metrics")]
-                registry,
             );
         let participant_disconnect_sender = Arc::new(Mutex::new(HashMap::new()));
         let (shutdown_network_s, shutdown_network_r) = oneshot::channel();

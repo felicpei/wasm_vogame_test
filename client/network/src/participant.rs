@@ -1,7 +1,6 @@
 use crate::{
     api::{ParticipantError, Stream},
     channel::{Protocols, RecvProtocols, SendProtocols},
-    metrics::NetworkMetrics,
     util::DeferredTracer,
 };
 use bytes::Bytes;
@@ -36,7 +35,7 @@ pub(crate) type B2sPrioStatistic = (Pid, u64, u64);
 #[allow(dead_code)]
 struct ChannelInfo {
     cid: Cid,
-    cid_string: String, //optimisationmetrics
+    cid_string: String, 
 }
 
 #[derive(Debug)]
@@ -74,7 +73,6 @@ pub struct BParticipant {
     streams: RwLock<HashMap<Sid, StreamInfo>>,
     run_channels: Option<ControlChannels>,
     shutdown_barrier: AtomicI32,
-    metrics: Arc<NetworkMetrics>,
     open_stream_channels: Arc<Mutex<Option<OpenStreamInfo>>>,
 }
 
@@ -90,7 +88,6 @@ impl BParticipant {
         local_pid: Pid,
         remote_pid: Pid,
         offset_sid: Sid,
-        metrics: Arc<NetworkMetrics>,
     ) -> (
         Self,
         mpsc::UnboundedSender<A2bStreamOpen>,
@@ -125,7 +122,6 @@ impl BParticipant {
                     Self::BARR_CHANNEL + Self::BARR_SEND + Self::BARR_RECV,
                 ),
                 run_channels,
-                metrics,
                 open_stream_channels: Arc::new(Mutex::new(None)),
             },
             a2b_open_stream_s,
@@ -351,8 +347,6 @@ impl BParticipant {
                 }
                 let flush_time = send_time.elapsed().as_secs_f32();
                 part_bandwidth = 0.99 * part_bandwidth + 0.01 * (cnt as f32 / flush_time);
-                self.metrics
-                    .participant_bandwidth(&self.remote_pid_string, part_bandwidth);
                 let _ = b2a_bandwidth_stats_s.send(part_bandwidth);
                 let r: Result<(), network_protocol::ProtocolError> = Ok(());
                 r
@@ -364,7 +358,6 @@ impl BParticipant {
                 // recv
                 log::trace!("TODO: for now decide to FAIL this participant and not wait for a failover");
                 sorted_send_protocols.delete(&cid).unwrap();
-                self.metrics.channels_disconnected(&self.remote_pid_string);
                 if sorted_send_protocols.data.is_empty() {
                     break;
                 }
@@ -374,7 +367,6 @@ impl BParticipant {
                 log:: debug!("remove protocol {:?}", cid);
                 match sorted_send_protocols.delete(&cid) {
                     Some(mut prot) => {
-                        self.metrics.channels_disconnected(&self.remote_pid_string);
                         log::trace!("blocking flush");
                         let _ = prot.flush(u64::MAX, Duration::from_secs(1)).await;
                         log::trace!("shutdown prot");
@@ -528,7 +520,6 @@ impl BParticipant {
         log::trace!("receiving no longer possible, closing all streams");
         for (_, si) in self.streams.write().await.drain() {
             si.send_closed.store(true, Ordering::SeqCst);
-            self.metrics.streams_closed(&self.remote_pid_string);
         }
         log:: trace!("Stop recv_mgr");
         self.shutdown_barrier
@@ -568,8 +559,6 @@ impl BParticipant {
                         log::debug!( "metrics will overwrite channel #5  : {}", channel_no);
                         channel_no = 5;
                     }
-                    self.metrics
-                        .channels_connected(&self.remote_pid_string, channel_no, cid);
                 }
             })
             .await;
@@ -681,9 +670,6 @@ impl BParticipant {
             let _ = sender.send(Ok(()));
         }
 
-        #[cfg(feature = "metrics")]
-        self.metrics.participants_disconnected_total.inc();
-        self.metrics.cleanup_participant(&self.remote_pid_string);
         log::trace!("Stop participant_shutdown_mgr");
     }
 
@@ -700,7 +686,6 @@ impl BParticipant {
                 log::trace!("Couldn't find the stream, might be simultaneous close from local/remote")
             },
         }
-        self.metrics.streams_closed(&self.remote_pid_string);
     }
 
     async fn create_stream(
@@ -718,7 +703,6 @@ impl BParticipant {
             send_closed: Arc::clone(&send_closed),
             b2a_msg_recv_s: Mutex::new(b2a_msg_recv_s),
         });
-        self.metrics.streams_opened(&self.remote_pid_string);
 
         let (a2b_msg_s, a2b_close_stream_s) = {
             let lock = self.open_stream_channels.lock().await;

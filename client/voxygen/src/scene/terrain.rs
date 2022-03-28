@@ -895,7 +895,7 @@ impl<V: RectRasterableVol> Terrain<V> {
         let max_texture_size = renderer.max_texture_size();
 
         //########## 这个是根据cpu数量来控制效率
-        let meshing_cores = 1;
+        let meshing_cores = 4;
         
         // let meshing_cores = match num_cpus::get() as u64 {
         //     n if n < 4 => 1,

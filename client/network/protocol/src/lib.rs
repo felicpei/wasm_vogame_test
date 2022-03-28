@@ -1,61 +1,10 @@
 #![feature(drain_filter)]
-//! Network Protocol
-//!
-//! a I/O-Free protocol for the veloren network crate.
-//! This crate defines multiple different protocols over [`UnreliableDrain`] and
-//! [`UnreliableSink`] traits, which allows it to define the behavior of a
-//! protocol separated from the actual io.
-//!
-//! For example we define the TCP protocol on top of Drains and Sinks that can
-//! send chunks of bytes. You can now implement your own Drain And Sink that
-//! sends the data via tokio's or std's implementation. Or you just use a
-//! std::mpsc::channel for unit tests without needing a actual tcp socket.
-//!
-//! This crate currently defines:
-//!  - TCP
-//!  - MPSC
-//!  - QUIC
-//!
-//! eventually a pure UDP implementation will follow
-//!
-//! warning: don't mix protocol, using the TCP variant for actual UDP socket
-//! will result in dropped data  using UDP with a TCP socket will be a waste of
-//! resources.
-//!
-//! A *channel* in this crate is defined as a combination of *read* and *write*
-//! protocol.
-//!
-//! # adding a protocol
-//!
-//! We start by defining our DataFormat. For most this is prob [`Vec<u8>`] or
-//! [`Bytes`]. MPSC can directly send a msg without serialisation.
-//!
-//! Create 2 structs, one for the receiving and sending end. Based on a generic
-//! Drain/Sink with your required DataFormat.
-//! Implement the [`SendProtocol`] and [`RecvProtocol`] traits respectively.
-//!
-//! Implement the Handshake: [`InitProtocol`], alternatively you can also
-//! implement `ReliableDrain` and `ReliableSink`, by this, you use the default
-//! Handshake.
-//!
-//! This crate also contains consts and definitions for the network protocol.
-//!
-//! For an *example* see `TcpDrain` and `TcpSink` in the [tcp.rs](tcp.rs)
-//!
-//! [`UnreliableDrain`]: crate::UnreliableDrain
-//! [`UnreliableSink`]: crate::UnreliableSink
-//! [`Vec<u8>`]: std::vec::Vec
-//! [`Bytes`]: bytes::Bytes
-//! [`SendProtocol`]: crate::SendProtocol
-//! [`RecvProtocol`]: crate::RecvProtocol
-//! [`InitProtocol`]: crate::InitProtocol
 
 mod error;
 mod event;
 mod frame;
 mod handshake;
 mod message;
-mod metrics;
 mod prio;
 mod tcp;
 mod types;
@@ -63,9 +12,6 @@ mod util;
 
 pub use error::{InitProtocolError, ProtocolError};
 pub use event::ProtocolEvent;
-pub use metrics::ProtocolMetricCache;
-#[cfg(feature = "metrics")]
-pub use metrics::ProtocolMetrics;
 pub use tcp::{TcpRecvProtocol, TcpSendProtocol};
 pub use types::{Bandwidth, Cid, Pid, Prio, Promises, Sid, HIGHEST_PRIO, VELOREN_NETWORK_VERSION};
 ///use at own risk, might change any time, for internal benchmarks

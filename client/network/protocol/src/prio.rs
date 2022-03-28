@@ -1,7 +1,6 @@
 use crate::{
     frame::OTFrame,
     message::OTMessage,
-    metrics::{ProtocolMetricCache, RemoveReason},
     types::{Bandwidth, Mid, Prio, Promises, Sid, HIGHEST_PRIO},
 };
 use bytes::Bytes;
@@ -26,16 +25,14 @@ struct StreamInfo {
 #[derive(Debug)]
 pub(crate) struct PrioManager {
     streams: HashMap<Sid, StreamInfo>,
-    metrics: ProtocolMetricCache,
 }
 
 // Send everything ONCE, then keep it till it's confirmed
 
 impl PrioManager {
-    pub fn new(metrics: ProtocolMetricCache) -> Self {
+    pub fn new() -> Self {
         Self {
             streams: HashMap::new(),
-            metrics,
         }
     }
 
@@ -82,7 +79,6 @@ impl PrioManager {
         let mut frames = vec![];
 
         let mut prios = [0u64; (HIGHEST_PRIO + 1) as usize];
-        let metrics = &mut self.metrics;
 
         let mut process_stream =
             |sid: &Sid, stream: &mut StreamInfo, mut bandwidth: i64, cur_bytes: &mut u64| {
@@ -102,7 +98,6 @@ impl PrioManager {
                         }
                     }
                     let (sid, bytes) = msg.get_sid_len();
-                    metrics.smsg_ob(sid, RemoveReason::Finished, bytes);
                     finished = Some(i);
                 }
                 if let Some(i) = finished {

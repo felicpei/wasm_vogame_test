@@ -282,6 +282,8 @@ impl Scene {
 
         log::info!("SpriteRenderContext::new(renderer)");
         let sprite_render_context = SpriteRenderContext::new(renderer);
+
+        log::info!("Terrain::new");
         let terrain = Terrain::new(renderer, &data, lod.get_data(), sprite_render_context);
         log::info!("Terrain::new over");
 

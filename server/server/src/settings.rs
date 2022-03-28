@@ -160,6 +160,8 @@ impl Settings {
     pub fn load(path: &Path) -> Self {
         let path = Self::get_settings_path(path);
 
+        tracing::info!("###### load setting ron:{:?}", path);
+
         if let Ok(file) = fs::File::open(&path) {
             match ron::de::from_reader(file) {
                 Ok(x) => x,

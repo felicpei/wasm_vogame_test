@@ -837,15 +837,13 @@ impl Window {
     }
 
     pub fn handle_redraw_requested(&mut self) {
+        
         //wasm 窗口自适应
         #[cfg(target_arch = "wasm32")]
         {
             let mut winit_window = &self.window;
-            let mut renderer = &mut self.renderer;
-
             if ui::wasm::resize_canvas_to_screen_size(&winit_window) {
-                let size = winit_window.inner_size();
-                renderer.update_wasm_size(size.width, size.height);
+                self.resized = true;
             }
         }
     }

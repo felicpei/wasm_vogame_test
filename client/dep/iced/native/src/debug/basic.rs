@@ -1,5 +1,6 @@
 #![allow(missing_docs)]
-use std::{collections::VecDeque, time};
+use std::{collections::VecDeque};
+use iced_core::time;
 
 /// A bunch of time measurements for debugging purposes.
 #[derive(Debug)]

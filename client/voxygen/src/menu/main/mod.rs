@@ -197,7 +197,6 @@ impl PlayState for MainMenuState {
                     //初始化网络
                     let connection_args = ConnectionArgs::Tcp {
                         hostname: server_address,
-                        prefer_ipv6: false,
                     };
 
                     log::info!("### try MainMenuEvent => LoginAttempt");

@@ -411,13 +411,6 @@ impl Renderer {
     /// Get the pipelines mode.
     pub fn pipeline_modes(&self) -> &PipelineModes { &self.pipeline_modes }
 
-    pub fn update_wasm_size(&mut self, width:u32, height:u32) {
-        
-        self.sc_desc.width = width;
-        self.sc_desc.height = height;
-        self.surface.configure(&self.device, &self.sc_desc);
-
-    }
     /// Resize internal render targets to match window render target dimensions.
     pub fn on_resize(&mut self, dims: Vec2<u32>) {
         // Avoid panics when creating texture with w,h of 0,0.

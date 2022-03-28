@@ -4,7 +4,6 @@ use crate::{
     frame::{ITFrame, InitFrame, OTFrame},
     handshake::{ReliableDrain, ReliableSink},
     message::{ITMessage, ALLOC_BLOCK},
-    metrics::{ProtocolMetricCache, RemoveReason},
     prio::PrioManager,
     types::{Bandwidth, Mid, Promises, Sid},
     RecvProtocol, SendProtocol, UnreliableDrain, UnreliableSink,
@@ -31,7 +30,6 @@ where
     drain: D,
     #[allow(dead_code)]
     last: Instant,
-    metrics: ProtocolMetricCache,
 }
 
 /// TCP implementation of [`RecvProtocol`]
@@ -46,24 +44,22 @@ where
     itmsg_allocator: BytesMut,
     incoming: HashMap<Mid, ITMessage>,
     sink: S,
-    metrics: ProtocolMetricCache,
 }
 
 impl<D> TcpSendProtocol<D>
 where
     D: UnreliableDrain<DataFormat = BytesMut>,
 {
-    pub fn new(drain: D, metrics: ProtocolMetricCache) -> Self {
+    pub fn new(drain: D) -> Self {
         Self {
             buffer: BytesMut::new(),
-            store: PrioManager::new(metrics.clone()),
+            store: PrioManager::new(),
             next_mid: 0u64,
             closing_streams: vec![],
             notify_closing_streams: vec![],
             pending_shutdown: false,
             drain,
             last: Instant::now(),
-            metrics,
         }
     }
 
@@ -81,13 +77,12 @@ impl<S> TcpRecvProtocol<S>
 where
     S: UnreliableSink<DataFormat = BytesMut>,
 {
-    pub fn new(sink: S, metrics: ProtocolMetricCache) -> Self {
+    pub fn new(sink: S) -> Self {
         Self {
             buffer: BytesMut::new(),
             itmsg_allocator: BytesMut::with_capacity(ALLOC_BLOCK),
             incoming: HashMap::new(),
             sink,
-            metrics,
         }
     }
 }
@@ -110,8 +105,6 @@ where
             },
             ProtocolEvent::CloseStream { sid } => {
                 if !self.store.try_close_stream(sid) {
-                    #[cfg(feature = "trace_pedantic")]
-                    trace!(?sid, "hold back notify close stream");
                     self.notify_closing_streams.push(sid);
                 }
             },
@@ -120,8 +113,6 @@ where
     }
 
     async fn send(&mut self, event: ProtocolEvent) -> Result<(), ProtocolError> {
-        #[cfg(feature = "trace_pedantic")]
-        trace!(?event, "send");
         match event {
             ProtocolEvent::OpenStream {
                 sid,
@@ -139,8 +130,6 @@ where
                     event.to_frame().write_bytes(&mut self.buffer);
                     self.drain.send(self.buffer.split()).await?;
                 } else {
-                    #[cfg(feature = "trace_pedantic")]
-                    trace!(?sid, "hold back close stream");
                     self.closing_streams.push(sid);
                 }
             },
@@ -149,13 +138,10 @@ where
                     event.to_frame().write_bytes(&mut self.buffer);
                     self.drain.send(self.buffer.split()).await?;
                 } else {
-                    #[cfg(feature = "trace_pedantic")]
-                    trace!("hold back shutdown");
                     self.pending_shutdown = true;
                 }
             },
             ProtocolEvent::Message { data, sid } => {
-                self.metrics.smsg_ib(sid, data.len() as u64);
                 self.store.add(data, self.next_mid, sid);
                 self.next_mid += 1;
             },
@@ -180,14 +166,10 @@ where
             frame.write_bytes(&mut self.buffer);
         }
         self.drain.send(self.buffer.split()).await?;
-        self.metrics
-            .sdata_frames_b(data_frames, data_bandwidth as u64);
 
         let mut finished_streams = vec![];
         for (i, &sid) in self.closing_streams.iter().enumerate() {
             if self.store.try_close_stream(sid) {
-                #[cfg(feature = "trace_pedantic")]
-                trace!(?sid, "close stream, as it's now empty");
                 OTFrame::CloseStream { sid }.write_bytes(&mut self.buffer);
                 self.drain.send(self.buffer.split()).await?;
                 finished_streams.push(i);
@@ -200,8 +182,6 @@ where
         let mut finished_streams = vec![];
         for (i, sid) in self.notify_closing_streams.iter().enumerate() {
             if self.store.try_close_stream(*sid) {
-                #[cfg(feature = "trace_pedantic")]
-                trace!(?sid, "close stream, as it's now empty");
                 finished_streams.push(i);
             }
         }
@@ -210,8 +190,6 @@ where
         }
 
         if self.pending_shutdown && self.store.is_empty() {
-            #[cfg(feature = "trace_pedantic")]
-            trace!("shutdown, as it's now empty");
             OTFrame::Shutdown {}.write_bytes(&mut self.buffer);
             self.drain.send(self.buffer.split()).await?;
             self.pending_shutdown = false;
@@ -230,8 +208,6 @@ where
             loop {
                 match ITFrame::read_frame(&mut self.buffer) {
                     Ok(Some(frame)) => {
-                        #[cfg(feature = "trace_pedantic")]
-                        trace!(?frame, "recv");
                         match frame {
                             ITFrame::Shutdown => break 'outer Ok(ProtocolEvent::Shutdown),
                             ITFrame::OpenStream {
@@ -252,11 +228,9 @@ where
                             },
                             ITFrame::DataHeader { sid, mid, length } => {
                                 let m = ITMessage::new(sid, length, &mut self.itmsg_allocator);
-                                self.metrics.rmsg_ib(sid, length);
                                 self.incoming.insert(mid, m);
                             },
                             ITFrame::Data { mid, data } => {
-                                self.metrics.rdata_frames_b(data.len() as u64);
                                 let m = match self.incoming.get_mut(&mid) {
                                     Some(m) => m,
                                     None => {
@@ -272,11 +246,6 @@ where
                                 if m.data.len() == m.length as usize {
                                     // finished, yay
                                     let m = self.incoming.remove(&mid).unwrap();
-                                    self.metrics.rmsg_ob(
-                                        m.sid,
-                                        RemoveReason::Finished,
-                                        m.data.len() as u64,
-                                    );
                                     break 'outer Ok(ProtocolEvent::Message {
                                         sid: m.sid,
                                         data: m.data.freeze(),

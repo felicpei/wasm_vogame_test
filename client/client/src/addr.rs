@@ -1,12 +1,12 @@
 use std::net::SocketAddr;
 
 
+
 #[derive(Clone, Debug)]
 pub enum ConnectionArgs {
     ///hostname: (hostname|ip):[<port>]
     Tcp {
         hostname: String,
-        prefer_ipv6: bool,
     },
 }
 
@@ -22,24 +22,21 @@ use tokio::net::lookup_host;
 /// colon will be used as the port unless you use [] around the address.
 
 #[cfg(not(target_arch = "wasm32"))]
-pub(crate) async fn resolve(
-    address: &str,
-    prefer_ipv6: bool,
-) -> Result<Vec<SocketAddr>, std::io::Error> {
+pub(crate) async fn resolve(address: &str) -> Result<Vec<SocketAddr>, std::io::Error> {
     // `lookup_host` will internally try to parse it as a SocketAddr
     // 1. Assume it's a hostname + port
   
     match lookup_host(address).await {
         Ok(s) => {
             log::trace!("Host lookup succeeded");
-            Ok(sort_ipv6(s, prefer_ipv6))
+            Ok(sort_ipv6(s))
         },
         Err(e) => {
             // 2. Assume its a hostname without port
             match lookup_host((address, ConnectionArgs::DEFAULT_PORT)).await {
                 Ok(s) => {
                     log::trace!("Host lookup without ports succeeded");
-                    Ok(sort_ipv6(s, prefer_ipv6))
+                    Ok(sort_ipv6(s))
                 },
                 Err(_) => Err(e), // Todo: evaluate returning both errors
             }
@@ -51,7 +48,6 @@ pub(crate) async fn resolve(
 pub(crate) async fn try_connect<F>(
     network: &network::Network,
     address: &str,
-    prefer_ipv6: bool,
     f: F,
 ) -> Result<network::Participant, crate::error::Error>
 where
@@ -59,15 +55,20 @@ where
 {
     use crate::error::Error;
 
+    log::info!("start try_connect:  {}", address);
+
     //tcp连接
     #[cfg(not(target_arch = "wasm32"))]
     {
         let mut participant = None;
-        for addr in resolve(address, prefer_ipv6)
+        for addr in resolve(address)
             .await
             .map_err(Error::HostnameLookupFailed)?
         {
-            match network.connect(f(addr)).await {
+            let address = f(addr);
+
+            log::info!("try_connect get address: {:?}", address);
+            match network.connect(address).await {
                 Ok(p) => {
                     participant = Some(Ok(p));
                     break;
@@ -81,13 +82,26 @@ where
     //websocket连接 todo
     #[cfg(target_arch = "wasm32")]
     {
-        log::error!("########## todo addr resolve and network connect");
-        Err(Error::Other("todo addr resolve and network connect".to_string()))
+        use std::net::{IpAddr, Ipv4Addr};
+
+        let mut participant = None;
+
+        let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), 1404);
+        log::warn!("socket addr: {:?}", addr);
+        let address = f(addr);
+
+        let connect_result = network.connect(address).await;
+        match connect_result {
+            Ok(p) => participant = Some(Ok(p)),
+            Err(e) => participant = Some(Err(Error::NetworkErr(e))),
+        }
+        participant.unwrap_or_else(|| Err(Error::Other("No Ip Addr provided".to_string())))
+        //Err(Error::Other("todo addr resolve and network connect".to_string()))
     }
 }
 
-fn sort_ipv6(s: impl Iterator<Item = SocketAddr>, prefer_ipv6: bool) -> Vec<SocketAddr> {
-    let (mut first_addrs, mut second_addrs) =
-        s.partition::<Vec<_>, _>(|a| a.is_ipv6() == prefer_ipv6);
+fn sort_ipv6(s: impl Iterator<Item = SocketAddr>) -> Vec<SocketAddr> {
+    let prefer_ipv6 = false;
+    let (mut first_addrs, mut second_addrs) = s.partition::<Vec<_>, _>(|a| a.is_ipv6() == prefer_ipv6);
     std::iter::Iterator::chain(first_addrs.drain(..), second_addrs.drain(..)).collect::<Vec<_>>()
 }

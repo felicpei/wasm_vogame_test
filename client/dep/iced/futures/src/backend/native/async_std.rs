@@ -24,19 +24,19 @@ pub mod time {
     /// The first message is produced after a `duration`, and then continues to
     /// produce more messages every `duration` after that.
     pub fn every<H: std::hash::Hasher, E>(
-        duration: std::time::Duration,
-    ) -> Subscription<H, E, std::time::Instant> {
+        duration: iced_core::time::Duration,
+    ) -> Subscription<H, E, iced_core::time::Instant> {
         Subscription::from_recipe(Every(duration))
     }
 
     #[derive(Debug)]
-    struct Every(std::time::Duration);
+    struct Every(iced_core::time::Duration);
 
     impl<H, E> subscription::Recipe<H, E> for Every
     where
         H: std::hash::Hasher,
     {
-        type Output = std::time::Instant;
+        type Output = iced_core::time::Instant;
 
         fn hash(&self, state: &mut H) {
             use std::hash::Hash;
@@ -52,7 +52,7 @@ pub mod time {
             use futures::stream::StreamExt;
 
             async_std::stream::interval(self.0)
-                .map(|_| std::time::Instant::now())
+                .map(|_| iced_core::time::Instant::now())
                 .boxed()
         }
     }

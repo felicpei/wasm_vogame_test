@@ -23,7 +23,7 @@ use futures_util::FutureExt;
 
 use network_protocol::{
     Bandwidth, Cid, InitProtocolError, Pid,
-    ProtocolError, ProtocolEvent, ProtocolMetricCache, ProtocolMetrics, Sid, TcpRecvProtocol,
+    ProtocolError, ProtocolEvent, Sid, TcpRecvProtocol,
     TcpSendProtocol, UnreliableDrain, UnreliableSink,
 };
 use std::{
@@ -56,7 +56,6 @@ impl Protocols {
 
     pub(crate) async fn with_tcp_connect(
         addr: SocketAddr,
-        metrics: ProtocolMetricCache,
     ) -> Result<Self, NetworkConnectError> {
 
         //tcp连接
@@ -73,7 +72,7 @@ impl Protocols {
                 "Connecting Tcp to: {}",
                 stream.peer_addr().map_err(NetworkConnectError::Io)?
             );
-            Ok(Self::new_tcp(stream, metrics))
+            Ok(Self::new_tcp(stream))
         }
     
         //websocket连接 todo
@@ -87,7 +86,6 @@ impl Protocols {
     pub(crate) async fn with_tcp_listen(
         addr: SocketAddr,
         cids: Arc<AtomicU64>,
-        metrics: Arc<ProtocolMetrics>,
         s2s_stop_listening_r: oneshot::Receiver<()>,
         c2s_protocol_s: mpsc::UnboundedSender<(Self, Cid)>,
     ) -> std::io::Result<()> {
@@ -131,8 +129,6 @@ impl Protocols {
                     }
                     let cid = cids.fetch_add(1, Ordering::Relaxed);
                     log::info!("Accepting Tcp from, {}, {}", remote_addr, cid);
-                    let metrics = ProtocolMetricCache::new(&cid.to_string(), Arc::clone(&metrics));
-                    let _ = c2s_protocol_s.send((Self::new_tcp(stream, metrics.clone()), cid));
                 }
             });
         }
@@ -148,16 +144,15 @@ impl Protocols {
 
     //tcp连接
     #[cfg(not(target_arch = "wasm32"))]
-    pub(crate) fn new_tcp(stream: tokio::net::TcpStream, metrics: ProtocolMetricCache) -> Self {
+    pub(crate) fn new_tcp(stream: tokio::net::TcpStream) -> Self {
 
         let (r, w) = stream.into_split();
-        let sp = TcpSendProtocol::new(TcpDrain { half: w }, metrics.clone());
+        let sp = TcpSendProtocol::new(TcpDrain { half: w });
         let rp = TcpRecvProtocol::new(
             TcpSink {
                 half: r,
                 buffer: BytesMut::new(),
             },
-            metrics,
         );
         Protocols::Tcp((sp, rp))
     }
